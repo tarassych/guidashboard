@@ -105,6 +105,7 @@ function App() {
         <div className="logo">
           <span className="logo-icon">◈</span>
           <span>DRONE TELEMETRY</span>
+          <span className="logo-version">ver 0.1</span>
         </div>
         <div className="status-bar">
           <StatusIndicator label="MODE" value={telemetry.mode} type="mode" />
