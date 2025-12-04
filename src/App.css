@@ -671,6 +671,333 @@ body {
   color: var(--text-primary);
 }
 
+/* Cameras Section */
+.cameras-section {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.secondary-cameras {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Camera Panel */
+.camera-panel {
+  grid-column: span 3;
+}
+
+.camera-panel.camera-main {
+  grid-column: auto;
+}
+
+.camera-panel.camera-secondary {
+  grid-column: auto;
+}
+
+.camera-panel.camera-secondary .panel-title {
+  font-size: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.camera-panel.camera-secondary .camera-container {
+  aspect-ratio: 16 / 9;
+}
+
+.camera-panel.camera-secondary .camera-loader {
+  gap: 0.5rem;
+}
+
+.camera-panel.camera-secondary .camera-loader span {
+  font-size: 0.7rem;
+}
+
+.camera-panel.camera-secondary .loader-ring {
+  width: 25px;
+  height: 25px;
+  border-width: 2px;
+}
+
+.camera-panel.camera-secondary .no-signal-icon {
+  width: 35px;
+  height: 35px;
+}
+
+.camera-panel.camera-secondary .no-signal-text {
+  font-size: 0.85rem;
+}
+
+.camera-panel.camera-secondary .reconnect-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.65rem;
+}
+
+.camera-panel.camera-secondary .hud-corner {
+  width: 15px;
+  height: 15px;
+}
+
+.camera-panel.camera-secondary .hud-corner.top-left,
+.camera-panel.camera-secondary .hud-corner.top-right {
+  top: 8px;
+}
+
+.camera-panel.camera-secondary .hud-corner.bottom-left,
+.camera-panel.camera-secondary .hud-corner.bottom-right {
+  bottom: 8px;
+}
+
+.camera-panel.camera-secondary .hud-corner.top-left,
+.camera-panel.camera-secondary .hud-corner.bottom-left {
+  left: 8px;
+}
+
+.camera-panel.camera-secondary .hud-corner.top-right,
+.camera-panel.camera-secondary .hud-corner.bottom-right {
+  right: 8px;
+}
+
+.camera-panel .panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.camera-status {
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.camera-status.live {
+  color: var(--accent-primary);
+  background: rgba(0, 255, 136, 0.15);
+  animation: pulse-status 2s ease-in-out infinite;
+}
+
+.camera-status.connecting {
+  color: var(--accent-warning);
+  background: rgba(255, 170, 0, 0.15);
+  animation: blink 1s ease-in-out infinite;
+}
+
+.camera-status.paused {
+  color: var(--accent-secondary);
+  background: rgba(0, 204, 255, 0.15);
+}
+
+.camera-status.error {
+  color: var(--accent-danger);
+  background: rgba(255, 68, 102, 0.15);
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.camera-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.camera-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 14, 20, 0.9);
+  z-index: 10;
+}
+
+.camera-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.retry-count {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.loader-ring {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.camera-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.no-signal-icon {
+  width: 60px;
+  height: 60px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.no-signal-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.no-signal-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+}
+
+.no-signal-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.reconnect-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  color: var(--accent-primary);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reconnect-btn:hover {
+  background: rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+}
+
+.reconnect-btn:active {
+  transform: scale(0.98);
+}
+
+.camera-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-color: var(--accent-primary);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.6;
+}
+
+.hud-corner.top-left {
+  top: 15px;
+  left: 15px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.hud-corner.top-right {
+  top: 15px;
+  right: 15px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.hud-corner.bottom-left {
+  bottom: 15px;
+  left: 15px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.hud-corner.bottom-right {
+  bottom: 15px;
+  right: 15px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+.hud-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  opacity: 0.4;
+}
+
+.hud-crosshair::before,
+.hud-crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--accent-primary);
+}
+
+.hud-crosshair::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.hud-crosshair::after {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .panel-row {
@@ -683,6 +1010,32 @@ body {
   
   .telemetry-table-panel {
     grid-column: span 2;
+  }
+  
+  .camera-panel {
+    grid-column: span 2;
+  }
+  
+  .cameras-section {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .secondary-cameras {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 900px) {
+  .cameras-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .secondary-cameras {
+    flex-direction: row;
+  }
+  
+  .secondary-cameras .camera-panel {
+    flex: 1;
   }
 }
 
@@ -702,5 +1055,17 @@ body {
   
   .telemetry-table {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .camera-panel {
+    grid-column: span 1;
+  }
+  
+  .cameras-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .secondary-cameras {
+    flex-direction: column;
   }
 }

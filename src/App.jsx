@@ -115,6 +115,26 @@ function App() {
       </header>
 
       <main className="dashboard-main">
+        <div className="cameras-section">
+          <CameraPanel 
+            streamUrl="http://192.168.88.15:8888/cam1/index.m3u8" 
+            title="FRONT CAMERA"
+            variant="main"
+          />
+          <div className="secondary-cameras">
+            <CameraPanel 
+              streamUrl="http://192.168.88.15:8888/cam2/index.m3u8" 
+              title="BACK CAMERA"
+              variant="secondary"
+            />
+            <CameraPanel 
+              streamUrl="http://192.168.88.15:8888/cam3/index.m3u8" 
+              title="THERMAL"
+              variant="secondary"
+            />
+          </div>
+        </div>
+
         <div className="panel-row">
           <CompassPanel heading={telemetry.heading} />
           <CoordinatesPanel 
@@ -435,6 +455,243 @@ function TelemetryTable({ telemetry }) {
             <span className="telemetry-value">{value}</span>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// Camera Panel Component
+function CameraPanel({ streamUrl, title = "CAMERA VIEW", variant = "main" }) {
+  const videoRef = useRef(null)
+  const hlsRef = useRef(null)
+  const retryTimeoutRef = useRef(null)
+  const [status, setStatus] = useState('connecting')
+  const [error, setError] = useState(null)
+  const [retryKey, setRetryKey] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    let isMounted = true
+
+    // Clear any pending retry
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+      retryTimeoutRef.current = null
+    }
+
+    // Cleanup previous instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+      hlsRef.current = null
+    }
+
+    setStatus('connecting')
+    setError(null)
+
+    const scheduleRetry = (delay = 3000) => {
+      retryTimeoutRef.current = setTimeout(() => {
+        setRetryCount(prev => prev + 1)
+        setRetryKey(prev => prev + 1)
+      }, delay)
+    }
+
+    // Dynamic import of hls.js
+    import('hls.js').then(({ default: Hls }) => {
+      if (!isMounted) return
+
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          manifestLoadingTimeOut: 15000,
+          manifestLoadingMaxRetry: 4,
+          manifestLoadingRetryDelay: 1000,
+          levelLoadingTimeOut: 15000,
+          levelLoadingMaxRetry: 4,
+          levelLoadingRetryDelay: 1000,
+          fragLoadingTimeOut: 20000,
+          fragLoadingMaxRetry: 6,
+          fragLoadingRetryDelay: 1000,
+        })
+        
+        hlsRef.current = hls
+        hls.loadSource(streamUrl)
+        hls.attachMedia(video)
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setStatus('playing')
+          setError(null)
+          setRetryCount(0)
+          video.play().catch(() => {
+            setStatus('paused')
+          })
+        })
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                // Try to recover from network error
+                setStatus('reconnecting')
+                setError('Connection lost - reconnecting...')
+                hls.startLoad()
+                // If startLoad doesn't work, schedule full reconnect
+                retryTimeoutRef.current = setTimeout(() => {
+                  if (hlsRef.current) {
+                    hlsRef.current.destroy()
+                    hlsRef.current = null
+                  }
+                  scheduleRetry(2000)
+                }, 5000)
+                break
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                // Try to recover from media error
+                setStatus('reconnecting')
+                setError('Media error - recovering...')
+                hls.recoverMediaError()
+                break
+              default:
+                hls.destroy()
+                hlsRef.current = null
+                setStatus('error')
+                setError('Stream error - retrying...')
+                scheduleRetry(3000)
+                break
+            }
+          }
+        })
+
+        // Handle video element errors
+        video.onerror = () => {
+          setStatus('reconnecting')
+          setError('Video error - reconnecting...')
+          scheduleRetry(3000)
+        }
+
+        // Handle stalled playback
+        video.onstalled = () => {
+          setError('Buffering...')
+        }
+
+        video.onwaiting = () => {
+          setError('Buffering...')
+        }
+
+        video.onplaying = () => {
+          setStatus('playing')
+          setError(null)
+        }
+
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        video.src = streamUrl
+        video.addEventListener('loadedmetadata', () => {
+          setStatus('playing')
+          setRetryCount(0)
+          video.play().catch(() => setStatus('paused'))
+        })
+        video.addEventListener('error', () => {
+          setStatus('reconnecting')
+          setError('Connection lost - reconnecting...')
+          scheduleRetry(3000)
+        })
+      } else {
+        setStatus('error')
+        setError('HLS not supported')
+      }
+    }).catch(() => {
+      if (isMounted) {
+        setStatus('error')
+        setError('Failed to load video player')
+      }
+    })
+
+    return () => {
+      isMounted = false
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current)
+      }
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [streamUrl, retryKey])
+
+  const handleReconnect = () => {
+    setRetryCount(0)
+    setRetryKey(prev => prev + 1)
+  }
+
+  const getStatusIndicator = () => {
+    switch (status) {
+      case 'connecting':
+        return <span className="camera-status connecting">● CONNECTING</span>
+      case 'reconnecting':
+        return <span className="camera-status connecting">● RECONNECTING</span>
+      case 'playing':
+        return <span className="camera-status live">● LIVE</span>
+      case 'paused':
+        return <span className="camera-status paused">● PAUSED</span>
+      case 'error':
+        return <span className="camera-status error">● NO SIGNAL</span>
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className={`panel camera-panel camera-${variant}`}>
+      <h3 className="panel-title">
+        {title}
+        {getStatusIndicator()}
+      </h3>
+      <div className="camera-container">
+        <video
+          ref={videoRef}
+          className="camera-video"
+          autoPlay
+          muted
+          playsInline
+        />
+        {(status === 'connecting' || status === 'reconnecting') && (
+          <div className="camera-overlay">
+            <div className="camera-loader">
+              <div className="loader-ring"></div>
+              <span>{status === 'reconnecting' ? 'Reconnecting...' : 'Connecting...'}</span>
+              {retryCount > 0 && <span className="retry-count">Attempt {retryCount + 1}</span>}
+            </div>
+          </div>
+        )}
+        {status === 'error' && (
+          <div className="camera-overlay">
+            <div className="camera-error">
+              <div className="no-signal-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 1l22 22M9 9a3 3 0 014.24 4.24M5.64 5.64A9 9 0 0118.36 18.36M2.05 2.05A13.5 13.5 0 0021.95 21.95" />
+                </svg>
+              </div>
+              <span className="no-signal-text">NO SIGNAL</span>
+              {variant === 'main' && <span className="no-signal-detail">{error}</span>}
+              <button className="reconnect-btn" onClick={handleReconnect}>
+                ↻ RECONNECT
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="camera-hud">
+          <div className="hud-corner top-left"></div>
+          <div className="hud-corner top-right"></div>
+          <div className="hud-corner bottom-left"></div>
+          <div className="hud-corner bottom-right"></div>
+          {variant === 'main' && <div className="hud-crosshair"></div>}
+        </div>
       </div>
     </div>
   )
