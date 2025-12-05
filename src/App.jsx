@@ -5,7 +5,6 @@ import './App.css'
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 const lerp = (start, end, t) => start + (end - start) * t
 const degToRad = (deg) => (deg * Math.PI) / 180
-const radToDeg = (rad) => (rad * 180) / Math.PI
 
 // Initial drone state
 const createInitialState = () => ({
@@ -35,19 +34,16 @@ function App() {
         frameRef.current += 1
         const frame = frameRef.current
 
-        // Change target heading periodically (simulating waypoint navigation)
         let newTargetHeading = prev.targetHeading
         if (frame % 40 === 0) {
           newTargetHeading = (prev.targetHeading + (Math.random() > 0.5 ? 30 : -30) + 360) % 360
         }
 
-        // Smoothly adjust heading towards target
         let headingDiff = newTargetHeading - prev.heading
         if (headingDiff > 180) headingDiff -= 360
         if (headingDiff < -180) headingDiff += 360
         const newHeading = (prev.heading + headingDiff * 0.1 + 360) % 360
 
-        // Adjust speed based on turning (slow down when turning)
         const turnRate = Math.abs(headingDiff)
         let newTargetSpeed = prev.targetSpeed
         if (frame % 60 === 0) {
@@ -56,23 +52,17 @@ function App() {
         const adjustedTargetSpeed = newTargetSpeed * (1 - turnRate / 360 * 0.5)
         const newSpeed = lerp(prev.speed, adjustedTargetSpeed, 0.1)
 
-        // Calculate new position based on heading and speed
         const headingRad = degToRad(newHeading)
-        const speedFactor = newSpeed * 0.00001 // Scale for lat/long movement
+        const speedFactor = newSpeed * 0.00001
         const newLatitude = prev.latitude + Math.cos(headingRad) * speedFactor
         const newLongitude = prev.longitude + Math.sin(headingRad) * speedFactor
 
-        // Simulate terrain elevation changes
         const elevationNoise = Math.sin(frame * 0.05) * 0.5 + Math.cos(frame * 0.03) * 0.3
         const newElevation = clamp(prev.elevation + elevationNoise, 100, 200)
 
-        // Battery drain
         const newBattery = Math.max(0, prev.battery - 0.01 * (newSpeed / 2))
-
-        // Signal fluctuation
         const newSignal = clamp(prev.signal + (Math.random() - 0.5) * 2, 70, 100)
 
-        // Update path history (keep last 50 points)
         const newPathHistory = [
           ...prev.pathHistory.slice(-49),
           { lat: newLatitude, lng: newLongitude }
@@ -99,376 +89,398 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <div className="logo">
-          <span className="logo-icon">◈</span>
-          <span>DRONE TELEMETRY</span>
-          <span className="logo-version">ver 0.5</span>
-        </div>
-        <div className="status-bar">
-          <StatusIndicator label="MODE" value={telemetry.mode} type="mode" />
-          <StatusIndicator label="SIGNAL" value={`${telemetry.signal.toFixed(0)}%`} type="signal" />
-          <StatusIndicator label="SAT" value={telemetry.satellites} type="satellites" />
-        </div>
-      </header>
-
-      <main className="dashboard-main">
-        <div className="cameras-section">
-          <CameraPanel 
-            streamUrl="http://192.168.88.15:8888/cam1/index.m3u8" 
-            title="FRONT CAMERA"
-            variant="main"
-          />
-          <div className="secondary-cameras">
-            <CameraPanel 
-              streamUrl="http://192.168.88.15:8888/cam2/index.m3u8" 
-              title="BACK CAMERA"
-              variant="secondary"
-            />
-            <CameraPanel 
-              streamUrl="http://192.168.88.15:8888/cam3/index.m3u8" 
-              title="THERMAL"
-              variant="secondary"
-            />
-          </div>
-        </div>
-
-        <div className="panel-row">
-          <CompassPanel heading={telemetry.heading} />
-          <CoordinatesPanel 
-            latitude={telemetry.latitude} 
-            longitude={telemetry.longitude}
-            elevation={telemetry.elevation}
-          />
-          <SpeedPanel speed={telemetry.speed} />
-        </div>
-
-        <div className="panel-row">
-          <HeadingPanel heading={telemetry.heading} />
-          <PathPanel pathHistory={telemetry.pathHistory} currentHeading={telemetry.heading} />
-          <ElevationPanel elevation={telemetry.elevation} />
-        </div>
-
-        <div className="panel-row">
-          <BatteryPanel battery={telemetry.battery} />
-          <TelemetryTable telemetry={telemetry} />
-        </div>
-      </main>
-    </div>
-  )
-}
-
-// Status Indicator Component
-function StatusIndicator({ label, value, type }) {
-  return (
-    <div className={`status-indicator status-${type}`}>
-      <span className="status-label">{label}</span>
-      <span className="status-value">{value}</span>
-    </div>
-  )
-}
-
-// Compass Panel Component
-function CompassPanel({ heading }) {
   const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-  const directionIndex = Math.round(heading / 45) % 8
-  
-  return (
-    <div className="panel compass-panel">
-      <h3 className="panel-title">COMPASS</h3>
-      <div className="compass">
-        <div className="compass-ring">
-          {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => (
-            <span 
-              key={deg} 
-              className="compass-mark"
-              style={{ transform: `rotate(${deg}deg) translateY(-70px)` }}
-            >
-              {directions[i]}
-            </span>
-          ))}
-        </div>
-        <div 
-          className="compass-needle"
-          style={{ transform: `rotate(${heading}deg)` }}
-        >
-          <div className="needle-north">▲</div>
-          <div className="needle-south">▼</div>
-        </div>
-        <div className="compass-center">
-          <span className="heading-value">{heading.toFixed(0)}°</span>
-          <span className="heading-direction">{directions[directionIndex]}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Coordinates Panel Component
-function CoordinatesPanel({ latitude, longitude, elevation }) {
-  const formatCoord = (value, isLat) => {
-    const dir = isLat ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W')
-    const abs = Math.abs(value)
-    const deg = Math.floor(abs)
-    const min = ((abs - deg) * 60).toFixed(4)
-    return `${deg}° ${min}' ${dir}`
-  }
+  const directionIndex = Math.round(telemetry.heading / 45) % 8
 
   return (
-    <div className="panel coordinates-panel">
-      <h3 className="panel-title">POSITION</h3>
-      <div className="coordinates">
-        <div className="coord-row">
-          <span className="coord-label">LAT</span>
-          <span className="coord-value">{formatCoord(latitude, true)}</span>
-        </div>
-        <div className="coord-row">
-          <span className="coord-label">LNG</span>
-          <span className="coord-value">{formatCoord(longitude, false)}</span>
-        </div>
-        <div className="coord-row elevation-row">
-          <span className="coord-label">ALT</span>
-          <span className="coord-value">{elevation.toFixed(1)} m</span>
-        </div>
-        <div className="coord-decimal">
-          <span>{latitude.toFixed(6)}, {longitude.toFixed(6)}</span>
-        </div>
+    <div className="hud-container">
+      {/* Full-screen Front Camera Background */}
+      <div className="main-camera-bg">
+        <CameraFeed streamUrl="http://192.168.88.15:8888/cam1/index.m3u8?username=admin&password=123456" />
       </div>
-    </div>
-  )
-}
 
-// Speed Panel Component
-function SpeedPanel({ speed }) {
-  const maxSpeed = 6
-  const percentage = (speed / maxSpeed) * 100
-  const segments = 12
+      {/* HUD Overlay */}
+      <div className="hud-overlay">
+        {/* Top Bar */}
+        <div className="hud-top-bar">
+          <div className="hud-logo">
+            <span className="logo-icon">◈</span>
+            <span className="logo-text">DRONE HUD</span>
+            <span className="logo-version">v0.5</span>
+          </div>
+          
+          <div className="hud-status-center">
+            <span className={`status-mode ${telemetry.mode.toLowerCase()}`}>{telemetry.mode}</span>
+            <span className="status-divider">│</span>
+            <span className="status-signal">◢◣ {telemetry.signal.toFixed(0)}%</span>
+            <span className="status-divider">│</span>
+            <span className="status-sat">⬡ {telemetry.satellites}</span>
+          </div>
 
-  return (
-    <div className="panel speed-panel">
-      <h3 className="panel-title">SPEED</h3>
-      <div className="speed-gauge">
-        <div className="speed-arc">
-          {Array.from({ length: segments }).map((_, i) => {
-            const segmentPercent = ((i + 1) / segments) * 100
-            const isActive = percentage >= segmentPercent - (100 / segments)
-            return (
-              <div 
-                key={i}
-                className={`speed-segment ${isActive ? 'active' : ''}`}
-                style={{ 
-                  transform: `rotate(${-90 + (i * 180 / segments)}deg)`,
-                  opacity: isActive ? 1 : 0.2
-                }}
-              />
-            )
-          })}
-        </div>
-        <div className="speed-value">
-          <span className="speed-number">{speed.toFixed(1)}</span>
-          <span className="speed-unit">m/s</span>
-        </div>
-        <div className="speed-labels">
-          <span>0</span>
-          <span>{maxSpeed}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Heading Panel Component
-function HeadingPanel({ heading }) {
-  return (
-    <div className="panel heading-panel">
-      <h3 className="panel-title">HEADING</h3>
-      <div className="heading-tape">
-        <div 
-          className="heading-scale"
-          style={{ transform: `translateX(${-heading * 3}px)` }}
-        >
-          {Array.from({ length: 72 }).map((_, i) => {
-            const deg = i * 5
-            const isMain = deg % 30 === 0
-            return (
-              <div key={i} className={`heading-tick ${isMain ? 'main' : ''}`}>
-                {isMain && <span className="heading-tick-label">{deg}°</span>}
-              </div>
-            )
-          })}
-        </div>
-        <div className="heading-indicator">▼</div>
-      </div>
-    </div>
-  )
-}
-
-// Path Panel Component
-function PathPanel({ pathHistory, currentHeading }) {
-  const scale = 150000
-  
-  if (pathHistory.length < 2) {
-    return (
-      <div className="panel path-panel">
-        <h3 className="panel-title">PATH</h3>
-        <div className="path-display">
-          <span className="path-waiting">Acquiring path data...</span>
-        </div>
-      </div>
-    )
-  }
-
-  const center = pathHistory[pathHistory.length - 1]
-  const points = pathHistory.map(p => ({
-    x: (p.lng - center.lng) * scale + 100,
-    y: -(p.lat - center.lat) * scale + 80
-  }))
-
-  const pathD = points.reduce((acc, p, i) => {
-    return acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`)
-  }, '')
-
-  return (
-    <div className="panel path-panel">
-      <h3 className="panel-title">PATH TRAIL</h3>
-      <div className="path-display">
-        <svg viewBox="0 0 200 160" className="path-svg">
-          <defs>
-            <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#00ff88" stopOpacity="0.1" />
-              <stop offset="100%" stopColor="#00ff88" stopOpacity="1" />
-            </linearGradient>
-          </defs>
-          <path 
-            d={pathD} 
-            fill="none" 
-            stroke="url(#pathGradient)" 
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <g transform={`translate(${points[points.length - 1].x}, ${points[points.length - 1].y}) rotate(${currentHeading})`}>
-            <polygon 
-              points="0,-8 -5,5 5,5" 
-              fill="#00ff88"
-              className="drone-marker"
-            />
-          </g>
-        </svg>
-        <div className="path-info">
-          <span>Trail: {pathHistory.length} points</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Elevation Panel Component
-function ElevationPanel({ elevation }) {
-  const minElev = 100
-  const maxElev = 200
-  const percentage = ((elevation - minElev) / (maxElev - minElev)) * 100
-
-  return (
-    <div className="panel elevation-panel">
-      <h3 className="panel-title">ELEVATION</h3>
-      <div className="elevation-display">
-        <div className="elevation-bar">
-          <div 
-            className="elevation-fill"
-            style={{ height: `${percentage}%` }}
-          />
-          <div className="elevation-marks">
-            {[200, 175, 150, 125, 100].map(mark => (
-              <div key={mark} className="elevation-mark">
-                <span>{mark}m</span>
-              </div>
-            ))}
+          <div className="hud-battery">
+            <BatteryIndicator battery={telemetry.battery} />
           </div>
         </div>
-        <div className="elevation-value">
-          <span className="elev-number">{elevation.toFixed(1)}</span>
-          <span className="elev-unit">m</span>
+
+        {/* Rear View Mirror */}
+        <div className="rear-mirror">
+          <div className="mirror-frame">
+            <CameraFeed streamUrl="http://192.168.88.15:8888/cam2/index.m3u8?username=admin&password=123456" variant="mirror" />
+            <span className="mirror-label">REAR</span>
+          </div>
+        </div>
+
+        {/* Heading Tape - Top Center */}
+        <div className="hud-heading-tape">
+          <HeadingTape heading={telemetry.heading} />
+        </div>
+
+        {/* Left Panel - Compass & Altitude */}
+        <div className="hud-left-panel">
+          <HudCompass heading={telemetry.heading} direction={directions[directionIndex]} />
+          <HudAltitude elevation={telemetry.elevation} />
+        </div>
+
+        {/* Right Panel - Speedometer */}
+        <div className="hud-right-panel">
+          <Speedometer speed={telemetry.speed} />
+        </div>
+
+        {/* Minimap */}
+        <div className="hud-minimap-container">
+          <Minimap 
+            pathHistory={telemetry.pathHistory} 
+            heading={telemetry.heading}
+            lat={telemetry.latitude}
+            lng={telemetry.longitude}
+          />
+        </div>
+
+        {/* Center Crosshair */}
+        <div className="hud-crosshair">
+          <div className="crosshair-h"></div>
+          <div className="crosshair-v"></div>
+          <div className="crosshair-center">◇</div>
+        </div>
+
+        {/* Bottom Telemetry Strip */}
+        <div className="hud-bottom-strip">
+          <TelemetryStrip telemetry={telemetry} />
         </div>
       </div>
     </div>
   )
 }
 
-// Battery Panel Component
-function BatteryPanel({ battery }) {
-  const getStatusClass = () => {
+// Battery Indicator (Mobile Phone Style)
+function BatteryIndicator({ battery }) {
+  const getClass = () => {
     if (battery > 50) return 'good'
     if (battery > 20) return 'warning'
     return 'critical'
   }
 
   return (
-    <div className="panel battery-panel">
-      <h3 className="panel-title">BATTERY</h3>
-      <div className="battery-display">
-        <div className="battery-icon">
-          <div className="battery-cap" />
-          <div className="battery-body">
-            <div 
-              className={`battery-level ${getStatusClass()}`}
-              style={{ width: `${battery}%` }}
-            />
-          </div>
-        </div>
-        <div className="battery-info">
-          <span className={`battery-percentage ${getStatusClass()}`}>
-            {battery.toFixed(0)}%
-          </span>
-          <span className="battery-estimate">
-            ~{Math.floor(battery * 0.4)} min remaining
-          </span>
-        </div>
+    <div className={`battery-indicator ${getClass()}`}>
+      <span className="battery-percent">{battery.toFixed(0)}%</span>
+      <div className="battery-icon-mini">
+        <div className="battery-fill-mini" style={{ width: `${battery}%` }}></div>
       </div>
     </div>
   )
 }
 
-// Telemetry Table Component
-function TelemetryTable({ telemetry }) {
-  const data = [
-    { label: 'Latitude', value: telemetry.latitude.toFixed(6) + '°' },
-    { label: 'Longitude', value: telemetry.longitude.toFixed(6) + '°' },
-    { label: 'Elevation', value: telemetry.elevation.toFixed(2) + ' m' },
-    { label: 'Heading', value: telemetry.heading.toFixed(1) + '°' },
-    { label: 'Speed', value: telemetry.speed.toFixed(2) + ' m/s' },
-    { label: 'Battery', value: telemetry.battery.toFixed(1) + '%' },
-    { label: 'Signal', value: telemetry.signal.toFixed(0) + '%' },
-    { label: 'Satellites', value: telemetry.satellites },
-    { label: 'Mode', value: telemetry.mode },
-    { label: 'Timestamp', value: new Date(telemetry.timestamp).toLocaleTimeString() },
-  ]
+// HUD Compass
+function HudCompass({ heading, direction }) {
+  return (
+    <div className="hud-compass">
+      <div className="compass-outer">
+        <div className="compass-ring" style={{ transform: `rotate(${-heading}deg)` }}>
+          <span className="compass-n">N</span>
+          <span className="compass-e">E</span>
+          <span className="compass-s">S</span>
+          <span className="compass-w">W</span>
+        </div>
+        <div className="compass-pointer">▲</div>
+      </div>
+      <div className="compass-readout">
+        <span className="compass-deg">{heading.toFixed(0)}°</span>
+        <span className="compass-dir">{direction}</span>
+      </div>
+    </div>
+  )
+}
+
+// HUD Altitude
+function HudAltitude({ elevation }) {
+  const minElev = 100
+  const maxElev = 200
+  const percentage = ((elevation - minElev) / (maxElev - minElev)) * 100
 
   return (
-    <div className="panel telemetry-table-panel">
-      <h3 className="panel-title">RAW TELEMETRY</h3>
-      <div className="telemetry-table">
-        {data.map(({ label, value }) => (
-          <div key={label} className="telemetry-row">
-            <span className="telemetry-label">{label}</span>
-            <span className="telemetry-value">{value}</span>
-          </div>
-        ))}
+    <div className="hud-altitude">
+      <div className="alt-label">ALT</div>
+      <div className="alt-bar">
+        <div className="alt-fill" style={{ height: `${percentage}%` }}></div>
+        <div className="alt-marks">
+          <span>200</span>
+          <span>150</span>
+          <span>100</span>
+        </div>
+      </div>
+      <div className="alt-value">{elevation.toFixed(0)}<span>m</span></div>
+    </div>
+  )
+}
+
+// Speedometer (Car Style - km/h)
+function Speedometer({ speed }) {
+  // Convert m/s to km/h
+  const speedKmh = speed * 3.6
+  const maxSpeed = 25 // max km/h
+  const angle = (speedKmh / maxSpeed) * 240 - 120 // -120 to +120 degrees
+
+  const ticks = []
+  for (let i = 0; i <= 25; i += 5) {
+    const tickAngle = (i / maxSpeed) * 240 - 120
+    const isMain = i % 10 === 0
+    const radians = (tickAngle - 90) * (Math.PI / 180)
+    const innerRadius = isMain ? 52 : 56
+    const outerRadius = 62
+    const x1 = 70 + innerRadius * Math.cos(radians)
+    const y1 = 70 + innerRadius * Math.sin(radians)
+    const x2 = 70 + outerRadius * Math.cos(radians)
+    const y2 = 70 + outerRadius * Math.sin(radians)
+    
+    ticks.push(
+      <g key={i}>
+        <line 
+          x1={x1} y1={y1} x2={x2} y2={y2} 
+          stroke={i <= speedKmh ? "var(--accent-primary)" : "var(--text-muted)"} 
+          strokeWidth={isMain ? 2 : 1}
+        />
+        {isMain && (
+          <text 
+            x={70 + 42 * Math.cos(radians)} 
+            y={70 + 42 * Math.sin(radians)} 
+            fill="var(--text-secondary)" 
+            fontSize="8" 
+            textAnchor="middle" 
+            dominantBaseline="middle"
+          >
+            {i}
+          </text>
+        )}
+      </g>
+    )
+  }
+
+  return (
+    <div className="speedometer">
+      <svg viewBox="0 0 140 100" className="speedo-svg">
+        {/* Background arc */}
+        <path 
+          d="M 14 70 A 56 56 0 0 1 126 70" 
+          fill="none" 
+          stroke="var(--hud-border)" 
+          strokeWidth="3"
+        />
+        {/* Ticks */}
+        {ticks}
+        {/* Needle */}
+        <g transform={`rotate(${angle}, 70, 70)`}>
+          <polygon 
+            points="70,25 67,70 70,75 73,70" 
+            fill="var(--accent-danger)"
+            filter="drop-shadow(0 0 3px var(--accent-danger))"
+          />
+        </g>
+        {/* Center cap */}
+        <circle cx="70" cy="70" r="8" fill="var(--bg-dark)" stroke="var(--accent-primary)" strokeWidth="2"/>
+      </svg>
+      <div className="speedo-readout">
+        <span className="speedo-value">{speedKmh.toFixed(0)}</span>
+        <span className="speedo-unit">km/h</span>
       </div>
     </div>
   )
 }
 
-// Camera Panel Component
-function CameraPanel({ streamUrl, title = "CAMERA VIEW", variant = "main" }) {
+// Minimap with moving arrow
+function Minimap({ pathHistory, heading, lat, lng }) {
+  const mapSize = 150
+  const scale = 300000 // Scale for lat/lng to pixels
+  
+  // Generate path points relative to current position
+  const getPoints = () => {
+    if (pathHistory.length < 2) return []
+    const current = pathHistory[pathHistory.length - 1]
+    return pathHistory.map(p => ({
+      x: mapSize/2 + (p.lng - current.lng) * scale,
+      y: mapSize/2 - (p.lat - current.lat) * scale
+    }))
+  }
+
+  const points = getPoints()
+  const pathD = points.length > 1 
+    ? points.reduce((acc, p, i) => acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '')
+    : ''
+
+  // Simulated map grid
+  const gridLines = []
+  for (let i = 0; i <= 6; i++) {
+    const pos = (i / 6) * mapSize
+    gridLines.push(
+      <line key={`h${i}`} x1="0" y1={pos} x2={mapSize} y2={pos} stroke="var(--hud-border)" strokeWidth="0.5" opacity="0.3" />,
+      <line key={`v${i}`} x1={pos} y1="0" x2={pos} y2={mapSize} stroke="var(--hud-border)" strokeWidth="0.5" opacity="0.3" />
+    )
+  }
+
+  return (
+    <div className="minimap">
+      <div className="minimap-header">
+        <span className="minimap-title">MAP</span>
+        <span className="minimap-coords">{lat.toFixed(4)}°, {lng.toFixed(4)}°</span>
+      </div>
+      <svg viewBox={`0 0 ${mapSize} ${mapSize}`} className="minimap-svg">
+        {/* Grid */}
+        {gridLines}
+        
+        {/* Simulated roads/terrain */}
+        <rect x="60" y="0" width="30" height={mapSize} fill="rgba(0,255,136,0.05)" />
+        <rect x="0" y="65" width={mapSize} height="20" fill="rgba(0,255,136,0.05)" />
+        
+        {/* Path trail */}
+        {pathD && (
+          <path 
+            d={pathD} 
+            fill="none" 
+            stroke="url(#trailGradient)" 
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+        
+        {/* Gradient definition */}
+        <defs>
+          <linearGradient id="trailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="1" />
+          </linearGradient>
+        </defs>
+        
+        {/* Arrow indicator at center */}
+        <g transform={`translate(${mapSize/2}, ${mapSize/2}) rotate(${heading})`}>
+          <polygon 
+            points="0,-12 -8,8 0,4 8,8" 
+            fill="var(--accent-primary)"
+            filter="drop-shadow(0 0 4px var(--glow))"
+          />
+        </g>
+        
+        {/* Center pulse ring */}
+        <circle 
+          cx={mapSize/2} 
+          cy={mapSize/2} 
+          r="18" 
+          fill="none" 
+          stroke="var(--accent-primary)" 
+          strokeWidth="1"
+          opacity="0.4"
+          className="pulse-ring"
+        />
+      </svg>
+    </div>
+  )
+}
+
+// Heading Tape
+function HeadingTape({ heading }) {
+  const ticks = []
+  for (let i = -6; i <= 6; i++) {
+    const deg = Math.round((heading + i * 10) / 10) * 10
+    const normalizedDeg = ((deg % 360) + 360) % 360
+    const offset = (deg - heading) * 4
+    const isMain = normalizedDeg % 30 === 0
+    ticks.push(
+      <div 
+        key={i} 
+        className={`htape-tick ${isMain ? 'main' : ''}`}
+        style={{ left: `calc(50% + ${offset}px)` }}
+      >
+        {isMain && <span className="htape-label">{normalizedDeg}</span>}
+        <div className="htape-mark"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="heading-tape">
+      <div className="htape-container">
+        {ticks}
+      </div>
+      <div className="htape-indicator">▼</div>
+      <div className="htape-value">{heading.toFixed(0)}°</div>
+    </div>
+  )
+}
+
+// Telemetry Strip
+function TelemetryStrip({ telemetry }) {
+  return (
+    <div className="telemetry-strip">
+      <div className="telem-item">
+        <span className="telem-label">LAT</span>
+        <span className="telem-value">{telemetry.latitude.toFixed(6)}°</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">LNG</span>
+        <span className="telem-value">{telemetry.longitude.toFixed(6)}°</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">ALT</span>
+        <span className="telem-value">{telemetry.elevation.toFixed(1)}m</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">HDG</span>
+        <span className="telem-value">{telemetry.heading.toFixed(0)}°</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">SPD</span>
+        <span className="telem-value">{telemetry.speed.toFixed(2)}m/s</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">BAT</span>
+        <span className="telem-value">{telemetry.battery.toFixed(0)}%</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">SIG</span>
+        <span className="telem-value">{telemetry.signal.toFixed(0)}%</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">SAT</span>
+        <span className="telem-value">{telemetry.satellites}</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">MODE</span>
+        <span className="telem-value">{telemetry.mode}</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">TIME</span>
+        <span className="telem-value">{new Date(telemetry.timestamp).toLocaleTimeString()}</span>
+      </div>
+    </div>
+  )
+}
+
+// Camera Feed Component
+function CameraFeed({ streamUrl, variant = "main" }) {
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const retryTimeoutRef = useRef(null)
   const [status, setStatus] = useState('connecting')
-  const [error, setError] = useState(null)
   const [retryKey, setRetryKey] = useState(0)
-  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const video = videoRef.current
@@ -476,29 +488,24 @@ function CameraPanel({ streamUrl, title = "CAMERA VIEW", variant = "main" }) {
 
     let isMounted = true
 
-    // Clear any pending retry
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current)
       retryTimeoutRef.current = null
     }
 
-    // Cleanup previous instance
     if (hlsRef.current) {
       hlsRef.current.destroy()
       hlsRef.current = null
     }
 
     setStatus('connecting')
-    setError(null)
 
     const scheduleRetry = (delay = 3000) => {
       retryTimeoutRef.current = setTimeout(() => {
-        setRetryCount(prev => prev + 1)
         setRetryKey(prev => prev + 1)
       }, delay)
     }
 
-    // Dynamic import of hls.js
     import('hls.js').then(({ default: Hls }) => {
       if (!isMounted) return
 
@@ -526,22 +533,15 @@ function CameraPanel({ streamUrl, title = "CAMERA VIEW", variant = "main" }) {
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setStatus('playing')
-          setError(null)
-          setRetryCount(0)
-          video.play().catch(() => {
-            setStatus('paused')
-          })
+          video.play().catch(() => setStatus('paused'))
         })
 
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                // Try to recover from network error
                 setStatus('reconnecting')
-                setError('Connection lost - reconnecting...')
                 hls.startLoad()
-                // If startLoad doesn't work, schedule full reconnect
                 retryTimeoutRef.current = setTimeout(() => {
                   if (hlsRef.current) {
                     hlsRef.current.destroy()
@@ -551,72 +551,43 @@ function CameraPanel({ streamUrl, title = "CAMERA VIEW", variant = "main" }) {
                 }, 5000)
                 break
               case Hls.ErrorTypes.MEDIA_ERROR:
-                // Try to recover from media error
                 setStatus('reconnecting')
-                setError('Media error - recovering...')
                 hls.recoverMediaError()
                 break
               default:
                 hls.destroy()
                 hlsRef.current = null
                 setStatus('error')
-                setError('Stream error - retrying...')
                 scheduleRetry(3000)
                 break
             }
           }
         })
 
-        // Handle video element errors
-        video.onerror = () => {
-          setStatus('reconnecting')
-          setError('Video error - reconnecting...')
-          scheduleRetry(3000)
-        }
-
-        // Handle stalled playback
-        video.onstalled = () => {
-          setError('Buffering...')
-        }
-
-        video.onwaiting = () => {
-          setError('Buffering...')
-        }
-
         video.onplaying = () => {
           setStatus('playing')
-          setError(null)
         }
 
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS support (Safari)
         video.src = streamUrl
         video.addEventListener('loadedmetadata', () => {
           setStatus('playing')
-          setRetryCount(0)
           video.play().catch(() => setStatus('paused'))
         })
         video.addEventListener('error', () => {
-          setStatus('reconnecting')
-          setError('Connection lost - reconnecting...')
+          setStatus('error')
           scheduleRetry(3000)
         })
       } else {
         setStatus('error')
-        setError('HLS not supported')
       }
     }).catch(() => {
-      if (isMounted) {
-        setStatus('error')
-        setError('Failed to load video player')
-      }
+      if (isMounted) setStatus('error')
     })
 
     return () => {
       isMounted = false
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current)
-      }
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current)
       if (hlsRef.current) {
         hlsRef.current.destroy()
         hlsRef.current = null
@@ -624,75 +595,22 @@ function CameraPanel({ streamUrl, title = "CAMERA VIEW", variant = "main" }) {
     }
   }, [streamUrl, retryKey])
 
-  const handleReconnect = () => {
-    setRetryCount(0)
-    setRetryKey(prev => prev + 1)
-  }
-
-  const getStatusIndicator = () => {
-    switch (status) {
-      case 'connecting':
-        return <span className="camera-status connecting">● CONNECTING</span>
-      case 'reconnecting':
-        return <span className="camera-status connecting">● RECONNECTING</span>
-      case 'playing':
-        return <span className="camera-status live">● LIVE</span>
-      case 'paused':
-        return <span className="camera-status paused">● PAUSED</span>
-      case 'error':
-        return <span className="camera-status error">● NO SIGNAL</span>
-      default:
-        return null
-    }
-  }
-
   return (
-    <div className={`panel camera-panel camera-${variant}`}>
-      <h3 className="panel-title">
-        {title}
-        {getStatusIndicator()}
-      </h3>
-      <div className="camera-container">
-        <video
-          ref={videoRef}
-          className="camera-video"
-          autoPlay
-          muted
-          playsInline
-        />
-        {(status === 'connecting' || status === 'reconnecting') && (
-          <div className="camera-overlay">
-            <div className="camera-loader">
-              <div className="loader-ring"></div>
-              <span>{status === 'reconnecting' ? 'Reconnecting...' : 'Connecting...'}</span>
-              {retryCount > 0 && <span className="retry-count">Attempt {retryCount + 1}</span>}
-            </div>
-          </div>
-        )}
-        {status === 'error' && (
-          <div className="camera-overlay">
-            <div className="camera-error">
-              <div className="no-signal-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 1l22 22M9 9a3 3 0 014.24 4.24M5.64 5.64A9 9 0 0118.36 18.36M2.05 2.05A13.5 13.5 0 0021.95 21.95" />
-                </svg>
-              </div>
-              <span className="no-signal-text">NO SIGNAL</span>
-              {variant === 'main' && <span className="no-signal-detail">{error}</span>}
-              <button className="reconnect-btn" onClick={handleReconnect}>
-                ↻ RECONNECT
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="camera-hud">
-          <div className="hud-corner top-left"></div>
-          <div className="hud-corner top-right"></div>
-          <div className="hud-corner bottom-left"></div>
-          <div className="hud-corner bottom-right"></div>
-          {variant === 'main' && <div className="hud-crosshair"></div>}
+    <div className={`camera-feed camera-${variant}`}>
+      <video
+        ref={videoRef}
+        className="camera-video"
+        autoPlay
+        muted
+        playsInline
+      />
+      {status !== 'playing' && (
+        <div className="camera-status-overlay">
+          {status === 'connecting' && <span className="status-text">◌ CONNECTING</span>}
+          {status === 'reconnecting' && <span className="status-text">↻ RECONNECTING</span>}
+          {status === 'error' && <span className="status-text error">✕ NO SIGNAL</span>}
         </div>
-      </div>
+      )}
     </div>
   )
 }
