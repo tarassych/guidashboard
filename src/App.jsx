@@ -1,5 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+
+// API Configuration
+// In production: empty string = same host (relative URL)
+// In development: localhost:3001
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 // Utility functions for realistic drone movement
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -106,7 +111,7 @@ function App() {
           <div className="hud-logo">
             <span className="logo-icon">◈</span>
             <span className="logo-text">DRONE HUD</span>
-            <span className="logo-version">v0.5</span>
+            <span className="logo-version">v0.6</span>
           </div>
           
           <div className="hud-status-center">
@@ -161,6 +166,11 @@ function App() {
           <div className="crosshair-h"></div>
           <div className="crosshair-v"></div>
           <div className="crosshair-center">◇</div>
+        </div>
+
+        {/* Telemetry Log */}
+        <div className="hud-telemetry-log-container">
+          <TelemetryLog />
         </div>
 
         {/* Bottom Telemetry Strip */}
@@ -469,6 +479,121 @@ function TelemetryStrip({ telemetry }) {
       <div className="telem-item">
         <span className="telem-label">TIME</span>
         <span className="telem-value">{new Date(telemetry.timestamp).toLocaleTimeString()}</span>
+      </div>
+    </div>
+  )
+}
+
+// Telemetry Log Component - Real-time database telemetry
+function TelemetryLog() {
+  const [records, setRecords] = useState([])
+  const [lastId, setLastId] = useState(0)
+  const [isNewData, setIsNewData] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState('connecting')
+  const scrollRef = useRef(null)
+
+  const formatTimestamp = useCallback((timestamp) => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      fractionalSecondDigits: 3
+    })
+  }, [])
+
+  const formatTelemetryData = useCallback((data) => {
+    const fields = []
+    if (data.batt_v !== undefined) fields.push(`BAT:${data.batt_v}V`)
+    if (data.speed !== undefined) fields.push(`SPD:${data.speed}`)
+    if (data.dist !== undefined) fields.push(`DST:${data.dist}`)
+    if (data.power !== undefined) fields.push(`PWR:${data.power}`)
+    if (data.fs !== undefined) fields.push(`FS:${data.fs}`)
+    if (data.md_str !== undefined) fields.push(`MODE:${data.md_str}`)
+    if (data.f1 !== undefined) fields.push(`F1:${data.f1 ? 'ON' : 'OFF'}`)
+    if (data.f2 !== undefined) fields.push(`F2:${data.f2 ? 'ON' : 'OFF'}`)
+    return fields.join(' │ ')
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    let pollInterval = null
+
+    const fetchTelemetry = async () => {
+      try {
+        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastId}&limit=100`
+        const response = await fetch(url)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch')
+        }
+
+        const data = await response.json()
+        
+        if (!isMounted) return
+
+        if (data.success && data.records.length > 0) {
+          setConnectionStatus('connected')
+          
+          // Add new records to the beginning
+          setRecords(prev => {
+            const newRecords = [...data.records, ...prev]
+            // Keep only the latest 100 records
+            return newRecords.slice(0, 100)
+          })
+          
+          // Update lastId to the newest record
+          setLastId(data.latestId)
+          
+          // Trigger pulse animation
+          setIsNewData(true)
+          setTimeout(() => {
+            if (isMounted) setIsNewData(false)
+          }, 500)
+        }
+      } catch (error) {
+        if (isMounted) {
+          setConnectionStatus('disconnected')
+        }
+      }
+    }
+
+    // Initial fetch
+    fetchTelemetry()
+
+    // Poll every 300ms
+    pollInterval = setInterval(fetchTelemetry, 300)
+
+    return () => {
+      isMounted = false
+      if (pollInterval) clearInterval(pollInterval)
+    }
+  }, [lastId])
+
+  return (
+    <div className={`telemetry-log ${isNewData ? 'pulse' : ''}`}>
+      <div className="tlog-header">
+        <span className="tlog-title">TELEMETRY LOG</span>
+        <span className={`tlog-status ${connectionStatus}`}>
+          {connectionStatus === 'connected' ? '● LIVE' : connectionStatus === 'connecting' ? '○ CONNECTING' : '○ OFFLINE'}
+        </span>
+      </div>
+      <div className="tlog-console" ref={scrollRef}>
+        {records.length === 0 ? (
+          <div className="tlog-empty">Waiting for telemetry data...</div>
+        ) : (
+          records.map((record, index) => (
+            <div key={record.id} className={`tlog-entry ${index === 0 && isNewData ? 'new' : ''}`}>
+              <span className="tlog-time">{formatTimestamp(record.timestamp)}</span>
+              <span className="tlog-arrow">→</span>
+              <span className="tlog-data">{formatTelemetryData(record.data)}</span>
+            </div>
+          ))
+        )}
+      </div>
+      <div className="tlog-footer">
+        <span className="tlog-count">{records.length} records</span>
       </div>
     </div>
   )

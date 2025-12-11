@@ -4,7 +4,8 @@ set -e
 REPO_DIR="/home/orangepi/guidashboard"
 NGINX_ROOT="/var/www/html"
 REPO_URL="https://github.com/tarassych/guidashboard.git"
-BRANCH="main"   # change if your branch is different
+BRANCH="main"
+SERVER_NAME="guidashboard-server"
 
 # Clone repo if missing
 if [ ! -d "$REPO_DIR/.git" ]; then
@@ -22,7 +23,6 @@ BASE=$(git merge-base "$BRANCH" "origin/$BRANCH")
 
 # Already up-to-date
 if [ "$LOCAL" = "$REMOTE" ]; then
-  # echo "Already up to date."
   exit 0
 fi
 
@@ -37,16 +37,29 @@ if [ "$LOCAL" = "$BASE" ]; then
     exit 1
   fi
 
-  echo "Deploying new dist/ to nginx root..."
-
+  # Deploy frontend to nginx
+  echo "Deploying frontend to nginx..."
   sudo rm -rf "$NGINX_ROOT"/*
   sudo cp -r "$REPO_DIR/dist/"* "$NGINX_ROOT"/
   sudo chown -R www-data:www-data "$NGINX_ROOT"
+
+  # Install/update server dependencies
+  echo "Installing server dependencies..."
+  cd "$REPO_DIR"
+  npm install --production --omit=dev
+
+  # Restart backend server with PM2
+  echo "Restarting backend server..."
+  if pm2 describe "$SERVER_NAME" > /dev/null 2>&1; then
+    pm2 restart "$SERVER_NAME"
+  else
+    pm2 start server/index.js --name "$SERVER_NAME"
+  fi
+  pm2 save
 
   echo "Deployment complete."
   exit 0
 fi
 
-# Local ahead or diverged (do nothing)
 echo "Local repo state unusual (ahead/diverged). Not auto-updating."
 exit 0
