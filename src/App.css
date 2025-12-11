@@ -1,19 +1,15 @@
+/**
+ * Main Layout Stylesheet
+ * Contains only structural/layout styles - colors and theming are in themes/
+ */
+
+/* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800&display=swap');
 
-:root {
-  --bg-dark: #0a0e14;
-  --accent-primary: #00ff88;
-  --accent-secondary: #00ccff;
-  --accent-warning: #ffaa00;
-  --accent-danger: #ff4466;
-  --text-primary: #e6edf3;
-  --text-secondary: #8b9eb0;
-  --text-muted: #4a5a6a;
-  --hud-bg: rgba(0, 20, 10, 0.7);
-  --hud-border: rgba(0, 255, 136, 0.3);
-  --glow: rgba(0, 255, 136, 0.4);
-}
+/* Theme */
+/* Theme is loaded dynamically via useTheme hook - see src/config.js */
 
+/* ========== RESET ========== */
 * {
   margin: 0;
   padding: 0;
@@ -22,8 +18,6 @@
 
 body {
   font-family: 'JetBrains Mono', monospace;
-  background: #000;
-  color: var(--text-primary);
   overflow: hidden;
 }
 
@@ -71,7 +65,7 @@ body {
   pointer-events: auto;
 }
 
-/* ========== TOP BAR ========== */
+/* ========== TOP BAR LAYOUT ========== */
 .hud-top-bar {
   position: absolute;
   top: 0;
@@ -82,7 +76,6 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0 20px;
-  background: linear-gradient(180deg, rgba(0, 10, 5, 0.9) 0%, transparent 100%);
 }
 
 .hud-logo {
@@ -93,30 +86,20 @@ body {
 
 .logo-icon {
   font-size: 1.5rem;
-  color: var(--accent-primary);
-  text-shadow: 0 0 15px var(--glow);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
 }
 
 .logo-text {
   font-family: 'Orbitron', sans-serif;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--accent-primary);
   letter-spacing: 2px;
-  text-shadow: 0 0 10px var(--glow);
 }
 
 .logo-version {
   font-size: 0.6rem;
-  color: var(--text-muted);
   padding: 2px 6px;
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 3px;
 }
 
@@ -125,36 +108,23 @@ body {
   align-items: center;
   gap: 12px;
   font-size: 0.75rem;
-  color: var(--text-secondary);
 }
 
 .status-mode {
   padding: 3px 10px;
-  background: rgba(0, 255, 136, 0.15);
-  border: 1px solid var(--accent-primary);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 3px;
-  color: var(--accent-primary);
   font-family: 'Orbitron', sans-serif;
   font-weight: 600;
   letter-spacing: 1px;
 }
 
-.status-mode.manual {
-  background: rgba(255, 170, 0, 0.15);
-  border-color: var(--accent-warning);
-  color: var(--accent-warning);
-}
-
 .status-divider {
-  color: var(--text-muted);
   opacity: 0.4;
 }
 
-.status-signal, .status-sat {
-  color: var(--accent-primary);
-}
-
-/* ========== BATTERY INDICATOR ========== */
+/* ========== BATTERY LAYOUT ========== */
 .hud-battery {
   display: flex;
   align-items: center;
@@ -172,28 +142,11 @@ body {
   font-weight: 600;
 }
 
-.battery-indicator.good .battery-percent {
-  color: var(--accent-primary);
-}
-
-.battery-indicator.warning .battery-percent {
-  color: var(--accent-warning);
-}
-
-.battery-indicator.critical .battery-percent {
-  color: var(--accent-danger);
-  animation: blink 0.5s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
 .battery-icon-mini {
   width: 28px;
   height: 14px;
-  border: 2px solid currentColor;
+  border-width: 2px;
+  border-style: solid;
   border-radius: 3px;
   position: relative;
   opacity: 0.9;
@@ -217,19 +170,7 @@ body {
   transition: width 0.3s ease;
 }
 
-.battery-indicator.good {
-  color: var(--accent-primary);
-}
-
-.battery-indicator.warning {
-  color: var(--accent-warning);
-}
-
-.battery-indicator.critical {
-  color: var(--accent-danger);
-}
-
-/* ========== REAR VIEW MIRROR ========== */
+/* ========== REAR VIEW MIRROR LAYOUT ========== */
 .rear-mirror {
   position: absolute;
   top: 55px;
@@ -241,14 +182,11 @@ body {
 .mirror-frame {
   width: 420px;
   height: 120px;
-  border: 3px solid var(--hud-border);
+  border-width: 3px;
+  border-style: solid;
   border-radius: 12px 12px 60px 60px;
   overflow: hidden;
   background: #000;
-  box-shadow: 
-    0 0 30px rgba(0, 0, 0, 0.9), 
-    0 0 15px var(--glow),
-    inset 0 0 30px rgba(0, 255, 136, 0.05);
   position: relative;
 }
 
@@ -259,7 +197,6 @@ body {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
   opacity: 0.6;
   z-index: 5;
 }
@@ -283,16 +220,13 @@ body {
   transform: translateX(-50%);
   font-family: 'Orbitron', sans-serif;
   font-size: 0.65rem;
-  color: var(--accent-primary);
   letter-spacing: 3px;
-  text-shadow: 0 0 8px var(--glow);
   opacity: 0.9;
-  background: rgba(0, 20, 10, 0.6);
   padding: 2px 12px;
   border-radius: 3px;
 }
 
-/* ========== HEADING TAPE ========== */
+/* ========== HEADING TAPE LAYOUT ========== */
 .hud-heading-tape {
   position: absolute;
   top: 190px;
@@ -304,8 +238,8 @@ body {
 .heading-tape {
   position: relative;
   height: 50px;
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -328,26 +262,19 @@ body {
 .htape-label {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.65rem;
-  color: var(--text-secondary);
   display: block;
   margin-bottom: 2px;
-}
-
-.htape-tick.main .htape-label {
-  color: var(--accent-primary);
 }
 
 .htape-mark {
   width: 1px;
   height: 8px;
-  background: var(--text-muted);
   margin: 0 auto;
 }
 
 .htape-tick.main .htape-mark {
   height: 12px;
   width: 2px;
-  background: var(--accent-primary);
 }
 
 .htape-indicator {
@@ -355,9 +282,7 @@ body {
   top: -2px;
   left: 50%;
   transform: translateX(-50%);
-  color: var(--accent-primary);
   font-size: 0.8rem;
-  text-shadow: 0 0 10px var(--glow);
   z-index: 5;
 }
 
@@ -369,11 +294,9 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--accent-primary);
-  text-shadow: 0 0 10px var(--glow);
 }
 
-/* ========== LEFT PANEL ========== */
+/* ========== LEFT PANEL LAYOUT ========== */
 .hud-left-panel {
   position: absolute;
   left: 20px;
@@ -384,10 +307,10 @@ body {
   gap: 20px;
 }
 
-/* Compass */
+/* Compass Layout */
 .hud-compass {
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 8px;
   padding: 12px;
   width: 120px;
@@ -398,7 +321,8 @@ body {
   height: 90px;
   margin: 0 auto;
   position: relative;
-  border: 2px solid var(--hud-border);
+  border-width: 2px;
+  border-style: solid;
   border-radius: 50%;
 }
 
@@ -414,14 +338,12 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--text-secondary);
 }
 
 .compass-n {
   top: 6px;
   left: 50%;
   transform: translateX(-50%);
-  color: var(--accent-danger);
 }
 
 .compass-s {
@@ -447,9 +369,7 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -80%);
-  color: var(--accent-primary);
   font-size: 1rem;
-  text-shadow: 0 0 10px var(--glow);
 }
 
 .compass-readout {
@@ -461,20 +381,17 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--accent-primary);
-  text-shadow: 0 0 10px var(--glow);
 }
 
 .compass-dir {
   font-size: 0.7rem;
-  color: var(--text-secondary);
   margin-left: 4px;
 }
 
-/* Altitude */
+/* Altitude Layout */
 .hud-altitude {
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 8px;
   padding: 12px;
   width: 120px;
@@ -483,7 +400,6 @@ body {
 .alt-label, .speed-label {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.6rem;
-  color: var(--text-muted);
   letter-spacing: 2px;
   text-align: center;
   margin-bottom: 8px;
@@ -493,31 +409,19 @@ body {
   height: 100px;
   width: 30px;
   margin: 0 auto;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 4px;
   position: relative;
   overflow: hidden;
 }
 
-.alt-fill {
+.alt-fill, .speed-fill {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to top, var(--accent-secondary), var(--accent-primary));
   transition: height 0.3s ease;
-  box-shadow: 0 0 10px var(--glow);
-}
-
-.speed-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, var(--accent-primary), #00ffaa);
-  transition: height 0.3s ease;
-  box-shadow: 0 0 10px var(--glow);
 }
 
 .alt-marks, .speed-marks {
@@ -533,7 +437,6 @@ body {
 
 .alt-marks span, .speed-marks span {
   font-size: 0.55rem;
-  color: var(--text-muted);
 }
 
 .alt-value, .speed-value {
@@ -542,17 +445,14 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--accent-primary);
-  text-shadow: 0 0 10px var(--glow);
 }
 
 .alt-value span, .speed-value span {
   font-size: 0.6rem;
-  color: var(--text-secondary);
   font-weight: 400;
 }
 
-/* ========== RIGHT PANEL - SPEEDOMETER ========== */
+/* ========== RIGHT PANEL LAYOUT ========== */
 .hud-right-panel {
   position: absolute;
   right: 20px;
@@ -561,8 +461,8 @@ body {
 }
 
 .speedometer {
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 12px;
   padding: 15px;
   width: 160px;
@@ -583,20 +483,17 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 2rem;
   font-weight: 700;
-  color: var(--accent-primary);
-  text-shadow: 0 0 15px var(--glow);
 }
 
 .speedo-unit {
   display: block;
   font-family: 'Orbitron', sans-serif;
   font-size: 0.7rem;
-  color: var(--text-secondary);
   letter-spacing: 2px;
   margin-top: -5px;
 }
 
-/* ========== MINIMAP ========== */
+/* ========== MINIMAP LAYOUT ========== */
 .hud-minimap-container {
   position: absolute;
   right: 20px;
@@ -604,8 +501,8 @@ body {
 }
 
 .minimap {
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 8px;
   padding: 8px;
   width: 180px;
@@ -617,46 +514,30 @@ body {
   align-items: center;
   margin-bottom: 6px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--hud-border);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
 }
 
 .minimap-title {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.6rem;
-  color: var(--text-muted);
   letter-spacing: 2px;
 }
 
 .minimap-coords {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.55rem;
-  color: var(--accent-primary);
 }
 
 .minimap-svg {
   width: 100%;
   height: 150px;
-  background: rgba(0, 0, 0, 0.4);
   border-radius: 4px;
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
 }
 
-.pulse-ring {
-  animation: pulse-ring 2s ease-out infinite;
-}
-
-@keyframes pulse-ring {
-  0% {
-    r: 18;
-    opacity: 0.4;
-  }
-  100% {
-    r: 30;
-    opacity: 0;
-  }
-}
-
-/* ========== CROSSHAIR ========== */
+/* ========== CROSSHAIR LAYOUT ========== */
 .hud-crosshair {
   position: absolute;
   top: 50%;
@@ -673,7 +554,6 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--accent-primary);
   opacity: 0.5;
 }
 
@@ -684,7 +564,6 @@ body {
   top: -4px;
   width: 1px;
   height: 9px;
-  background: var(--accent-primary);
 }
 
 .crosshair-h::before { left: 20px; }
@@ -696,7 +575,6 @@ body {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--accent-primary);
   opacity: 0.5;
 }
 
@@ -707,7 +585,6 @@ body {
   left: -4px;
   height: 1px;
   width: 9px;
-  background: var(--accent-primary);
 }
 
 .crosshair-v::before { top: 20px; }
@@ -718,19 +595,16 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: var(--accent-primary);
   font-size: 1rem;
-  text-shadow: 0 0 10px var(--glow);
   opacity: 0.8;
 }
 
-/* ========== BOTTOM TELEMETRY STRIP ========== */
+/* ========== BOTTOM STRIP LAYOUT ========== */
 .hud-bottom-strip {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(0deg, rgba(0, 10, 5, 0.95) 0%, transparent 100%);
   padding: 15px 20px 10px;
 }
 
@@ -750,7 +624,6 @@ body {
 
 .telem-label {
   font-size: 0.55rem;
-  color: var(--text-muted);
   letter-spacing: 1px;
   margin-bottom: 2px;
 }
@@ -758,11 +631,9 @@ body {
 .telem-value {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.75rem;
-  color: var(--accent-primary);
-  text-shadow: 0 0 5px var(--glow);
 }
 
-/* ========== CAMERA FEED ========== */
+/* ========== CAMERA FEED LAYOUT ========== */
 .camera-feed {
   position: relative;
   background: #000;
@@ -781,23 +652,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.8);
 }
 
 .status-text {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.8rem;
-  color: var(--accent-primary);
   letter-spacing: 2px;
-  animation: pulse 1.5s ease-in-out infinite;
 }
 
-.status-text.error {
-  color: var(--accent-danger);
-  animation: none;
-}
-
-/* ========== TELEMETRY LOG ========== */
+/* ========== TELEMETRY LOG LAYOUT ========== */
 .hud-telemetry-log-container {
   position: absolute;
   left: 20px;
@@ -808,16 +671,11 @@ body {
 .telemetry-log {
   width: 380px;
   max-height: 200px;
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
+  border-width: 1px;
+  border-style: solid;
   border-radius: 8px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
-}
-
-.telemetry-log.pulse {
-  box-shadow: 0 0 20px var(--glow), 0 0 40px rgba(0, 255, 136, 0.2);
-  border-color: var(--accent-primary);
 }
 
 .tlog-header {
@@ -825,14 +683,13 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: rgba(0, 255, 136, 0.05);
-  border-bottom: 1px solid var(--hud-border);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
 }
 
 .tlog-title {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.65rem;
-  color: var(--text-muted);
   letter-spacing: 2px;
 }
 
@@ -840,19 +697,6 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.55rem;
   letter-spacing: 1px;
-}
-
-.tlog-status.connected {
-  color: var(--accent-primary);
-}
-
-.tlog-status.connecting {
-  color: var(--accent-warning);
-  animation: blink 1s ease-in-out infinite;
-}
-
-.tlog-status.disconnected {
-  color: var(--accent-danger);
 }
 
 .tlog-console {
@@ -868,21 +712,11 @@ body {
   width: 6px;
 }
 
-.tlog-console::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-}
-
 .tlog-console::-webkit-scrollbar-thumb {
-  background: var(--hud-border);
   border-radius: 3px;
 }
 
-.tlog-console::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
-}
-
 .tlog-empty {
-  color: var(--text-muted);
   text-align: center;
   padding: 20px;
   font-style: italic;
@@ -893,45 +727,30 @@ body {
   align-items: flex-start;
   gap: 6px;
   padding: 3px 0;
-  border-bottom: 1px solid rgba(0, 255, 136, 0.1);
-  color: var(--accent-primary);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
   opacity: 0.8;
   transition: opacity 0.3s ease, background 0.3s ease;
 }
 
 .tlog-entry:hover {
   opacity: 1;
-  background: rgba(0, 255, 136, 0.05);
 }
 
 .tlog-entry.new {
   opacity: 1;
-  background: rgba(0, 255, 136, 0.15);
-  animation: flash-entry 0.5s ease-out;
-}
-
-@keyframes flash-entry {
-  0% {
-    background: rgba(0, 255, 136, 0.4);
-  }
-  100% {
-    background: rgba(0, 255, 136, 0.15);
-  }
 }
 
 .tlog-time {
-  color: var(--text-secondary);
   white-space: nowrap;
   min-width: 85px;
 }
 
 .tlog-arrow {
-  color: var(--accent-primary);
   opacity: 0.6;
 }
 
 .tlog-data {
-  color: var(--accent-primary);
   word-break: break-word;
   flex: 1;
 }
@@ -940,13 +759,12 @@ body {
   display: flex;
   justify-content: flex-end;
   padding: 4px 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border-top: 1px solid var(--hud-border);
+  border-top-width: 1px;
+  border-top-style: solid;
 }
 
 .tlog-count {
   font-size: 0.55rem;
-  color: var(--text-muted);
 }
 
 /* ========== RESPONSIVE ========== */

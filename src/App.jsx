@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+import config from './config'
+import { useTheme } from './hooks/useTheme'
 
-// API Configuration
-// In production: empty string = same host (relative URL)
-// In development: localhost:3001
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+// API Configuration from config
+const API_BASE_URL = config.apiUrl
 
 // Utility functions for realistic drone movement
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -31,7 +31,11 @@ const createInitialState = () => ({
 
 function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
+  const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   const frameRef = useRef(0)
+  
+  // Theme management - reacts to telemetry data changes
+  const { currentTheme, setTheme, availableThemes } = useTheme(latestTelemetryData)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -170,7 +174,7 @@ function App() {
 
         {/* Telemetry Log */}
         <div className="hud-telemetry-log-container">
-          <TelemetryLog />
+          <TelemetryLog onTelemetryUpdate={setLatestTelemetryData} />
         </div>
 
         {/* Bottom Telemetry Strip */}
@@ -485,7 +489,7 @@ function TelemetryStrip({ telemetry }) {
 }
 
 // Telemetry Log Component - Real-time database telemetry
-function TelemetryLog() {
+function TelemetryLog({ onTelemetryUpdate }) {
   const [records, setRecords] = useState([])
   const [lastId, setLastId] = useState(0)
   const [isNewData, setIsNewData] = useState(false)
@@ -545,6 +549,12 @@ function TelemetryLog() {
           
           // Update lastId to the newest record
           setLastId(data.latestId)
+          
+          // Notify parent of latest telemetry data (for theme switching, etc.)
+          const latestRecord = data.records[data.records.length - 1]
+          if (latestRecord && onTelemetryUpdate) {
+            onTelemetryUpdate(latestRecord.data)
+          }
           
           // Trigger pulse animation
           setIsNewData(true)

@@ -1,0 +1,432 @@
+/**
+ * Digital Green Theme
+ * A cyberpunk-inspired green HUD theme for drone telemetry
+ */
+
+/* ========== THEME VARIABLES ========== */
+:root {
+  /* Background colors */
+  --theme-bg-dark: #0a0e14;
+  --theme-bg-overlay: rgba(0, 20, 10, 0.7);
+  --theme-bg-gradient-start: rgba(0, 10, 5, 0.9);
+  --theme-bg-gradient-end: rgba(0, 10, 5, 0.95);
+  
+  /* Primary accent - Green */
+  --theme-accent-primary: #00ff88;
+  --theme-accent-primary-rgb: 0, 255, 136;
+  --theme-accent-primary-dim: rgba(0, 255, 136, 0.15);
+  --theme-accent-primary-glow: rgba(0, 255, 136, 0.4);
+  --theme-accent-primary-border: rgba(0, 255, 136, 0.3);
+  
+  /* Secondary accent - Cyan */
+  --theme-accent-secondary: #00ccff;
+  --theme-accent-secondary-rgb: 0, 204, 255;
+  
+  /* Status colors */
+  --theme-status-warning: #ffaa00;
+  --theme-status-warning-dim: rgba(255, 170, 0, 0.15);
+  --theme-status-danger: #ff4466;
+  --theme-status-danger-dim: rgba(255, 68, 102, 0.15);
+  
+  /* Text colors */
+  --theme-text-primary: #e6edf3;
+  --theme-text-secondary: #8b9eb0;
+  --theme-text-muted: #4a5a6a;
+  
+  /* Map to standard variable names for compatibility */
+  --bg-dark: var(--theme-bg-dark);
+  --accent-primary: var(--theme-accent-primary);
+  --accent-secondary: var(--theme-accent-secondary);
+  --accent-warning: var(--theme-status-warning);
+  --accent-danger: var(--theme-status-danger);
+  --text-primary: var(--theme-text-primary);
+  --text-secondary: var(--theme-text-secondary);
+  --text-muted: var(--theme-text-muted);
+  --hud-bg: var(--theme-bg-overlay);
+  --hud-border: var(--theme-accent-primary-border);
+  --glow: var(--theme-accent-primary-glow);
+}
+
+/* ========== BASE THEME STYLES ========== */
+body {
+  background: #000;
+  color: var(--theme-text-primary);
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes pulse-ring {
+  0% { r: 18; opacity: 0.4; }
+  100% { r: 30; opacity: 0; }
+}
+
+@keyframes flash-entry {
+  0% { background: rgba(var(--theme-accent-primary-rgb), 0.4); }
+  100% { background: rgba(var(--theme-accent-primary-rgb), 0.15); }
+}
+
+/* ========== TOP BAR THEME ========== */
+.hud-top-bar {
+  background: linear-gradient(180deg, var(--theme-bg-gradient-start) 0%, transparent 100%);
+}
+
+.logo-icon {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 15px var(--theme-accent-primary-glow);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.logo-text {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.logo-version {
+  color: var(--theme-text-muted);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.hud-status-center {
+  color: var(--theme-text-secondary);
+}
+
+.status-mode {
+  background: var(--theme-accent-primary-dim);
+  border-color: var(--theme-accent-primary);
+  color: var(--theme-accent-primary);
+}
+
+.status-mode.manual {
+  background: var(--theme-status-warning-dim);
+  border-color: var(--theme-status-warning);
+  color: var(--theme-status-warning);
+}
+
+.status-divider {
+  color: var(--theme-text-muted);
+}
+
+.status-signal, .status-sat {
+  color: var(--theme-accent-primary);
+}
+
+/* ========== BATTERY THEME ========== */
+.battery-indicator.good .battery-percent,
+.battery-indicator.good {
+  color: var(--theme-accent-primary);
+}
+
+.battery-indicator.warning .battery-percent,
+.battery-indicator.warning {
+  color: var(--theme-status-warning);
+}
+
+.battery-indicator.critical .battery-percent,
+.battery-indicator.critical {
+  color: var(--theme-status-danger);
+  animation: blink 0.5s ease-in-out infinite;
+}
+
+/* ========== MIRROR THEME ========== */
+.mirror-frame {
+  border-color: var(--theme-accent-primary-border);
+  box-shadow: 
+    0 0 30px rgba(0, 0, 0, 0.9), 
+    0 0 15px var(--theme-accent-primary-glow),
+    inset 0 0 30px rgba(var(--theme-accent-primary-rgb), 0.05);
+}
+
+.mirror-frame::before {
+  background: linear-gradient(90deg, transparent, var(--theme-accent-primary), transparent);
+}
+
+.mirror-label {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
+  background: rgba(0, 20, 10, 0.6);
+}
+
+/* ========== HEADING TAPE THEME ========== */
+.heading-tape {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.htape-label {
+  color: var(--theme-text-secondary);
+}
+
+.htape-tick.main .htape-label {
+  color: var(--theme-accent-primary);
+}
+
+.htape-mark {
+  background: var(--theme-text-muted);
+}
+
+.htape-tick.main .htape-mark {
+  background: var(--theme-accent-primary);
+}
+
+.htape-indicator {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.htape-value {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+/* ========== COMPASS THEME ========== */
+.hud-compass {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.compass-outer {
+  border-color: var(--theme-accent-primary-border);
+}
+
+.compass-n, .compass-e, .compass-s, .compass-w {
+  color: var(--theme-text-secondary);
+}
+
+.compass-n {
+  color: var(--theme-status-danger);
+}
+
+.compass-pointer {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.compass-deg {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.compass-dir {
+  color: var(--theme-text-secondary);
+}
+
+/* ========== ALTITUDE THEME ========== */
+.hud-altitude {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.alt-label, .speed-label {
+  color: var(--theme-text-muted);
+}
+
+.alt-bar, .speed-bar {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.alt-fill {
+  background: linear-gradient(to top, var(--theme-accent-secondary), var(--theme-accent-primary));
+  box-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.speed-fill {
+  background: linear-gradient(to top, var(--theme-accent-primary), #00ffaa);
+  box-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.alt-marks span, .speed-marks span {
+  color: var(--theme-text-muted);
+}
+
+.alt-value, .speed-value {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.alt-value span, .speed-value span {
+  color: var(--theme-text-secondary);
+}
+
+/* ========== SPEEDOMETER THEME ========== */
+.speedometer {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.speedo-value {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 15px var(--theme-accent-primary-glow);
+}
+
+.speedo-unit {
+  color: var(--theme-text-secondary);
+}
+
+/* ========== MINIMAP THEME ========== */
+.minimap {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.minimap-header {
+  border-bottom-color: var(--theme-accent-primary-border);
+}
+
+.minimap-title {
+  color: var(--theme-text-muted);
+}
+
+.minimap-coords {
+  color: var(--theme-accent-primary);
+}
+
+.minimap-svg {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ========== CROSSHAIR THEME ========== */
+.crosshair-h,
+.crosshair-v {
+  background: var(--theme-accent-primary);
+}
+
+.crosshair-h::before,
+.crosshair-h::after,
+.crosshair-v::before,
+.crosshair-v::after {
+  background: var(--theme-accent-primary);
+}
+
+.crosshair-center {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+/* ========== BOTTOM STRIP THEME ========== */
+.hud-bottom-strip {
+  background: linear-gradient(0deg, var(--theme-bg-gradient-end) 0%, transparent 100%);
+}
+
+.telem-label {
+  color: var(--theme-text-muted);
+}
+
+.telem-value {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 5px var(--theme-accent-primary-glow);
+}
+
+/* ========== CAMERA FEED THEME ========== */
+.camera-status-overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.status-text {
+  color: var(--theme-accent-primary);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-text.error {
+  color: var(--theme-status-danger);
+  animation: none;
+}
+
+/* ========== TELEMETRY LOG THEME ========== */
+.telemetry-log {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.telemetry-log.pulse {
+  box-shadow: 0 0 20px var(--theme-accent-primary-glow), 0 0 40px rgba(var(--theme-accent-primary-rgb), 0.2);
+  border-color: var(--theme-accent-primary);
+}
+
+.tlog-header {
+  background: rgba(var(--theme-accent-primary-rgb), 0.05);
+  border-bottom-color: var(--theme-accent-primary-border);
+}
+
+.tlog-title {
+  color: var(--theme-text-muted);
+}
+
+.tlog-status.connected {
+  color: var(--theme-accent-primary);
+}
+
+.tlog-status.connecting {
+  color: var(--theme-status-warning);
+  animation: blink 1s ease-in-out infinite;
+}
+
+.tlog-status.disconnected {
+  color: var(--theme-status-danger);
+}
+
+.tlog-console::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tlog-console::-webkit-scrollbar-thumb {
+  background: var(--theme-accent-primary-border);
+}
+
+.tlog-console::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-accent-primary);
+}
+
+.tlog-empty {
+  color: var(--theme-text-muted);
+}
+
+.tlog-entry {
+  border-bottom-color: rgba(var(--theme-accent-primary-rgb), 0.1);
+  color: var(--theme-accent-primary);
+}
+
+.tlog-entry:hover {
+  background: rgba(var(--theme-accent-primary-rgb), 0.05);
+}
+
+.tlog-entry.new {
+  background: rgba(var(--theme-accent-primary-rgb), 0.15);
+  animation: flash-entry 0.5s ease-out;
+}
+
+.tlog-time {
+  color: var(--theme-text-secondary);
+}
+
+.tlog-arrow {
+  color: var(--theme-accent-primary);
+}
+
+.tlog-data {
+  color: var(--theme-accent-primary);
+}
+
+.tlog-footer {
+  background: rgba(0, 0, 0, 0.3);
+  border-top-color: var(--theme-accent-primary-border);
+}
+
+.tlog-count {
+  color: var(--theme-text-muted);
+}
+
