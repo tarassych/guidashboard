@@ -7,6 +7,16 @@ REPO_URL="https://github.com/tarassych/guidashboard.git"
 BRANCH="main"
 SERVER_NAME="guidashboard-server"
 
+# Function to check and install PM2
+ensure_pm2() {
+  if ! command -v pm2 &> /dev/null; then
+    echo "PM2 not found. Installing PM2..."
+    sudo npm install -g pm2
+    # Setup PM2 to start on boot
+    pm2 startup systemd -u orangepi --hp /home/orangepi | tail -1 | sudo bash
+  fi
+}
+
 # Clone repo if missing
 if [ ! -d "$REPO_DIR/.git" ]; then
   echo "Cloning repository..."
@@ -43,6 +53,9 @@ if [ "$LOCAL" = "$BASE" ]; then
   sudo cp -r "$REPO_DIR/dist/"* "$NGINX_ROOT"/
   sudo chown -R www-data:www-data "$NGINX_ROOT"
 
+  # Ensure PM2 is installed
+  ensure_pm2
+
   # Install/update server dependencies
   echo "Installing server dependencies..."
   cd "$REPO_DIR"
@@ -61,5 +74,5 @@ if [ "$LOCAL" = "$BASE" ]; then
   exit 0
 fi
 
-echo "Local repo state unusual (ahead/diverged). Not auto-updating. Exiting. Fake update"
+echo "Local repo state unusual (ahead/diverged). Not auto-updating."
 exit 0
