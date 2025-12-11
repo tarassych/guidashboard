@@ -74,5 +74,5 @@ if [ "$LOCAL" = "$BASE" ]; then
   exit 0
 fi
 
-echo "Local repo state unusual (ahead/diverged). Not auto-updating."
+echo "Local repo state unusual (ahead/diverged). Not auto-updating. Fake update"
 exit 0
