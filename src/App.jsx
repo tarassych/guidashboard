@@ -110,7 +110,7 @@ function App() {
         <div className="hud-top-bar">
           <div className="hud-logo">
             <span className="logo-icon">◈</span>
-            <span className="logo-text"></span>
+            <span className="logo-text">RATERA DRONE OSD</span>
             <span className="logo-version">v0.7</span>
           </div>
           
