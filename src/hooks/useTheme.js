@@ -66,22 +66,36 @@ export function useTheme(telemetryData = null) {
     loadTheme(config.defaultTheme)
   }, [loadTheme])
 
+  // Extract fuse states for stable dependency tracking
+  const f1 = telemetryData?.f1
+  const f2 = telemetryData?.f2
+  const battV = telemetryData?.batt_v
+  
   // Check telemetry conditions for automatic theme switching
   useEffect(() => {
-    if (!telemetryData || manualOverrideRef.current) return
+    if (manualOverrideRef.current) return
 
     const conditions = config.themeConditions
-    for (const [, config] of Object.entries(conditions)) {
+    let matchedTheme = null
+    
+    // Check all conditions - first match wins
+    for (const [, conditionConfig] of Object.entries(conditions)) {
       try {
-        if (config.condition(telemetryData) && currentTheme !== config.theme) {
-          loadTheme(config.theme)
+        if (conditionConfig.condition({ f1, f2, batt_v: battV })) {
+          matchedTheme = conditionConfig.theme
           break
         }
       } catch (e) {
         // Condition check failed, skip
       }
     }
-  }, [telemetryData, currentTheme, loadTheme])
+    
+    // Apply matched theme or revert to default
+    const targetTheme = matchedTheme || config.defaultTheme
+    if (currentTheme !== targetTheme) {
+      loadTheme(targetTheme)
+    }
+  }, [f1, f2, battV, currentTheme, loadTheme])
 
   return {
     currentTheme,

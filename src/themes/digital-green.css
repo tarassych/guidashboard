@@ -4,7 +4,7 @@
  */
 
 /* ========== THEME VARIABLES ========== */
-:root {
+body.theme-digital-green {
   /* Background colors */
   --theme-bg-dark: #0a0e14;
   --theme-bg-overlay: rgba(0, 20, 10, 0.7);
@@ -91,7 +91,7 @@ body {
 }
 
 .logo-version {
-  color: var(--theme-text-muted);
+  color: var(--theme-accent-primary);
   border-color: var(--theme-accent-primary-border);
 }
 
@@ -111,12 +111,20 @@ body {
   color: var(--theme-status-warning);
 }
 
-.status-divider {
+.status-mode.offline {
+  background: rgba(100, 100, 100, 0.15);
+  border-color: var(--theme-text-muted);
   color: var(--theme-text-muted);
 }
 
-.status-signal, .status-sat, .status-fs {
+/* FS Indicator */
+.status-fs {
+  color: var(--theme-text-muted);
+}
+
+.status-fs.active {
   color: var(--theme-accent-primary);
+  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
 }
 
 .status-flag {
@@ -130,6 +138,91 @@ body {
   background: var(--theme-accent-primary-dim);
   color: var(--theme-accent-primary);
   border: 1px solid var(--theme-accent-primary-border);
+}
+
+/* ========== FUSE SWITCH THEME ========== */
+.fuse-switch {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.fuse-switch.safe .fuse-body {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.fuse-switch.safe .fuse-element {
+  background: var(--theme-text-muted);
+}
+
+.fuse-switch.safe .fuse-label {
+  color: var(--theme-text-secondary);
+}
+
+.fuse-switch.safe .fuse-status {
+  color: var(--theme-accent-primary);
+}
+
+.fuse-switch.manual .manual-indicator {
+  color: var(--theme-status-warning);
+}
+
+/* Armed state - ALWAYS RED regardless of theme */
+.fuse-switch.armed {
+  background: rgba(255, 50, 50, 0.15);
+  border-color: #ff3333;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.fuse-switch.armed .fuse-body {
+  background: rgba(255, 50, 50, 0.2);
+  border-color: #ff3333;
+}
+
+.fuse-switch.armed .fuse-element {
+  background: #ff3333;
+  box-shadow: 0 0 8px #ff3333;
+}
+
+.fuse-switch.armed .fuse-label {
+  color: #ff3333;
+  text-shadow: 0 0 8px rgba(255, 50, 50, 0.6);
+}
+
+.fuse-switch.armed .fuse-status {
+  color: #ff3333;
+  text-shadow: 0 0 6px rgba(255, 50, 50, 0.6);
+}
+
+/* ========== WARNING BANNER THEME (always red) ========== */
+.warning-banner {
+  background: linear-gradient(90deg, transparent, rgba(255, 30, 30, 0.2), transparent);
+}
+
+.warning-chevrons {
+  color: #ff3333;
+  text-shadow: 0 0 10px rgba(255, 50, 50, 0.8);
+}
+
+.warning-frame {
+  background: rgba(255, 30, 30, 0.15);
+  border-color: #ff3333;
+  box-shadow: 0 0 20px rgba(255, 50, 50, 0.4), inset 0 0 15px rgba(255, 50, 50, 0.1);
+}
+
+.warning-icon {
+  color: #ff3333;
+  text-shadow: 0 0 10px rgba(255, 50, 50, 0.8);
+}
+
+.warning-text {
+  color: #ff3333;
+  text-shadow: 0 0 15px rgba(255, 50, 50, 0.8);
+}
+
+.warning-subtext {
+  color: #ff6666;
+  text-shadow: 0 0 8px rgba(255, 50, 50, 0.6);
 }
 
 /* ========== BATTERY THEME ========== */
@@ -313,6 +406,47 @@ body {
   color: var(--theme-text-muted);
 }
 
+/* Map Zoom Controls Theme */
+.zoom-btn {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+  color: var(--theme-accent-primary);
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background: var(--theme-accent-primary-dim);
+  border-color: var(--theme-accent-primary);
+}
+
+.zoom-level {
+  color: var(--theme-text-secondary);
+}
+
+/* Map Scale Bar Theme */
+.scale-line {
+  background: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 4px var(--theme-accent-primary-glow);
+}
+
+.scale-line::before,
+.scale-line::after {
+  background: var(--theme-accent-primary);
+}
+
+.scale-label {
+  color: var(--theme-accent-primary);
+}
+
+.map-loading span {
+  color: var(--theme-accent-primary);
+}
+
+.map-compass-n {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
+}
+
 
 .alt-value, .speed-value {
   color: var(--theme-accent-primary);
@@ -336,6 +470,69 @@ body {
 
 .speedo-unit {
   color: var(--theme-text-secondary);
+}
+
+/* Odometer Theme */
+.odometer {
+  border-top-color: var(--theme-accent-primary-border);
+}
+
+.odo-digit {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.odo-num {
+  color: var(--theme-accent-primary);
+}
+
+.odo-unit {
+  color: var(--theme-text-muted);
+}
+
+/* ========== POWER INDICATOR THEME ========== */
+.power-indicator {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.power-label {
+  color: var(--theme-text-muted);
+}
+
+.power-bar {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.power-bar.active.level-0 {
+  background: var(--theme-text-muted);
+  border-color: var(--theme-text-muted);
+}
+
+.power-bar.active.level-1 {
+  background: var(--theme-accent-secondary);
+  border-color: var(--theme-accent-secondary);
+  box-shadow: 0 0 8px var(--theme-accent-secondary);
+}
+
+.power-bar.active.level-2 {
+  background: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.power-mode {
+  color: var(--theme-text-muted);
+}
+
+.power-mode.level-1 {
+  color: var(--theme-accent-secondary);
+}
+
+.power-mode.level-2 {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
 }
 
 /* ========== MINIMAP THEME ========== */

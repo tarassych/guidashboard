@@ -96,14 +96,20 @@ body {
 }
 
 .logo-version {
-  font-size: 0.6rem;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
   padding: 2px 6px;
   border-width: 1px;
   border-style: solid;
   border-radius: 3px;
+  letter-spacing: 1px;
 }
 
 .hud-status-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -120,14 +126,18 @@ body {
   letter-spacing: 1px;
 }
 
-.status-divider {
-  opacity: 0.4;
+.status-fs {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1px;
 }
 
-/* ========== BATTERY LAYOUT ========== */
-.hud-battery {
+/* ========== RIGHT INDICATORS (FS + Battery) ========== */
+.hud-right-indicators {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .battery-indicator {
@@ -170,13 +180,102 @@ body {
   transition: width 0.3s ease;
 }
 
-/* ========== REAR VIEW MIRROR LAYOUT ========== */
-.rear-mirror {
+/* ========== FUSE SWITCHES & REAR VIEW MIRROR LAYOUT ========== */
+.hud-mirror-section {
   position: absolute;
   top: 55px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.rear-mirror {
+  /* No longer absolute - part of flex container */
+}
+
+/* Fuse Switch */
+.fuse-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 18px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  min-width: 70px;
+}
+
+.fuse-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.fuse-icon {
+  position: relative;
+  width: 16px;
+  height: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.fuse-icon:hover {
+  transform: scale(1.2);
+}
+
+.fuse-icon:active {
+  transform: scale(0.95);
+}
+
+.fuse-body {
+  flex: 1;
+  width: 12px;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.fuse-element {
+  width: 4px;
+  height: 100%;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.fuse-status {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.manual-indicator {
+  font-size: 0.5rem;
+}
+
+/* Only blink when armed */
+.fuse-switch.armed .manual-indicator {
+  animation: blink 0.5s ease-in-out infinite;
+}
+
+.fuse-switch.manual {
+  border-style: dashed;
 }
 
 .mirror-frame {
@@ -224,6 +323,84 @@ body {
   opacity: 0.9;
   padding: 2px 12px;
   border-radius: 3px;
+}
+
+/* ========== WARNING BANNER LAYOUT ========== */
+.hud-warning-banner {
+  position: absolute;
+  top: 190px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+.warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  animation: warning-pulse 0.3s ease-in-out infinite;
+}
+
+@keyframes warning-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.warning-chevrons {
+  display: flex;
+  gap: 4px;
+  font-size: 1rem;
+}
+
+.warning-chevrons span {
+  opacity: 0.8;
+}
+
+.warning-chevrons.left span:nth-child(1) { animation: chevron-flash 0.5s ease-in-out infinite 0.1s; }
+.warning-chevrons.left span:nth-child(2) { animation: chevron-flash 0.5s ease-in-out infinite 0.2s; }
+.warning-chevrons.left span:nth-child(3) { animation: chevron-flash 0.5s ease-in-out infinite 0.3s; }
+.warning-chevrons.right span:nth-child(1) { animation: chevron-flash 0.5s ease-in-out infinite 0.3s; }
+.warning-chevrons.right span:nth-child(2) { animation: chevron-flash 0.5s ease-in-out infinite 0.2s; }
+.warning-chevrons.right span:nth-child(3) { animation: chevron-flash 0.5s ease-in-out infinite 0.1s; }
+
+@keyframes chevron-flash {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.warning-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.warning-frame {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 20px;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 6px;
+}
+
+.warning-icon {
+  font-size: 1rem;
+}
+
+.warning-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+
+.warning-subtext {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  margin-top: 4px;
 }
 
 /* ========== HEADING TAPE LAYOUT ========== */
@@ -402,6 +579,16 @@ body {
   letter-spacing: 2px;
   text-align: center;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sat-icon {
+  font-size: 0.8rem;
+  filter: grayscale(100%);
+  opacity: 0.8;
 }
 
 .sat-grid {
@@ -489,6 +676,96 @@ body {
   margin-top: -5px;
 }
 
+/* Odometer */
+.odometer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top-width: 1px;
+  border-top-style: solid;
+}
+
+.odo-display {
+  display: flex;
+  gap: 2px;
+}
+
+.odo-digit {
+  width: 16px;
+  height: 22px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.odo-num {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.odo-unit {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  margin-left: 2px;
+}
+
+/* ========== POWER INDICATOR LAYOUT ========== */
+.power-indicator {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  padding: 10px 15px;
+  width: 160px;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.power-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.power-bars {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.power-bar {
+  width: 35px;
+  height: 18px;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.power-bar.level-0 {
+  border-radius: 4px 0 0 4px;
+}
+
+.power-bar.level-2 {
+  border-radius: 0 4px 4px 0;
+}
+
+.power-mode {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
 /* ========== MAP PANEL LAYOUT (2x bigger with altimeter) ========== */
 .hud-minimap-container {
   position: absolute;
@@ -543,6 +820,152 @@ body {
   width: 100%;
   height: 100%;
   border-radius: 4px;
+}
+
+/* Google Map states */
+.map-loading,
+.map-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  font-family: 'Orbitron', sans-serif;
+  gap: 8px;
+}
+
+.map-loading span {
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.map-error span {
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  color: var(--theme-status-danger);
+}
+
+.map-error small {
+  font-size: 0.6rem;
+  color: var(--theme-text-muted);
+}
+
+/* Map HUD overlay */
+.map-hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.map-compass-n {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+/* Map Zoom Controls */
+.map-zoom-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 10;
+}
+
+.zoom-btn {
+  width: 28px;
+  height: 28px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 4px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.zoom-level {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+}
+
+/* Map Scale Bar */
+.map-scale-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+}
+
+.scale-line {
+  height: 4px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 2px;
+  min-width: 20px;
+  max-width: 80px;
+  position: relative;
+}
+
+.scale-line::before,
+.scale-line::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 8px;
+  top: -2px;
+}
+
+.scale-line::before {
+  left: 0;
+}
+
+.scale-line::after {
+  right: 0;
+}
+
+.scale-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 1px;
 }
 
 

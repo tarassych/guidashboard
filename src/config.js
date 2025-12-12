@@ -14,11 +14,16 @@
  *   Available: 'digital-green', 'aggressive-red'
  *   Default: 'digital-green'
  * 
+ * VITE_GOOGLE_MAPS_API_KEY
+ *   Google Maps API key for satellite map view
+ *   Get your key from: https://console.cloud.google.com/google/maps-apis
+ * 
  * ============================================================================
  * Example .env file:
  * ============================================================================
  *   VITE_API_URL=
  *   VITE_DEFAULT_THEME=digital-green
+ *   VITE_GOOGLE_MAPS_API_KEY=your-api-key-here
  * ============================================================================
  */
 
@@ -28,6 +33,9 @@ export const config = {
   
   // Theme Configuration - change default here or via VITE_DEFAULT_THEME env var
   defaultTheme: import.meta.env.VITE_DEFAULT_THEME || 'digital-green',
+  
+  // Google Maps API Key
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBMh5UJX91WEJRuhPl3Ha3D0OyIuNVd0JU',
   
   // Available themes (add new themes here)
   themes: {
@@ -39,6 +47,11 @@ export const config = {
   // Theme will auto-switch when telemetry data matches conditions
   // Conditions are checked in order - first match wins
   themeConditions: {
+    // Switch to aggressive-red when both fuses are armed
+    fusesArmed: {
+      theme: 'aggressive-red',
+      condition: (telemetry) => telemetry?.f1 === true && telemetry?.f2 === true,
+    },
     // Switch to aggressive-red when battery voltage drops below 12V
     lowBattery: {
       theme: 'aggressive-red',

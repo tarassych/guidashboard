@@ -1,10 +1,26 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import './App.css'
 import config from './config'
 import { useTheme } from './hooks/useTheme'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
+
+// Google Maps dark style for HUD aesthetic
+const mapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a1a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#4a5a6a" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a2a2a" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#5a6a7a" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a1520" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3a5a7a" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#1a2a1a" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1a2a1a" }] },
+  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+]
 
 // Initial telemetry state (from real data)
 const createInitialState = () => ({
@@ -26,6 +42,7 @@ const createInitialState = () => ({
   f2: false,
   md: 0,
   md_str: 'OFFLINE',
+  telemetry_time: 0,
   // Meta
   timestamp: Date.now(),
   pathHistory: [],
@@ -36,8 +53,40 @@ function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   
-  // Theme management - reacts to telemetry data changes
-  const { currentTheme } = useTheme(latestTelemetryData)
+  // Manual fuse overrides: null = use telemetry, true = manual armed
+  const [fuseOverrides, setFuseOverrides] = useState({ f1: null, f2: null })
+  
+  // Get effective fuse states (override or telemetry)
+  const f1Armed = fuseOverrides.f1 !== null ? fuseOverrides.f1 : telemetry.f1
+  const f2Armed = fuseOverrides.f2 !== null ? fuseOverrides.f2 : telemetry.f2
+  
+  // Create effective telemetry data for theme switching (includes manual fuse overrides)
+  // Use useMemo to ensure stable reference and proper change detection
+  const effectiveTelemetryData = useMemo(() => ({
+    ...(latestTelemetryData || {}),
+    f1: f1Armed,
+    f2: f2Armed
+  }), [latestTelemetryData, f1Armed, f2Armed])
+  
+  // Theme management - reacts to effective telemetry data (with fuse overrides)
+  const { currentTheme } = useTheme(effectiveTelemetryData)
+  
+  // Toggle fuse override (3-state: null -> true -> false -> null)
+  // null = use telemetry, true = manual ON (armed), false = manual OFF (safe)
+  const toggleFuseOverride = useCallback((fuse) => {
+    setFuseOverrides(prev => {
+      const current = prev[fuse]
+      let next
+      if (current === null) {
+        next = true  // telemetry -> manual ON
+      } else if (current === true) {
+        next = false // manual ON -> manual OFF
+      } else {
+        next = null  // manual OFF -> back to telemetry
+      }
+      return { ...prev, [fuse]: next }
+    })
+  }, [])
 
   // Handle telemetry updates from TelemetryLog
   const handleTelemetryUpdate = useCallback((data) => {
@@ -79,6 +128,7 @@ function App() {
         updated.f2 = data.f2 ?? prev.f2
         updated.md = data.md ?? prev.md
         updated.md_str = data.md_str ?? prev.md_str
+        updated.telemetry_time = data.telemetry_time ?? prev.telemetry_time
       }
       
       return updated
@@ -102,35 +152,53 @@ function App() {
           <div className="hud-logo">
             <span className="logo-icon">◈</span>
             <span className="logo-text">RATERA DRONE OSD</span>
-            <span className="logo-version">v0.8</span>
+            <span className="logo-version">v1.0</span>
           </div>
           
           <div className="hud-status-center">
-            <span className={`status-mode ${telemetry.md_str.toLowerCase().replace(/\s+/g, '-')}`}>{telemetry.md_str}</span>
-            <span className="status-divider">│</span>
-            <span className="status-fs">FS:{telemetry.fs}</span>
-            <span className="status-divider">│</span>
-            <span className={`status-flag ${telemetry.f1 ? 'active' : ''}`}>F1</span>
-            <span className={`status-flag ${telemetry.f2 ? 'active' : ''}`}>F2</span>
+            <span className={`status-mode ${telemetry.connected ? telemetry.md_str.toLowerCase().replace(/\s+/g, '-') : 'offline'}`}>
+              {telemetry.connected ? telemetry.md_str : 'OFFLINE'}
+            </span>
           </div>
 
-          <div className="hud-battery">
+          <div className="hud-right-indicators">
+            <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>FS:{telemetry.fs}</span>
             <BatteryIndicator voltage={telemetry.batt_v} />
           </div>
         </div>
 
-        {/* Rear View Mirror */}
-        <div className="rear-mirror">
-          <div className="mirror-frame">
-            <CameraFeed streamUrl="http://192.168.88.15:8888/cam2/index.m3u8?username=admin&password=123456" variant="mirror" />
-            <span className="mirror-label">REAR</span>
+        {/* Fuse Switches & Rear View Mirror */}
+        <div className="hud-mirror-section">
+          <FuseSwitch 
+            label="F1" 
+            armed={f1Armed} 
+            isManual={fuseOverrides.f1 !== null}
+            onClick={() => toggleFuseOverride('f1')} 
+          />
+          <div className="rear-mirror">
+            <div className="mirror-frame">
+              <CameraFeed streamUrl="http://192.168.88.15:8888/cam2/index.m3u8?username=admin&password=123456" variant="mirror" />
+              <span className="mirror-label">REAR</span>
+            </div>
           </div>
+          <FuseSwitch 
+            label="F2" 
+            armed={f2Armed} 
+            isManual={fuseOverrides.f2 !== null}
+            onClick={() => toggleFuseOverride('f2')} 
+          />
         </div>
 
-        {/* Heading Tape - Top Center */}
-        <div className="hud-heading-tape">
-          <HeadingTape heading={telemetry.heading} />
-        </div>
+        {/* Heading Tape or Warning Banner */}
+        {(f1Armed && f2Armed) ? (
+          <div className="hud-warning-banner">
+            <WarningBanner />
+          </div>
+        ) : (
+          <div className="hud-heading-tape">
+            <HeadingTape heading={telemetry.heading} />
+          </div>
+        )}
 
         {/* Left Panel - Compass & Satellites */}
         <div className="hud-left-panel">
@@ -138,9 +206,10 @@ function App() {
           <SatelliteIndicator satellites={telemetry.satellites} />
         </div>
 
-        {/* Right Panel - Speedometer */}
+        {/* Right Panel - Speedometer & Power */}
         <div className="hud-right-panel">
-          <Speedometer speed={telemetry.groundspeed} />
+          <Speedometer speed={telemetry.speed} dist={telemetry.dist} />
+          <PowerIndicator power={telemetry.power} />
         </div>
 
         {/* Map with integrated Altimeter */}
@@ -177,23 +246,47 @@ function App() {
 
 // Battery Indicator (Voltage-based)
 function BatteryIndicator({ voltage }) {
-  // Assuming 3S LiPo: 9V min (3.0V/cell), 12.6V max (4.2V/cell)
-  // Adjust these values based on your battery configuration
-  const minVoltage = 9.0
-  const maxVoltage = 12.6
-  const percentage = Math.max(0, Math.min(100, ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100))
-  
+  // Voltage thresholds: 37+ = good, 35+ = warning, <35 = critical
   const getClass = () => {
-    if (percentage > 50) return 'good'
-    if (percentage > 20) return 'warning'
+    if (voltage >= 37) return 'good'
+    if (voltage >= 35) return 'warning'
     return 'critical'
   }
+
+  // Fill percentage based on voltage (33V empty, 42V full)
+  const minV = 33
+  const maxV = 42
+  const fillPercent = Math.max(0, Math.min(100, ((voltage - minV) / (maxV - minV)) * 100))
 
   return (
     <div className={`battery-indicator ${getClass()}`}>
       <span className="battery-voltage">{voltage.toFixed(1)}V</span>
       <div className="battery-icon-mini">
-        <div className="battery-fill-mini" style={{ width: `${percentage}%` }}></div>
+        <div className="battery-fill-mini" style={{ width: `${fillPercent}%` }}></div>
+      </div>
+    </div>
+  )
+}
+
+// Fuse Switch Indicator
+function FuseSwitch({ label, armed, isManual, onClick }) {
+  const getTooltip = () => {
+    if (!isManual) return 'Click to arm manually'
+    if (armed) return 'Click to disarm manually'
+    return 'Click to return to telemetry'
+  }
+  
+  return (
+    <div className={`fuse-switch ${armed ? 'armed' : 'safe'} ${isManual ? 'manual' : ''}`}>
+      <div className="fuse-label">{label}</div>
+      <div className="fuse-icon" onClick={onClick} title={getTooltip()}>
+        <div className="fuse-body">
+          <div className={`fuse-element ${armed ? 'active' : ''}`}></div>
+        </div>
+      </div>
+      <div className="fuse-status">
+        {armed ? 'ON' : 'OFF'}
+        {isManual && <span className="manual-indicator">●</span>}
       </div>
     </div>
   )
@@ -235,7 +328,7 @@ function SatelliteIndicator({ satellites }) {
 
   return (
     <div className="hud-satellites">
-      <div className="sat-label">SAT</div>
+      <div className="sat-label"><span className="sat-icon">📡</span> SAT</div>
       <div className="sat-grid">
         {satArray.map((active, i) => (
           <div 
@@ -255,12 +348,15 @@ function SatelliteIndicator({ satellites }) {
   )
 }
 
-// Speedometer (km/h from groundspeed)
-function Speedometer({ speed }) {
-  // groundspeed is already in km/h from GPS
+// Speedometer (km/h from wheel speed) with Odometer
+function Speedometer({ speed, dist }) {
   const speedKmh = speed
   const maxSpeed = 60 // max km/h for display
   const angle = Math.min((speedKmh / maxSpeed) * 240, 240) - 120 // -120 to +120 degrees
+
+  // Odometer: format distance in meters to 5-digit display
+  const odoValue = Math.floor(dist || 0)
+  const odoDigits = String(odoValue).padStart(5, '0').split('')
 
   const ticks = []
   for (let i = 0; i <= 60; i += 10) {
@@ -324,47 +420,127 @@ function Speedometer({ speed }) {
         <span className="speedo-value">{speedKmh.toFixed(0)}</span>
         <span className="speedo-unit">km/h</span>
       </div>
+      {/* Odometer */}
+      <div className="odometer">
+        <div className="odo-display">
+          {odoDigits.map((digit, i) => (
+            <div key={i} className="odo-digit">
+              <span className="odo-num">{digit}</span>
+            </div>
+          ))}
+        </div>
+        <span className="odo-unit">m</span>
+      </div>
     </div>
   )
 }
 
-// Map Panel with simulated satellite view and integrated Altimeter
-function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
-  const mapSize = 300 // 2x bigger
-  const scale = 300000
+// Power Indicator (0, 1, 2 levels)
+function PowerIndicator({ power }) {
+  const levels = [0, 1, 2]
+  const labels = ['OFF', 'ECO', 'MAX']
   
-  // Generate path points relative to current position
-  const getPoints = () => {
-    if (pathHistory.length < 2 || !lat || !lng) return []
-    return pathHistory.map(p => ({
-      x: mapSize/2 + (p.lng - lng) * scale,
-      y: mapSize/2 - (p.lat - lat) * scale
-    }))
+  return (
+    <div className="power-indicator">
+      <div className="power-label">PWR</div>
+      <div className="power-bars">
+        {levels.map(level => (
+          <div 
+            key={level} 
+            className={`power-bar ${power >= level ? 'active' : ''} level-${level}`}
+          />
+        ))}
+      </div>
+      <div className={`power-mode level-${power}`}>{labels[power] || 'OFF'}</div>
+    </div>
+  )
+}
+
+// Map Panel with Google Maps satellite view
+function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
+  const [zoom, setZoom] = useState(17) // Google Maps zoom level (1-21)
+  const mapRef = useRef(null)
+  
+  // Load Google Maps
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: config.googleMapsApiKey,
+    id: 'google-map-script'
+  })
+  
+  // Map container style
+  const containerStyle = {
+    width: '100%',
+    height: '100%',
+    borderRadius: '4px'
   }
-
-  const points = getPoints()
-  const pathD = points.length > 1 
-    ? points.reduce((acc, p, i) => acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '')
-    : ''
-
-  // Generate terrain pattern based on coordinates
-  const terrainPatterns = []
-  const gridSize = 30
-  for (let i = 0; i < mapSize / gridSize; i++) {
-    for (let j = 0; j < mapSize / gridSize; j++) {
-      const noise = Math.sin((lat || 0) * 1000 + i * 0.5) * Math.cos((lng || 0) * 1000 + j * 0.3)
-      const brightness = 0.15 + (noise + 1) * 0.1
-      terrainPatterns.push(
-        <rect
-          key={`${i}-${j}`}
-          x={i * gridSize}
-          y={j * gridSize}
-          width={gridSize}
-          height={gridSize}
-          fill={`rgba(var(--theme-accent-primary-rgb), ${brightness})`}
-        />
-      )
+  
+  // Center position
+  const center = useMemo(() => ({
+    lat: lat || 0,
+    lng: lng || 0
+  }), [lat, lng])
+  
+  // Path for polyline
+  const pathCoords = useMemo(() => 
+    pathHistory.map(p => ({ lat: p.lat, lng: p.lng })),
+    [pathHistory]
+  )
+  
+  // Map options
+  const options = useMemo(() => ({
+    mapTypeId: 'satellite',
+    styles: mapStyles,
+    disableDefaultUI: true,
+    zoomControl: false,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    rotateControl: false,
+    scaleControl: false,
+    clickableIcons: false,
+    gestureHandling: 'none', // Disable user interaction
+    heading: heading || 0,
+    tilt: 0
+  }), [heading])
+  
+  // Custom arrow icon for marker
+  const arrowIcon = useMemo(() => ({
+    path: 'M 0,-20 L -12,12 L 0,4 L 12,12 Z',
+    fillColor: '#00ff88',
+    fillOpacity: 1,
+    strokeColor: '#000',
+    strokeWeight: 2,
+    scale: 1,
+    rotation: heading || 0,
+    anchor: { x: 0, y: 0 }
+  }), [heading])
+  
+  // Polyline options
+  const polylineOptions = {
+    strokeColor: '#00ff88',
+    strokeOpacity: 0.8,
+    strokeWeight: 3,
+    geodesic: true
+  }
+  
+  const zoomIn = () => setZoom(prev => Math.min(21, prev + 1))
+  const zoomOut = () => setZoom(prev => Math.max(1, prev - 1))
+  
+  // Update map center when coordinates change
+  useEffect(() => {
+    if (mapRef.current && lat && lng) {
+      mapRef.current.panTo({ lat, lng })
     }
+  }, [lat, lng])
+  
+  // Calculate scale based on zoom
+  const getScaleText = () => {
+    const scales = {
+      21: '5m', 20: '10m', 19: '20m', 18: '50m', 17: '100m',
+      16: '200m', 15: '500m', 14: '1km', 13: '2km', 12: '5km',
+      11: '10km', 10: '20km', 9: '50km', 8: '100km'
+    }
+    return scales[zoom] || `${zoom}`
   }
 
   return (
@@ -378,78 +554,54 @@ function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
       </div>
       
       <div className="map-body">
-        {/* SVG Map with terrain simulation */}
-        <svg viewBox={`0 0 ${mapSize} ${mapSize}`} className="map-svg-full">
-          {/* Dark background */}
-          <rect x="0" y="0" width={mapSize} height={mapSize} fill="rgba(0,0,0,0.8)" />
-          
-          {/* Simulated terrain pattern */}
-          {terrainPatterns}
-          
-          {/* Grid overlay */}
-          {Array.from({ length: 11 }, (_, i) => {
-            const pos = (i / 10) * mapSize
-            return (
-              <g key={`grid-${i}`}>
-                <line x1="0" y1={pos} x2={mapSize} y2={pos} stroke="var(--theme-accent-primary)" strokeWidth="0.5" opacity="0.2" />
-                <line x1={pos} y1="0" x2={pos} y2={mapSize} stroke="var(--theme-accent-primary)" strokeWidth="0.5" opacity="0.2" />
-              </g>
-            )
-          })}
-          
-          {/* Simulated roads */}
-          <rect x={mapSize * 0.4} y="0" width={mapSize * 0.06} height={mapSize} fill="rgba(var(--theme-accent-primary-rgb), 0.08)" />
-          <rect x="0" y={mapSize * 0.45} width={mapSize} height={mapSize * 0.04} fill="rgba(var(--theme-accent-primary-rgb), 0.08)" />
-          
-          {/* Path trail */}
-          {pathD && (
-            <path 
-              d={pathD} 
-              fill="none" 
-              stroke="url(#trailGradientMap)" 
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-          
-          {/* Gradient definition */}
-          <defs>
-            <linearGradient id="trailGradientMap" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--theme-accent-primary)" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="var(--theme-accent-primary)" stopOpacity="1" />
-            </linearGradient>
-          </defs>
-          
-          {/* Arrow indicator at center */}
-          <g transform={`translate(${mapSize/2}, ${mapSize/2}) rotate(${heading})`}>
-            <polygon 
-              points="0,-16 -10,10 0,5 10,10" 
-              fill="var(--theme-accent-primary)"
-              stroke="var(--theme-bg-dark)"
-              strokeWidth="2"
-              filter="drop-shadow(0 0 6px var(--theme-accent-primary-glow))"
-            />
-          </g>
-          
-          {/* Center pulse ring */}
-          <circle 
-            cx={mapSize/2} 
-            cy={mapSize/2} 
-            r="24" 
-            fill="none" 
-            stroke="var(--theme-accent-primary)" 
-            strokeWidth="2"
-            opacity="0.5"
-            className="pulse-ring"
-          />
-          
-          {/* Compass directions on map */}
-          <text x={mapSize/2} y="15" fill="var(--theme-accent-primary)" fontSize="10" textAnchor="middle" opacity="0.6">N</text>
-          <text x={mapSize/2} y={mapSize - 6} fill="var(--theme-text-muted)" fontSize="10" textAnchor="middle" opacity="0.4">S</text>
-          <text x="8" y={mapSize/2 + 4} fill="var(--theme-text-muted)" fontSize="10" opacity="0.4">W</text>
-          <text x={mapSize - 8} y={mapSize/2 + 4} fill="var(--theme-text-muted)" fontSize="10" textAnchor="end" opacity="0.4">E</text>
-        </svg>
+        {/* Zoom Controls */}
+        <div className="map-zoom-controls">
+          <button className="zoom-btn" onClick={zoomIn} disabled={zoom >= 21}>+</button>
+          <span className="zoom-level">{getScaleText()}</span>
+          <button className="zoom-btn" onClick={zoomOut} disabled={zoom <= 8}>−</button>
+        </div>
+        
+        {/* Google Map */}
+        {loadError && (
+          <div className="map-error">
+            <span>Map Error</span>
+            <small>Check API Key</small>
+          </div>
+        )}
+        
+        {!isLoaded && !loadError && (
+          <div className="map-loading">
+            <span>Loading Map...</span>
+          </div>
+        )}
+        
+        {isLoaded && !loadError && (
+          <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={center}
+            zoom={zoom}
+            options={options}
+            onLoad={map => { mapRef.current = map }}
+          >
+            {/* Path trail */}
+            {pathCoords.length > 1 && (
+              <Polyline path={pathCoords} options={polylineOptions} />
+            )}
+            
+            {/* Position marker with arrow */}
+            {lat && lng && (
+              <Marker
+                position={center}
+                icon={arrowIcon}
+              />
+            )}
+          </GoogleMap>
+        )}
+        
+        {/* HUD Overlay on map */}
+        <div className="map-hud-overlay">
+          <span className="map-compass-n">N</span>
+        </div>
       </div>
     </div>
   )
@@ -486,8 +638,46 @@ function HeadingTape({ heading }) {
   )
 }
 
+// Warning Banner - shown when both fuses are armed
+function WarningBanner() {
+  return (
+    <div className="warning-banner">
+      <div className="warning-chevrons left">
+        <span>◀</span>
+        <span>◀</span>
+        <span>◀</span>
+      </div>
+      <div className="warning-center">
+        <div className="warning-frame">
+          <span className="warning-icon">⚠</span>
+          <span className="warning-text">WARNING</span>
+          <span className="warning-icon">⚠</span>
+        </div>
+        <div className="warning-subtext">ARMED</div>
+      </div>
+      <div className="warning-chevrons right">
+        <span>▶</span>
+        <span>▶</span>
+        <span>▶</span>
+      </div>
+    </div>
+  )
+}
+
 // Telemetry Strip - now using real telemetry data
 function TelemetryStrip({ telemetry }) {
+  // Format telemetry_time as clock
+  const formatClock = (timestamp) => {
+    if (!timestamp) return '--:--:--'
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit'
+    })
+  }
+
   return (
     <div className="telemetry-strip">
       <div className="telem-item">
@@ -508,15 +698,15 @@ function TelemetryStrip({ telemetry }) {
       </div>
       <div className="telem-item">
         <span className="telem-label">GS</span>
-        <span className="telem-value">{telemetry.groundspeed.toFixed(1)}km/h</span>
+        <span className="telem-value">{telemetry.groundspeed.toFixed(1)}</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">SPD</span>
+        <span className="telem-value">{telemetry.speed.toFixed(1)}</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">DIST</span>
         <span className="telem-value">{telemetry.dist.toFixed(0)}m</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">PWR</span>
-        <span className="telem-value">{telemetry.power}</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">BAT</span>
@@ -529,6 +719,10 @@ function TelemetryStrip({ telemetry }) {
       <div className="telem-item">
         <span className="telem-label">MODE</span>
         <span className="telem-value">{telemetry.md_str}</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">TIME</span>
+        <span className="telem-value">{formatClock(telemetry.telemetry_time)}</span>
       </div>
     </div>
   )
