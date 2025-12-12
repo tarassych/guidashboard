@@ -300,11 +300,10 @@ body {
 .hud-left-panel {
   position: absolute;
   left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 60px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
 }
 
 /* Compass Layout */
@@ -664,13 +663,13 @@ body {
 .hud-telemetry-log-container {
   position: absolute;
   left: 20px;
-  bottom: 80px;
+  bottom: 70px;
   z-index: 15;
 }
 
 .telemetry-log {
-  width: 380px;
-  max-height: 200px;
+  width: 520px;
+  max-height: 280px;
   border-width: 1px;
   border-style: solid;
   border-radius: 8px;
@@ -700,12 +699,12 @@ body {
 }
 
 .tlog-console {
-  height: 140px;
+  height: 200px;
   overflow-y: auto;
-  padding: 6px 8px;
+  padding: 8px 10px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  line-height: 1.5;
+  font-size: 0.7rem;
+  line-height: 1.6;
 }
 
 .tlog-console::-webkit-scrollbar {
@@ -788,7 +787,12 @@ body {
 }
 
 @media (max-width: 900px) {
-  .hud-left-panel, .hud-right-panel {
+  .hud-left-panel {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+  
+  .hud-right-panel {
     transform: translateY(-50%) scale(0.8);
   }
   
@@ -808,12 +812,12 @@ body {
   }
   
   .telemetry-log {
-    width: 320px;
+    width: 420px;
   }
   
   .hud-telemetry-log-container {
     left: 10px;
-    bottom: 70px;
+    bottom: 60px;
   }
 }
 
@@ -841,15 +845,15 @@ body {
     display: none;
   }
   
-  .hud-left-panel, .hud-right-panel {
-    transform: translateY(-50%) scale(0.7);
-  }
-  
   .hud-left-panel {
+    transform: scale(0.7);
+    transform-origin: top left;
     left: 5px;
+    top: 50px;
   }
   
   .hud-right-panel {
+    transform: translateY(-50%) scale(0.7);
     right: 5px;
   }
   

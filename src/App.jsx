@@ -491,10 +491,10 @@ function TelemetryStrip({ telemetry }) {
 // Telemetry Log Component - Real-time database telemetry
 function TelemetryLog({ onTelemetryUpdate }) {
   const [records, setRecords] = useState([])
-  const [lastId, setLastId] = useState(0)
   const [isNewData, setIsNewData] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState('connecting')
   const scrollRef = useRef(null)
+  const lastIdRef = useRef(0)
 
   const formatTimestamp = useCallback((timestamp) => {
     const date = new Date(timestamp)
@@ -509,14 +509,40 @@ function TelemetryLog({ onTelemetryUpdate }) {
 
   const formatTelemetryData = useCallback((data) => {
     const fields = []
-    if (data.batt_v !== undefined) fields.push(`BAT:${data.batt_v}V`)
-    if (data.speed !== undefined) fields.push(`SPD:${data.speed}`)
-    if (data.dist !== undefined) fields.push(`DST:${data.dist}`)
-    if (data.power !== undefined) fields.push(`PWR:${data.power}`)
-    if (data.fs !== undefined) fields.push(`FS:${data.fs}`)
-    if (data.md_str !== undefined) fields.push(`MODE:${data.md_str}`)
-    if (data.f1 !== undefined) fields.push(`F1:${data.f1 ? 'ON' : 'OFF'}`)
-    if (data.f2 !== undefined) fields.push(`F2:${data.f2 ? 'ON' : 'OFF'}`)
+    const type = data.type || 'unknown'
+    
+    // Add type indicator
+    const typeLabels = { gps: '📍GPS', batt: '🔋BAT', state: '⚙️STA' }
+    fields.push(typeLabels[type] || `[${type}]`)
+    
+    // GPS type fields
+    if (type === 'gps') {
+      if (data.latitude !== undefined && data.longitude !== undefined) {
+        fields.push(`LAT:${data.latitude.toFixed(6)}`)
+        fields.push(`LNG:${data.longitude.toFixed(6)}`)
+      }
+      if (data.groundspeed !== undefined) fields.push(`GS:${data.groundspeed}`)
+      if (data.heading !== undefined) fields.push(`HDG:${data.heading.toFixed(1)}°`)
+      if (data.altitude !== undefined) fields.push(`ALT:${data.altitude}m`)
+      if (data.satellites !== undefined) fields.push(`SAT:${data.satellites}`)
+    }
+    
+    // Battery type fields
+    if (type === 'batt') {
+      if (data.batt_v !== undefined) fields.push(`V:${data.batt_v}V`)
+    }
+    
+    // State type fields
+    if (type === 'state') {
+      if (data.speed !== undefined) fields.push(`SPD:${data.speed}`)
+      if (data.dist !== undefined) fields.push(`DST:${data.dist}`)
+      if (data.power !== undefined) fields.push(`PWR:${data.power}`)
+      if (data.fs !== undefined) fields.push(`FS:${data.fs}`)
+      if (data.md_str !== undefined) fields.push(`MODE:${data.md_str}`)
+      if (data.f1 !== undefined) fields.push(`F1:${data.f1 ? 'ON' : 'OFF'}`)
+      if (data.f2 !== undefined) fields.push(`F2:${data.f2 ? 'ON' : 'OFF'}`)
+    }
+    
     return fields.join(' │ ')
   }, [])
 
@@ -526,7 +552,7 @@ function TelemetryLog({ onTelemetryUpdate }) {
 
     const fetchTelemetry = async () => {
       try {
-        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastId}&limit=100`
+        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastIdRef.current}&limit=100`
         const response = await fetch(url)
         
         if (!response.ok) {
@@ -537,30 +563,33 @@ function TelemetryLog({ onTelemetryUpdate }) {
         
         if (!isMounted) return
 
-        if (data.success && data.records.length > 0) {
+        if (data.success) {
           setConnectionStatus('connected')
           
-          // Add new records to the beginning
-          setRecords(prev => {
-            const newRecords = [...data.records, ...prev]
-            // Keep only the latest 100 records
-            return newRecords.slice(0, 100)
-          })
-          
-          // Update lastId to the newest record
-          setLastId(data.latestId)
-          
-          // Notify parent of latest telemetry data (for theme switching, etc.)
-          const latestRecord = data.records[data.records.length - 1]
-          if (latestRecord && onTelemetryUpdate) {
-            onTelemetryUpdate(latestRecord.data)
+          if (data.records.length > 0) {
+            // Add new records to the beginning (newest first in display)
+            setRecords(prev => {
+              // Records from API are already newest-first, keep that order
+              const newRecords = [...data.records, ...prev]
+              // Keep only the latest 100 records
+              return newRecords.slice(0, 100)
+            })
+            
+            // Update lastId ref to the newest record ID
+            lastIdRef.current = data.latestId
+            
+            // Notify parent of latest telemetry data (for theme switching, etc.)
+            const latestRecord = data.records[0] // First record is newest
+            if (latestRecord && onTelemetryUpdate) {
+              onTelemetryUpdate(latestRecord.data)
+            }
+            
+            // Trigger pulse animation
+            setIsNewData(true)
+            setTimeout(() => {
+              if (isMounted) setIsNewData(false)
+            }, 500)
           }
-          
-          // Trigger pulse animation
-          setIsNewData(true)
-          setTimeout(() => {
-            if (isMounted) setIsNewData(false)
-          }, 500)
         }
       } catch (error) {
         if (isMounted) {
@@ -579,7 +608,7 @@ function TelemetryLog({ onTelemetryUpdate }) {
       isMounted = false
       if (pollInterval) clearInterval(pollInterval)
     }
-  }, [lastId])
+  }, [onTelemetryUpdate])
 
   return (
     <div className={`telemetry-log ${isNewData ? 'pulse' : ''}`}>

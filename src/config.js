@@ -12,13 +12,13 @@
  * VITE_DEFAULT_THEME  
  *   Default theme to load on startup
  *   Available: 'digital-green', 'aggressive-red'
- *   Default: 'aggressive-red'
+ *   Default: 'digital-green'
  * 
  * ============================================================================
  * Example .env file:
  * ============================================================================
  *   VITE_API_URL=
- *   VITE_DEFAULT_THEME=aggressive-red
+ *   VITE_DEFAULT_THEME=digital-green
  * ============================================================================
  */
 
@@ -27,7 +27,7 @@ export const config = {
   apiUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3001',
   
   // Theme Configuration - change default here or via VITE_DEFAULT_THEME env var
-  defaultTheme: import.meta.env.VITE_DEFAULT_THEME || 'aggressive-red',
+  defaultTheme: import.meta.env.VITE_DEFAULT_THEME || 'digital-green',
   
   // Available themes (add new themes here)
   themes: {
@@ -39,21 +39,11 @@ export const config = {
   // Theme will auto-switch when telemetry data matches conditions
   // Conditions are checked in order - first match wins
   themeConditions: {
-    // Switch to aggressive-red when battery voltage drops below 35V
+    // Switch to aggressive-red when battery voltage drops below 12V
     lowBattery: {
       theme: 'aggressive-red',
-      condition: (telemetry) => telemetry?.batt_v < 35,
+      condition: (telemetry) => telemetry?.batt_v < 12,
     },
-    // Switch to digital-green when in AUTO mode
-    autoMode: {
-      theme: 'digital-green', 
-      condition: (telemetry) => telemetry?.md_str === 'AUTO',
-    },
-    // Add more conditions as needed:
-    // manualMode: {
-    //   theme: 'aggressive-red',
-    //   condition: (telemetry) => telemetry?.md_str === 'MANUAL',
-    // },
   },
 }
 
