@@ -6,96 +6,83 @@ import { useTheme } from './hooks/useTheme'
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
 
-// Utility functions for realistic drone movement
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-const lerp = (start, end, t) => start + (end - start) * t
-const degToRad = (deg) => (deg * Math.PI) / 180
-
-// Initial drone state
+// Initial telemetry state (from real data)
 const createInitialState = () => ({
-  latitude: 47.6062,
-  longitude: -122.3321,
-  elevation: 125.5,
-  heading: 45,
+  // GPS data
+  latitude: 0,
+  longitude: 0,
+  altitude: 0,
+  heading: 0,
+  groundspeed: 0,
+  satellites: 0,
+  // Battery data
+  batt_v: 0,
+  // State data
   speed: 0,
-  targetSpeed: 2.5,
-  battery: 87,
-  signal: 95,
-  satellites: 12,
-  mode: 'AUTO',
-  pathHistory: [],
-  targetHeading: 45,
-  accelerating: true,
+  dist: 0,
+  power: 0,
+  fs: 0,
+  f1: false,
+  f2: false,
+  md: 0,
+  md_str: 'OFFLINE',
+  // Meta
   timestamp: Date.now(),
+  pathHistory: [],
+  connected: false,
 })
 
 function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
-  const frameRef = useRef(0)
   
   // Theme management - reacts to telemetry data changes
-  const { currentTheme, setTheme, availableThemes } = useTheme(latestTelemetryData)
+  const { currentTheme } = useTheme(latestTelemetryData)
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTelemetry((prev) => {
-        frameRef.current += 1
-        const frame = frameRef.current
-
-        let newTargetHeading = prev.targetHeading
-        if (frame % 40 === 0) {
-          newTargetHeading = (prev.targetHeading + (Math.random() > 0.5 ? 30 : -30) + 360) % 360
+  // Handle telemetry updates from TelemetryLog
+  const handleTelemetryUpdate = useCallback((data) => {
+    setLatestTelemetryData(data)
+    
+    setTelemetry(prev => {
+      const updated = { ...prev, connected: true, timestamp: Date.now() }
+      
+      // Merge GPS data
+      if (data.type === 'gps') {
+        updated.latitude = data.latitude ?? prev.latitude
+        updated.longitude = data.longitude ?? prev.longitude
+        updated.altitude = data.altitude ?? prev.altitude
+        updated.heading = data.heading ?? prev.heading
+        updated.groundspeed = data.groundspeed ?? prev.groundspeed
+        updated.satellites = data.satellites ?? prev.satellites
+        
+        // Update path history
+        if (data.latitude && data.longitude) {
+          updated.pathHistory = [
+            ...prev.pathHistory.slice(-49),
+            { lat: data.latitude, lng: data.longitude }
+          ]
         }
-
-        let headingDiff = newTargetHeading - prev.heading
-        if (headingDiff > 180) headingDiff -= 360
-        if (headingDiff < -180) headingDiff += 360
-        const newHeading = (prev.heading + headingDiff * 0.1 + 360) % 360
-
-        const turnRate = Math.abs(headingDiff)
-        let newTargetSpeed = prev.targetSpeed
-        if (frame % 60 === 0) {
-          newTargetSpeed = clamp(prev.targetSpeed + (Math.random() - 0.5) * 1, 0.5, 5)
-        }
-        const adjustedTargetSpeed = newTargetSpeed * (1 - turnRate / 360 * 0.5)
-        const newSpeed = lerp(prev.speed, adjustedTargetSpeed, 0.1)
-
-        const headingRad = degToRad(newHeading)
-        const speedFactor = newSpeed * 0.00001
-        const newLatitude = prev.latitude + Math.cos(headingRad) * speedFactor
-        const newLongitude = prev.longitude + Math.sin(headingRad) * speedFactor
-
-        const elevationNoise = Math.sin(frame * 0.05) * 0.5 + Math.cos(frame * 0.03) * 0.3
-        const newElevation = clamp(prev.elevation + elevationNoise, 100, 200)
-
-        const newBattery = Math.max(0, prev.battery - 0.01 * (newSpeed / 2))
-        const newSignal = clamp(prev.signal + (Math.random() - 0.5) * 2, 70, 100)
-
-        const newPathHistory = [
-          ...prev.pathHistory.slice(-49),
-          { lat: newLatitude, lng: newLongitude }
-        ]
-
-        return {
-          ...prev,
-          latitude: newLatitude,
-          longitude: newLongitude,
-          elevation: newElevation,
-          heading: newHeading,
-          speed: newSpeed,
-          targetSpeed: newTargetSpeed,
-          targetHeading: newTargetHeading,
-          battery: newBattery,
-          signal: newSignal,
-          satellites: clamp(Math.floor(prev.satellites + (Math.random() - 0.5)), 8, 14),
-          pathHistory: newPathHistory,
-          timestamp: Date.now(),
-        }
-      })
-    }, 500)
-
-    return () => clearInterval(interval)
+      }
+      
+      // Merge Battery data
+      if (data.type === 'batt') {
+        updated.batt_v = data.batt_v ?? prev.batt_v
+      }
+      
+      // Merge State data
+      if (data.type === 'state') {
+        updated.speed = data.speed ?? prev.speed
+        updated.dist = data.dist ?? prev.dist
+        updated.power = data.power ?? prev.power
+        updated.fs = data.fs ?? prev.fs
+        updated.f1 = data.f1 ?? prev.f1
+        updated.f2 = data.f2 ?? prev.f2
+        updated.md = data.md ?? prev.md
+        updated.md_str = data.md_str ?? prev.md_str
+      }
+      
+      return updated
+    })
   }, [])
 
   const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
@@ -115,19 +102,20 @@ function App() {
           <div className="hud-logo">
             <span className="logo-icon">◈</span>
             <span className="logo-text">RATERA DRONE OSD</span>
-            <span className="logo-version">v0.7</span>
+            <span className="logo-version">v0.8</span>
           </div>
           
           <div className="hud-status-center">
-            <span className={`status-mode ${telemetry.mode.toLowerCase()}`}>{telemetry.mode}</span>
+            <span className={`status-mode ${telemetry.md_str.toLowerCase().replace(/\s+/g, '-')}`}>{telemetry.md_str}</span>
             <span className="status-divider">│</span>
-            <span className="status-signal">◢◣ {telemetry.signal.toFixed(0)}%</span>
+            <span className="status-fs">FS:{telemetry.fs}</span>
             <span className="status-divider">│</span>
-            <span className="status-sat">⬡ {telemetry.satellites}</span>
+            <span className={`status-flag ${telemetry.f1 ? 'active' : ''}`}>F1</span>
+            <span className={`status-flag ${telemetry.f2 ? 'active' : ''}`}>F2</span>
           </div>
 
           <div className="hud-battery">
-            <BatteryIndicator battery={telemetry.battery} />
+            <BatteryIndicator voltage={telemetry.batt_v} />
           </div>
         </div>
 
@@ -144,24 +132,25 @@ function App() {
           <HeadingTape heading={telemetry.heading} />
         </div>
 
-        {/* Left Panel - Compass & Altitude */}
+        {/* Left Panel - Compass & Satellites */}
         <div className="hud-left-panel">
           <HudCompass heading={telemetry.heading} direction={directions[directionIndex]} />
-          <HudAltitude elevation={telemetry.elevation} />
+          <SatelliteIndicator satellites={telemetry.satellites} />
         </div>
 
         {/* Right Panel - Speedometer */}
         <div className="hud-right-panel">
-          <Speedometer speed={telemetry.speed} />
+          <Speedometer speed={telemetry.groundspeed} />
         </div>
 
-        {/* Minimap */}
+        {/* Map with integrated Altimeter */}
         <div className="hud-minimap-container">
-          <Minimap 
+          <MapPanel 
             pathHistory={telemetry.pathHistory} 
             heading={telemetry.heading}
             lat={telemetry.latitude}
             lng={telemetry.longitude}
+            altitude={telemetry.altitude}
           />
         </div>
 
@@ -174,7 +163,7 @@ function App() {
 
         {/* Telemetry Log */}
         <div className="hud-telemetry-log-container">
-          <TelemetryLog onTelemetryUpdate={setLatestTelemetryData} />
+          <TelemetryLog onTelemetryUpdate={handleTelemetryUpdate} />
         </div>
 
         {/* Bottom Telemetry Strip */}
@@ -186,19 +175,25 @@ function App() {
   )
 }
 
-// Battery Indicator (Mobile Phone Style)
-function BatteryIndicator({ battery }) {
+// Battery Indicator (Voltage-based)
+function BatteryIndicator({ voltage }) {
+  // Assuming 3S LiPo: 9V min (3.0V/cell), 12.6V max (4.2V/cell)
+  // Adjust these values based on your battery configuration
+  const minVoltage = 9.0
+  const maxVoltage = 12.6
+  const percentage = Math.max(0, Math.min(100, ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100))
+  
   const getClass = () => {
-    if (battery > 50) return 'good'
-    if (battery > 20) return 'warning'
+    if (percentage > 50) return 'good'
+    if (percentage > 20) return 'warning'
     return 'critical'
   }
 
   return (
     <div className={`battery-indicator ${getClass()}`}>
-      <span className="battery-percent">{battery.toFixed(0)}%</span>
+      <span className="battery-voltage">{voltage.toFixed(1)}V</span>
       <div className="battery-icon-mini">
-        <div className="battery-fill-mini" style={{ width: `${battery}%` }}></div>
+        <div className="battery-fill-mini" style={{ width: `${percentage}%` }}></div>
       </div>
     </div>
   )
@@ -225,39 +220,52 @@ function HudCompass({ heading, direction }) {
   )
 }
 
-// HUD Altitude
-function HudAltitude({ elevation }) {
-  const minElev = 100
-  const maxElev = 200
-  const percentage = ((elevation - minElev) / (maxElev - minElev)) * 100
+// Satellite Indicator (replaces Altitude)
+function SatelliteIndicator({ satellites }) {
+  const maxSatellites = 16
+  const satArray = Array.from({ length: maxSatellites }, (_, i) => i < satellites)
+  
+  // Determine signal quality
+  const getQuality = () => {
+    if (satellites >= 10) return 'excellent'
+    if (satellites >= 6) return 'good'
+    if (satellites >= 4) return 'weak'
+    return 'poor'
+  }
 
   return (
-    <div className="hud-altitude">
-      <div className="alt-label">ALT</div>
-      <div className="alt-bar">
-        <div className="alt-fill" style={{ height: `${percentage}%` }}></div>
-        <div className="alt-marks">
-          <span>200</span>
-          <span>150</span>
-          <span>100</span>
-        </div>
+    <div className="hud-satellites">
+      <div className="sat-label">SAT</div>
+      <div className="sat-grid">
+        {satArray.map((active, i) => (
+          <div 
+            key={i} 
+            className={`sat-dot ${active ? 'active' : ''}`}
+            style={{ 
+              animationDelay: active ? `${i * 50}ms` : undefined 
+            }}
+          />
+        ))}
       </div>
-      <div className="alt-value">{elevation.toFixed(0)}<span>m</span></div>
+      <div className="sat-info">
+        <span className={`sat-count ${getQuality()}`}>{satellites}</span>
+        <span className="sat-quality">{getQuality().toUpperCase()}</span>
+      </div>
     </div>
   )
 }
 
-// Speedometer (Car Style - km/h)
+// Speedometer (km/h from groundspeed)
 function Speedometer({ speed }) {
-  // Convert m/s to km/h
-  const speedKmh = speed * 3.6
-  const maxSpeed = 25 // max km/h
-  const angle = (speedKmh / maxSpeed) * 240 - 120 // -120 to +120 degrees
+  // groundspeed is already in km/h from GPS
+  const speedKmh = speed
+  const maxSpeed = 60 // max km/h for display
+  const angle = Math.min((speedKmh / maxSpeed) * 240, 240) - 120 // -120 to +120 degrees
 
   const ticks = []
-  for (let i = 0; i <= 25; i += 5) {
+  for (let i = 0; i <= 60; i += 10) {
     const tickAngle = (i / maxSpeed) * 240 - 120
-    const isMain = i % 10 === 0
+    const isMain = i % 20 === 0
     const radians = (tickAngle - 90) * (Math.PI / 180)
     const innerRadius = isMain ? 52 : 56
     const outerRadius = 62
@@ -270,14 +278,14 @@ function Speedometer({ speed }) {
       <g key={i}>
         <line 
           x1={x1} y1={y1} x2={x2} y2={y2} 
-          stroke={i <= speedKmh ? "var(--accent-primary)" : "var(--text-muted)"} 
+          stroke={i <= speedKmh ? "var(--theme-accent-primary)" : "var(--theme-text-muted)"} 
           strokeWidth={isMain ? 2 : 1}
         />
         {isMain && (
           <text 
             x={70 + 42 * Math.cos(radians)} 
             y={70 + 42 * Math.sin(radians)} 
-            fill="var(--text-secondary)" 
+            fill="var(--theme-text-secondary)" 
             fontSize="8" 
             textAnchor="middle" 
             dominantBaseline="middle"
@@ -296,7 +304,7 @@ function Speedometer({ speed }) {
         <path 
           d="M 14 70 A 56 56 0 0 1 126 70" 
           fill="none" 
-          stroke="var(--hud-border)" 
+          stroke="var(--theme-hud-border)" 
           strokeWidth="3"
         />
         {/* Ticks */}
@@ -305,12 +313,12 @@ function Speedometer({ speed }) {
         <g transform={`rotate(${angle}, 70, 70)`}>
           <polygon 
             points="70,25 67,70 70,75 73,70" 
-            fill="var(--accent-danger)"
-            filter="drop-shadow(0 0 3px var(--accent-danger))"
+            fill="var(--theme-status-danger)"
+            filter="drop-shadow(0 0 3px var(--theme-status-danger))"
           />
         </g>
         {/* Center cap */}
-        <circle cx="70" cy="70" r="8" fill="var(--bg-dark)" stroke="var(--accent-primary)" strokeWidth="2"/>
+        <circle cx="70" cy="70" r="8" fill="var(--theme-bg-dark)" stroke="var(--theme-accent-primary)" strokeWidth="2"/>
       </svg>
       <div className="speedo-readout">
         <span className="speedo-value">{speedKmh.toFixed(0)}</span>
@@ -320,18 +328,17 @@ function Speedometer({ speed }) {
   )
 }
 
-// Minimap with moving arrow
-function Minimap({ pathHistory, heading, lat, lng }) {
-  const mapSize = 150
-  const scale = 300000 // Scale for lat/lng to pixels
+// Map Panel with simulated satellite view and integrated Altimeter
+function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
+  const mapSize = 300 // 2x bigger
+  const scale = 300000
   
   // Generate path points relative to current position
   const getPoints = () => {
-    if (pathHistory.length < 2) return []
-    const current = pathHistory[pathHistory.length - 1]
+    if (pathHistory.length < 2 || !lat || !lng) return []
     return pathHistory.map(p => ({
-      x: mapSize/2 + (p.lng - current.lng) * scale,
-      y: mapSize/2 - (p.lat - current.lat) * scale
+      x: mapSize/2 + (p.lng - lng) * scale,
+      y: mapSize/2 - (p.lat - lat) * scale
     }))
   }
 
@@ -340,71 +347,110 @@ function Minimap({ pathHistory, heading, lat, lng }) {
     ? points.reduce((acc, p, i) => acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '')
     : ''
 
-  // Simulated map grid
-  const gridLines = []
-  for (let i = 0; i <= 6; i++) {
-    const pos = (i / 6) * mapSize
-    gridLines.push(
-      <line key={`h${i}`} x1="0" y1={pos} x2={mapSize} y2={pos} stroke="var(--hud-border)" strokeWidth="0.5" opacity="0.3" />,
-      <line key={`v${i}`} x1={pos} y1="0" x2={pos} y2={mapSize} stroke="var(--hud-border)" strokeWidth="0.5" opacity="0.3" />
-    )
+  // Generate terrain pattern based on coordinates
+  const terrainPatterns = []
+  const gridSize = 30
+  for (let i = 0; i < mapSize / gridSize; i++) {
+    for (let j = 0; j < mapSize / gridSize; j++) {
+      const noise = Math.sin((lat || 0) * 1000 + i * 0.5) * Math.cos((lng || 0) * 1000 + j * 0.3)
+      const brightness = 0.15 + (noise + 1) * 0.1
+      terrainPatterns.push(
+        <rect
+          key={`${i}-${j}`}
+          x={i * gridSize}
+          y={j * gridSize}
+          width={gridSize}
+          height={gridSize}
+          fill={`rgba(var(--theme-accent-primary-rgb), ${brightness})`}
+        />
+      )
+    }
   }
 
   return (
-    <div className="minimap">
-      <div className="minimap-header">
-        <span className="minimap-title">MAP</span>
-        <span className="minimap-coords">{lat.toFixed(4)}°, {lng.toFixed(4)}°</span>
+    <div className="map-panel">
+      <div className="map-header">
+        <span className="map-title">MAP</span>
+        <span className="map-alt">ALT: {altitude.toFixed(0)}m</span>
+        <span className="map-coords">
+          {lat ? lat.toFixed(6) : '-.------'}°, {lng ? lng.toFixed(6) : '-.------'}°
+        </span>
       </div>
-      <svg viewBox={`0 0 ${mapSize} ${mapSize}`} className="minimap-svg">
-        {/* Grid */}
-        {gridLines}
-        
-        {/* Simulated roads/terrain */}
-        <rect x="60" y="0" width="30" height={mapSize} fill="rgba(0,255,136,0.05)" />
-        <rect x="0" y="65" width={mapSize} height="20" fill="rgba(0,255,136,0.05)" />
-        
-        {/* Path trail */}
-        {pathD && (
-          <path 
-            d={pathD} 
+      
+      <div className="map-body">
+        {/* SVG Map with terrain simulation */}
+        <svg viewBox={`0 0 ${mapSize} ${mapSize}`} className="map-svg-full">
+          {/* Dark background */}
+          <rect x="0" y="0" width={mapSize} height={mapSize} fill="rgba(0,0,0,0.8)" />
+          
+          {/* Simulated terrain pattern */}
+          {terrainPatterns}
+          
+          {/* Grid overlay */}
+          {Array.from({ length: 11 }, (_, i) => {
+            const pos = (i / 10) * mapSize
+            return (
+              <g key={`grid-${i}`}>
+                <line x1="0" y1={pos} x2={mapSize} y2={pos} stroke="var(--theme-accent-primary)" strokeWidth="0.5" opacity="0.2" />
+                <line x1={pos} y1="0" x2={pos} y2={mapSize} stroke="var(--theme-accent-primary)" strokeWidth="0.5" opacity="0.2" />
+              </g>
+            )
+          })}
+          
+          {/* Simulated roads */}
+          <rect x={mapSize * 0.4} y="0" width={mapSize * 0.06} height={mapSize} fill="rgba(var(--theme-accent-primary-rgb), 0.08)" />
+          <rect x="0" y={mapSize * 0.45} width={mapSize} height={mapSize * 0.04} fill="rgba(var(--theme-accent-primary-rgb), 0.08)" />
+          
+          {/* Path trail */}
+          {pathD && (
+            <path 
+              d={pathD} 
+              fill="none" 
+              stroke="url(#trailGradientMap)" 
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+          
+          {/* Gradient definition */}
+          <defs>
+            <linearGradient id="trailGradientMap" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="var(--theme-accent-primary)" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="var(--theme-accent-primary)" stopOpacity="1" />
+            </linearGradient>
+          </defs>
+          
+          {/* Arrow indicator at center */}
+          <g transform={`translate(${mapSize/2}, ${mapSize/2}) rotate(${heading})`}>
+            <polygon 
+              points="0,-16 -10,10 0,5 10,10" 
+              fill="var(--theme-accent-primary)"
+              stroke="var(--theme-bg-dark)"
+              strokeWidth="2"
+              filter="drop-shadow(0 0 6px var(--theme-accent-primary-glow))"
+            />
+          </g>
+          
+          {/* Center pulse ring */}
+          <circle 
+            cx={mapSize/2} 
+            cy={mapSize/2} 
+            r="24" 
             fill="none" 
-            stroke="url(#trailGradient)" 
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            stroke="var(--theme-accent-primary)" 
+            strokeWidth="2"
+            opacity="0.5"
+            className="pulse-ring"
           />
-        )}
-        
-        {/* Gradient definition */}
-        <defs>
-          <linearGradient id="trailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="1" />
-          </linearGradient>
-        </defs>
-        
-        {/* Arrow indicator at center */}
-        <g transform={`translate(${mapSize/2}, ${mapSize/2}) rotate(${heading})`}>
-          <polygon 
-            points="0,-12 -8,8 0,4 8,8" 
-            fill="var(--accent-primary)"
-            filter="drop-shadow(0 0 4px var(--glow))"
-          />
-        </g>
-        
-        {/* Center pulse ring */}
-        <circle 
-          cx={mapSize/2} 
-          cy={mapSize/2} 
-          r="18" 
-          fill="none" 
-          stroke="var(--accent-primary)" 
-          strokeWidth="1"
-          opacity="0.4"
-          className="pulse-ring"
-        />
-      </svg>
+          
+          {/* Compass directions on map */}
+          <text x={mapSize/2} y="15" fill="var(--theme-accent-primary)" fontSize="10" textAnchor="middle" opacity="0.6">N</text>
+          <text x={mapSize/2} y={mapSize - 6} fill="var(--theme-text-muted)" fontSize="10" textAnchor="middle" opacity="0.4">S</text>
+          <text x="8" y={mapSize/2 + 4} fill="var(--theme-text-muted)" fontSize="10" opacity="0.4">W</text>
+          <text x={mapSize - 8} y={mapSize/2 + 4} fill="var(--theme-text-muted)" fontSize="10" textAnchor="end" opacity="0.4">E</text>
+        </svg>
+      </div>
     </div>
   )
 }
@@ -440,37 +486,41 @@ function HeadingTape({ heading }) {
   )
 }
 
-// Telemetry Strip
+// Telemetry Strip - now using real telemetry data
 function TelemetryStrip({ telemetry }) {
   return (
     <div className="telemetry-strip">
       <div className="telem-item">
         <span className="telem-label">LAT</span>
-        <span className="telem-value">{telemetry.latitude.toFixed(6)}°</span>
+        <span className="telem-value">{telemetry.latitude ? telemetry.latitude.toFixed(6) : '-.------'}°</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">LNG</span>
-        <span className="telem-value">{telemetry.longitude.toFixed(6)}°</span>
+        <span className="telem-value">{telemetry.longitude ? telemetry.longitude.toFixed(6) : '-.------'}°</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">ALT</span>
-        <span className="telem-value">{telemetry.elevation.toFixed(1)}m</span>
+        <span className="telem-value">{telemetry.altitude.toFixed(0)}m</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">HDG</span>
         <span className="telem-value">{telemetry.heading.toFixed(0)}°</span>
       </div>
       <div className="telem-item">
-        <span className="telem-label">SPD</span>
-        <span className="telem-value">{telemetry.speed.toFixed(2)}m/s</span>
+        <span className="telem-label">GS</span>
+        <span className="telem-value">{telemetry.groundspeed.toFixed(1)}km/h</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">DIST</span>
+        <span className="telem-value">{telemetry.dist.toFixed(0)}m</span>
+      </div>
+      <div className="telem-item">
+        <span className="telem-label">PWR</span>
+        <span className="telem-value">{telemetry.power}</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">BAT</span>
-        <span className="telem-value">{telemetry.battery.toFixed(0)}%</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">SIG</span>
-        <span className="telem-value">{telemetry.signal.toFixed(0)}%</span>
+        <span className="telem-value">{telemetry.batt_v.toFixed(1)}V</span>
       </div>
       <div className="telem-item">
         <span className="telem-label">SAT</span>
@@ -478,11 +528,7 @@ function TelemetryStrip({ telemetry }) {
       </div>
       <div className="telem-item">
         <span className="telem-label">MODE</span>
-        <span className="telem-value">{telemetry.mode}</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">TIME</span>
-        <span className="telem-value">{new Date(telemetry.timestamp).toLocaleTimeString()}</span>
+        <span className="telem-value">{telemetry.md_str}</span>
       </div>
     </div>
   )
@@ -491,9 +537,7 @@ function TelemetryStrip({ telemetry }) {
 // Telemetry Log Component - Real-time database telemetry
 function TelemetryLog({ onTelemetryUpdate }) {
   const [records, setRecords] = useState([])
-  const [isNewData, setIsNewData] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState('connecting')
-  const scrollRef = useRef(null)
   const lastIdRef = useRef(0)
 
   const formatTimestamp = useCallback((timestamp) => {
@@ -502,62 +546,58 @@ function TelemetryLog({ onTelemetryUpdate }) {
       hour12: false, 
       hour: '2-digit', 
       minute: '2-digit', 
-      second: '2-digit',
-      fractionalSecondDigits: 3
+      second: '2-digit'
     })
   }, [])
 
   const formatTelemetryData = useCallback((data) => {
     const fields = []
-    const type = data.type || 'unknown'
+    const type = data.type || '?'
     
-    // Add type indicator
-    const typeLabels = { gps: '📍GPS', batt: '🔋BAT', state: '⚙️STA' }
-    fields.push(typeLabels[type] || `[${type}]`)
+    // Add type indicator (no icons)
+    fields.push(`[${type.toUpperCase()}]`)
     
     // GPS type fields
     if (type === 'gps') {
-      if (data.latitude !== undefined && data.longitude !== undefined) {
-        fields.push(`LAT:${data.latitude.toFixed(6)}`)
-        fields.push(`LNG:${data.longitude.toFixed(6)}`)
-      }
+      if (data.latitude !== undefined) fields.push(`LAT:${data.latitude.toFixed(5)}`)
+      if (data.longitude !== undefined) fields.push(`LNG:${data.longitude.toFixed(5)}`)
       if (data.groundspeed !== undefined) fields.push(`GS:${data.groundspeed}`)
-      if (data.heading !== undefined) fields.push(`HDG:${data.heading.toFixed(1)}°`)
-      if (data.altitude !== undefined) fields.push(`ALT:${data.altitude}m`)
+      if (data.heading !== undefined) fields.push(`HDG:${data.heading.toFixed(0)}°`)
+      if (data.altitude !== undefined) fields.push(`ALT:${data.altitude}`)
       if (data.satellites !== undefined) fields.push(`SAT:${data.satellites}`)
     }
     
     // Battery type fields
     if (type === 'batt') {
-      if (data.batt_v !== undefined) fields.push(`V:${data.batt_v}V`)
+      if (data.batt_v !== undefined) fields.push(`${data.batt_v}V`)
     }
     
     // State type fields
     if (type === 'state') {
+      if (data.md_str !== undefined) fields.push(data.md_str)
       if (data.speed !== undefined) fields.push(`SPD:${data.speed}`)
       if (data.dist !== undefined) fields.push(`DST:${data.dist}`)
       if (data.power !== undefined) fields.push(`PWR:${data.power}`)
-      if (data.fs !== undefined) fields.push(`FS:${data.fs}`)
-      if (data.md_str !== undefined) fields.push(`MODE:${data.md_str}`)
-      if (data.f1 !== undefined) fields.push(`F1:${data.f1 ? 'ON' : 'OFF'}`)
-      if (data.f2 !== undefined) fields.push(`F2:${data.f2 ? 'ON' : 'OFF'}`)
     }
     
-    return fields.join(' │ ')
+    return fields.join(' ')
   }, [])
 
   useEffect(() => {
     let isMounted = true
     let pollInterval = null
+    let controller = new AbortController()
 
     const fetchTelemetry = async () => {
+      // Abort previous request if still pending
+      controller.abort()
+      controller = new AbortController()
+      
       try {
-        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastIdRef.current}&limit=100`
-        const response = await fetch(url)
+        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastIdRef.current}&limit=20`
+        const response = await fetch(url, { signal: controller.signal })
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch')
-        }
+        if (!response.ok) throw new Error('Failed to fetch')
 
         const data = await response.json()
         
@@ -567,72 +607,55 @@ function TelemetryLog({ onTelemetryUpdate }) {
           setConnectionStatus('connected')
           
           if (data.records.length > 0) {
-            // Add new records to the beginning (newest first in display)
-            setRecords(prev => {
-              // Records from API are already newest-first, keep that order
-              const newRecords = [...data.records, ...prev]
-              // Keep only the latest 100 records
-              return newRecords.slice(0, 100)
-            })
-            
-            // Update lastId ref to the newest record ID
+            // Update lastId ref first
             lastIdRef.current = data.latestId
             
-            // Notify parent of latest telemetry data (for theme switching, etc.)
-            const latestRecord = data.records[0] // First record is newest
+            // Stack behavior: new on top, limit to 20
+            setRecords(prev => [...data.records, ...prev].slice(0, 20))
+            
+            // Notify parent - only the latest record to reduce overhead
+            const latestRecord = data.records[0]
             if (latestRecord && onTelemetryUpdate) {
               onTelemetryUpdate(latestRecord.data)
             }
-            
-            // Trigger pulse animation
-            setIsNewData(true)
-            setTimeout(() => {
-              if (isMounted) setIsNewData(false)
-            }, 500)
           }
         }
       } catch (error) {
-        if (isMounted) {
+        if (error.name !== 'AbortError' && isMounted) {
           setConnectionStatus('disconnected')
         }
       }
     }
 
-    // Initial fetch
     fetchTelemetry()
-
-    // Poll every 300ms
     pollInterval = setInterval(fetchTelemetry, 300)
 
     return () => {
       isMounted = false
+      controller.abort()
       if (pollInterval) clearInterval(pollInterval)
     }
   }, [onTelemetryUpdate])
 
   return (
-    <div className={`telemetry-log ${isNewData ? 'pulse' : ''}`}>
+    <div className="telemetry-log">
       <div className="tlog-header">
         <span className="tlog-title">TELEMETRY LOG</span>
         <span className={`tlog-status ${connectionStatus}`}>
-          {connectionStatus === 'connected' ? '● LIVE' : connectionStatus === 'connecting' ? '○ CONNECTING' : '○ OFFLINE'}
+          {connectionStatus === 'connected' ? '● LIVE' : connectionStatus === 'connecting' ? '○ ...' : '○ OFF'}
         </span>
       </div>
-      <div className="tlog-console" ref={scrollRef}>
+      <div className="tlog-console">
         {records.length === 0 ? (
-          <div className="tlog-empty">Waiting for telemetry data...</div>
+          <div className="tlog-empty">Waiting...</div>
         ) : (
-          records.map((record, index) => (
-            <div key={record.id} className={`tlog-entry ${index === 0 && isNewData ? 'new' : ''}`}>
+          records.map(record => (
+            <div key={record.id} className="tlog-entry">
               <span className="tlog-time">{formatTimestamp(record.timestamp)}</span>
-              <span className="tlog-arrow">→</span>
               <span className="tlog-data">{formatTelemetryData(record.data)}</span>
             </div>
           ))
         )}
-      </div>
-      <div className="tlog-footer">
-        <span className="tlog-count">{records.length} records</span>
       </div>
     </div>
   )

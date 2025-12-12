@@ -115,22 +115,38 @@ body {
   color: var(--theme-text-muted);
 }
 
-.status-signal, .status-sat {
+.status-signal, .status-sat, .status-fs {
   color: var(--theme-accent-primary);
+}
+
+.status-flag {
+  color: var(--theme-text-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+}
+
+.status-flag.active {
+  background: var(--theme-accent-primary-dim);
+  color: var(--theme-accent-primary);
+  border: 1px solid var(--theme-accent-primary-border);
 }
 
 /* ========== BATTERY THEME ========== */
 .battery-indicator.good .battery-percent,
+.battery-indicator.good .battery-voltage,
 .battery-indicator.good {
   color: var(--theme-accent-primary);
 }
 
 .battery-indicator.warning .battery-percent,
+.battery-indicator.warning .battery-voltage,
 .battery-indicator.warning {
   color: var(--theme-status-warning);
 }
 
 .battery-indicator.critical .battery-percent,
+.battery-indicator.critical .battery-voltage,
 .battery-indicator.critical {
   color: var(--theme-status-danger);
   animation: blink 0.5s ease-in-out infinite;
@@ -219,34 +235,84 @@ body {
   color: var(--theme-text-secondary);
 }
 
-/* ========== ALTITUDE THEME ========== */
-.hud-altitude {
+/* ========== SATELLITE INDICATOR THEME ========== */
+.hud-satellites {
   background: var(--theme-bg-overlay);
   border-color: var(--theme-accent-primary-border);
 }
 
-.alt-label, .speed-label {
+.sat-label {
   color: var(--theme-text-muted);
 }
 
-.alt-bar, .speed-bar {
-  background: rgba(0, 0, 0, 0.5);
+.sat-grid {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.sat-dot {
+  background: rgba(0, 0, 0, 0.4);
   border-color: var(--theme-accent-primary-border);
 }
 
-.alt-fill {
-  background: linear-gradient(to top, var(--theme-accent-secondary), var(--theme-accent-primary));
-  box-shadow: 0 0 10px var(--theme-accent-primary-glow);
+.sat-dot.active {
+  background: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 8px var(--theme-accent-primary-glow);
 }
 
-.speed-fill {
-  background: linear-gradient(to top, var(--theme-accent-primary), #00ffaa);
-  box-shadow: 0 0 10px var(--theme-accent-primary-glow);
+.sat-count {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
 }
 
-.alt-marks span, .speed-marks span {
+.sat-count.excellent {
+  color: var(--theme-accent-primary);
+}
+
+.sat-count.good {
+  color: var(--theme-accent-secondary);
+}
+
+.sat-count.weak {
+  color: var(--theme-status-warning);
+}
+
+.sat-count.poor {
+  color: var(--theme-status-danger);
+}
+
+.sat-quality {
   color: var(--theme-text-muted);
 }
+
+/* ========== MAP PANEL THEME ========== */
+.map-panel {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.map-header {
+  border-bottom-color: var(--theme-accent-primary-border);
+}
+
+.map-title {
+  color: var(--theme-accent-primary);
+}
+
+.map-alt {
+  color: var(--theme-accent-secondary);
+}
+
+.map-coords {
+  color: var(--theme-text-secondary);
+}
+
+.map-placeholder {
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--theme-text-muted);
+}
+
 
 .alt-value, .speed-value {
   color: var(--theme-accent-primary);
@@ -352,11 +418,6 @@ body {
   border-color: var(--theme-accent-primary-border);
 }
 
-.telemetry-log.pulse {
-  box-shadow: 0 0 20px var(--theme-accent-primary-glow), 0 0 40px rgba(var(--theme-accent-primary-rgb), 0.2);
-  border-color: var(--theme-accent-primary);
-}
-
 .tlog-header {
   background: rgba(var(--theme-accent-primary-rgb), 0.05);
   border-bottom-color: var(--theme-accent-primary-border);
@@ -400,34 +461,12 @@ body {
   color: var(--theme-accent-primary);
 }
 
-.tlog-entry:hover {
-  background: rgba(var(--theme-accent-primary-rgb), 0.05);
-}
-
-.tlog-entry.new {
-  background: rgba(var(--theme-accent-primary-rgb), 0.15);
-  animation: flash-entry 0.5s ease-out;
-}
-
 .tlog-time {
   color: var(--theme-text-secondary);
 }
 
-.tlog-arrow {
-  color: var(--theme-accent-primary);
-}
-
 .tlog-data {
   color: var(--theme-accent-primary);
-}
-
-.tlog-footer {
-  background: rgba(0, 0, 0, 0.3);
-  border-top-color: var(--theme-accent-primary-border);
-}
-
-.tlog-count {
-  color: var(--theme-text-muted);
 }
 
 
