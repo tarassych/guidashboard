@@ -857,6 +857,24 @@ body {
   color: var(--theme-text-muted);
 }
 
+/* Map theme color overlay */
+.map-theme-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 4;
+  border-radius: 4px;
+  mix-blend-mode: overlay;
+}
+
+/* Make Google Map semi-transparent */
+.map-body > div:first-of-type {
+  opacity: 0.85;
+}
+
 /* Map HUD overlay */
 .map-hud-overlay {
   position: absolute;

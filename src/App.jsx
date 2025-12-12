@@ -526,10 +526,10 @@ function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
   const zoomIn = () => setZoom(prev => Math.min(21, prev + 1))
   const zoomOut = () => setZoom(prev => Math.max(1, prev - 1))
   
-  // Update map center when coordinates change
+  // Keep map centered on drone position (instant, no animation)
   useEffect(() => {
     if (mapRef.current && lat && lng) {
-      mapRef.current.panTo({ lat, lng })
+      mapRef.current.setCenter({ lat, lng })
     }
   }, [lat, lng])
   
@@ -597,6 +597,9 @@ function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
             )}
           </GoogleMap>
         )}
+        
+        {/* Theme color overlay on map */}
+        <div className="map-theme-overlay"></div>
         
         {/* HUD Overlay on map */}
         <div className="map-hud-overlay">
@@ -807,10 +810,14 @@ function TelemetryLog({ onTelemetryUpdate }) {
             // Stack behavior: new on top, limit to 20
             setRecords(prev => [...data.records, ...prev].slice(0, 20))
             
-            // Notify parent - only the latest record to reduce overhead
-            const latestRecord = data.records[0]
-            if (latestRecord && onTelemetryUpdate) {
-              onTelemetryUpdate(latestRecord.data)
+            // Process ALL records (oldest to newest) so each type updates its fields
+            // This ensures batt, gps, and state records all get merged into app state
+            if (onTelemetryUpdate) {
+              // Reverse to process oldest first, newest last (most recent wins)
+              const recordsToProcess = data.records.slice().reverse()
+              recordsToProcess.forEach(record => {
+                onTelemetryUpdate(record.data)
+              })
             }
           }
         }

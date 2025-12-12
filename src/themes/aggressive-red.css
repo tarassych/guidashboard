@@ -462,6 +462,17 @@ body {
   text-shadow: 0 0 8px var(--theme-accent-primary-glow);
 }
 
+/* Map theme overlay - red tint */
+.map-theme-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 34, 68, 0.1) 0%,
+    rgba(255, 34, 68, 0.04) 50%,
+    rgba(255, 34, 68, 0.1) 100%
+  );
+  box-shadow: inset 0 0 60px rgba(255, 34, 68, 0.12);
+}
+
 
 /* ========== SPEEDOMETER THEME ========== */
 .speedometer {
