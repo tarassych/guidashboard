@@ -142,7 +142,7 @@ function App() {
     <div className="hud-container">
       {/* Full-screen Front Camera Background */}
       <div className="main-camera-bg">
-        <CameraFeed streamUrl="http://192.168.88.15:8888/cam1/index.m3u8?username=admin&password=123456" />
+        <CameraFeed streamUrl="/nginxhls/cam1/index.m3u8" />
       </div>
 
       {/* HUD Overlay */}
@@ -177,7 +177,7 @@ function App() {
           />
           <div className="rear-mirror">
             <div className="mirror-frame">
-              <CameraFeed streamUrl="http://192.168.88.15:8888/cam2/index.m3u8?username=admin&password=123456" variant="mirror" />
+              <CameraFeed streamUrl="nginxhls/cam2/index.m3u8" variant="mirror" />
               <span className="mirror-label">REAR</span>
             </div>
           </div>
