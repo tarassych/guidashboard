@@ -1,0 +1,416 @@
+/* Drone Profile Editor Styles */
+
+.profile-editor {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+  color: var(--hud-primary, #00ff88);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.profile-editor.loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.2rem;
+}
+
+/* Header */
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid var(--hud-primary, #00ff88);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.back-btn {
+  color: var(--hud-primary, #00ff88);
+  text-decoration: none;
+  font-size: 0.9rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.back-btn:hover {
+  opacity: 1;
+}
+
+.editor-header h1 {
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+/* Sections */
+section {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+section h2 {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin: 0 0 1rem 0;
+  opacity: 0.7;
+}
+
+/* Unknown drones */
+.unknown-section {
+  background: rgba(255, 170, 0, 0.05);
+  border-bottom-color: rgba(255, 170, 0, 0.2);
+}
+
+.unknown-section h2 {
+  color: #ffaa00;
+}
+
+.unknown-section p {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  margin: 0 0 1rem 0;
+}
+
+.unknown-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.unknown-drone-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid #ffaa00;
+  color: #ffaa00;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unknown-drone-btn:hover {
+  background: #ffaa00;
+  color: #000;
+}
+
+.unknown-drone-btn .drone-id {
+  font-weight: 600;
+}
+
+.unknown-drone-btn .add-text {
+  opacity: 0.8;
+}
+
+/* Add section */
+.add-section {
+  padding: 1.5rem 2rem;
+}
+
+.add-form {
+  display: flex;
+  gap: 1rem;
+  max-width: 400px;
+}
+
+.add-form input {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.add-form input:focus {
+  outline: none;
+  border-color: var(--hud-primary, #00ff88);
+}
+
+.add-form button {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-form button:hover {
+  background: var(--hud-primary, #00ff88);
+  color: #000;
+}
+
+/* Profiles grid */
+.profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.no-profiles {
+  padding: 2rem;
+  text-align: center;
+  opacity: 0.5;
+}
+
+/* Profile card */
+.profile-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--accent-color, #00ff88);
+  border-radius: 2px;
+}
+
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-id {
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+
+.profile-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.edit-btn {
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  opacity: 1;
+  border-color: var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+}
+
+.profile-details {
+  padding: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.detail-label {
+  opacity: 0.5;
+  min-width: 100px;
+}
+
+.detail-value {
+  flex: 1;
+  word-break: break-all;
+}
+
+.detail-value em {
+  opacity: 0.4;
+  font-style: normal;
+}
+
+.profile-actions {
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  text-align: right;
+}
+
+.view-osd-btn {
+  padding: 0.5rem 1rem;
+  background: var(--accent-color, #00ff88);
+  border: none;
+  color: #000;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.view-osd-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #0a0a0f;
+  border: 1px solid var(--hud-primary, #00ff88);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Profile form */
+.profile-form {
+  padding: 1.5rem;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-header h3 {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.delete-btn {
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: #ff4444;
+  color: #000;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"] {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--hud-primary, #00ff88);
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  opacity: 0.4;
+}
+
+.color-input-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.color-input-row input[type="color"] {
+  width: 50px;
+  height: 36px;
+  padding: 2px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.color-input-row .color-text {
+  flex: 1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cancel-btn {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.cancel-btn:hover {
+  opacity: 1;
+}
+
+.save-btn {
+  padding: 0.6rem 1.5rem;
+  background: var(--hud-primary, #00ff88);
+  border: none;
+  color: #000;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.save-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import './App.css'
 import config from './config'
@@ -50,6 +51,32 @@ const createInitialState = () => ({
 })
 
 function App() {
+  // Get drone ID from URL params
+  const { droneId: droneIdParam } = useParams()
+  const droneId = droneIdParam ? parseInt(droneIdParam) : 1
+  
+  // Drone profile state
+  const [droneProfile, setDroneProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(true)
+  
+  // Fetch drone profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/profiles`)
+        const data = await response.json()
+        if (data.success && data.profiles[droneId]) {
+          setDroneProfile(data.profiles[droneId])
+        }
+      } catch (error) {
+        console.error('Failed to fetch drone profile:', error)
+      } finally {
+        setProfileLoading(false)
+      }
+    }
+    fetchProfile()
+  }, [droneId])
+  
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   
@@ -138,11 +165,16 @@ function App() {
   const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
   const directionIndex = Math.round(telemetry.heading / 45) % 8
 
+  // Get camera URLs from profile or use defaults
+  const frontCameraUrl = droneProfile?.frontCameraUrl || '/nginxhls/cam1/index.m3u8'
+  const rearCameraUrl = droneProfile?.rearCameraUrl || '/nginxhls/cam2/index.m3u8'
+  const droneName = droneProfile?.name || `Drone ${droneId}`
+
   return (
     <div className="hud-container">
       {/* Full-screen Front Camera Background */}
       <div className="main-camera-bg">
-        <CameraFeed streamUrl="/nginxhls/cam1/index.m3u8" />
+        <CameraFeed streamUrl={frontCameraUrl} />
       </div>
 
       {/* HUD Overlay */}
@@ -150,8 +182,9 @@ function App() {
         {/* Top Bar */}
         <div className="hud-top-bar">
           <div className="hud-logo">
+            <Link to="/" className="back-to-dashboard" title="Back to Dashboard">←</Link>
             <span className="logo-icon">◈</span>
-            <span className="logo-text">RATERA DRONE OSD</span>
+            <span className="logo-text">{droneName.toUpperCase()} OSD</span>
             <span className="logo-version">v1.0</span>
           </div>
           
@@ -177,7 +210,7 @@ function App() {
           />
           <div className="rear-mirror">
             <div className="mirror-frame">
-              <CameraFeed streamUrl="nginxhls/cam2/index.m3u8" variant="mirror" />
+              <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
               <span className="mirror-label">REAR</span>
             </div>
           </div>
@@ -232,7 +265,7 @@ function App() {
 
         {/* Telemetry Log */}
         <div className="hud-telemetry-log-container">
-          <TelemetryLog onTelemetryUpdate={handleTelemetryUpdate} />
+          <TelemetryLog droneId={droneId} onTelemetryUpdate={handleTelemetryUpdate} />
         </div>
 
         {/* Bottom Telemetry Strip */}
@@ -732,7 +765,7 @@ function TelemetryStrip({ telemetry }) {
 }
 
 // Telemetry Log Component - Real-time database telemetry
-function TelemetryLog({ onTelemetryUpdate }) {
+function TelemetryLog({ droneId, onTelemetryUpdate }) {
   const [records, setRecords] = useState([])
   const [connectionStatus, setConnectionStatus] = useState('connecting')
   const lastIdRef = useRef(0)
@@ -791,7 +824,8 @@ function TelemetryLog({ onTelemetryUpdate }) {
       controller = new AbortController()
       
       try {
-        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastIdRef.current}&limit=20`
+        const droneFilter = droneId ? `&droneId=${droneId}` : ''
+        const url = `${API_BASE_URL}/api/telemetry?lastId=${lastIdRef.current}&limit=20${droneFilter}`
         const response = await fetch(url, { signal: controller.signal })
         
         if (!response.ok) throw new Error('Failed to fetch')
@@ -836,7 +870,7 @@ function TelemetryLog({ onTelemetryUpdate }) {
       controller.abort()
       if (pollInterval) clearInterval(pollInterval)
     }
-  }, [onTelemetryUpdate])
+  }, [droneId, onTelemetryUpdate])
 
   return (
     <div className="telemetry-log">

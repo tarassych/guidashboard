@@ -106,6 +106,28 @@ body {
   letter-spacing: 1px;
 }
 
+.back-to-dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--hud-primary, #00ff88);
+  border-radius: 4px;
+  color: var(--hud-primary, #00ff88);
+  text-decoration: none;
+  font-size: 1.2rem;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.back-to-dashboard:hover {
+  background: var(--hud-primary, #00ff88);
+  color: #000;
+}
+
 .hud-status-center {
   position: absolute;
   left: 50%;
