@@ -1,13 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import config from './config'
+import CameraFeed from './components/CameraFeed'
 import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
 
-// Mini drone preview card with live telemetry
+// Mini drone preview card with live telemetry and camera feed
 function DroneCard({ droneId, profile, telemetry, onClick }) {
   const isOnline = telemetry?.connected
+  // Use rear camera (cam2) for dashboard preview - lower bandwidth
+  const previewCameraUrl = profile?.rearCameraUrl
   
   return (
     <div 
@@ -23,16 +26,17 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
       </div>
       
       <div className="drone-card-preview">
-        {profile?.frontCameraUrl ? (
-          <div className="camera-placeholder">
-            <span className="camera-icon">◉</span>
-            <span className="camera-hint">Click to view OSD</span>
-          </div>
+        {previewCameraUrl ? (
+          <CameraFeed streamUrl={previewCameraUrl} variant="thumbnail" />
         ) : (
           <div className="no-camera">
+            <span className="camera-icon">◇</span>
             <span>No camera configured</span>
           </div>
         )}
+        <div className="preview-overlay">
+          <span className="preview-hint">Click to view OSD</span>
+        </div>
       </div>
       
       <div className="drone-card-telemetry">

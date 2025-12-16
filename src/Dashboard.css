@@ -193,36 +193,58 @@
   color: #666;
 }
 
-/* Camera preview placeholder */
+/* Camera preview */
 .drone-card-preview {
-  height: 160px;
+  position: relative;
+  height: 180px;
   display: flex;
   justify-content: center;
   align-items: center;
   background: linear-gradient(135deg, #0a0a0a 0%, #151520 100%);
+  overflow: hidden;
 }
 
-.camera-placeholder {
+.drone-card-preview .camera-feed {
+  position: absolute;
+  inset: 0;
+}
+
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.drone-card:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-hint {
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.no-camera {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: var(--hud-primary, #00ff88);
-}
-
-.camera-icon {
-  font-size: 2.5rem;
-  opacity: 0.3;
-}
-
-.camera-hint {
-  font-size: 0.75rem;
-  opacity: 0.5;
-}
-
-.no-camera {
   color: #666;
   font-size: 0.85rem;
+}
+
+.no-camera .camera-icon {
+  font-size: 2rem;
+  opacity: 0.4;
 }
 
 /* Telemetry grid */
