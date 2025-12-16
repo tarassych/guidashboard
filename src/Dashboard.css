@@ -127,18 +127,20 @@
   background: #ffcc00;
 }
 
-/* Grid */
+/* Grid - Rectangle cards */
 .dashboard-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-auto-rows: min-content;
   gap: 1.5rem;
   padding: 2rem;
+  align-content: start;
 }
 
-/* Drone Card */
+/* Drone Card - Compact rectangle */
 .drone-card {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   overflow: hidden;
@@ -147,7 +149,7 @@
 }
 
 .drone-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: var(--hud-primary, #00ff88);
   box-shadow: 0 8px 30px rgba(0, 255, 136, 0.2);
 }
@@ -157,67 +159,138 @@
 }
 
 .drone-card.offline {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
+/* Header bar with title and status */
 .drone-card-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.4);
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: rgba(0, 0, 0, 0.5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.drone-id {
-  font-size: 0.85rem;
-  opacity: 0.5;
-}
-
-.drone-name {
-  flex: 1;
-  font-size: 1rem;
+.drone-title {
+  font-size: 0.9rem;
   font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .drone-status {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
 }
 
 .drone-status.online {
   color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
 }
 
 .drone-status.offline {
-  color: #666;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Camera preview */
-.drone-card-preview {
+/* Video section with OSD overlay */
+.drone-card-video {
   position: relative;
-  height: 180px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #0a0a0a 0%, #151520 100%);
+  height: 200px;
+  background: linear-gradient(135deg, #0a0a0a 0%, #101018 100%);
   overflow: hidden;
 }
 
-.drone-card-preview .camera-feed {
+.drone-card-video .camera-feed {
   position: absolute;
   inset: 0;
 }
 
+/* OSD Overlay on video */
+.card-osd-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.osd-top,
+.osd-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.osd-battery,
+.osd-speed,
+.osd-mode,
+.osd-gps {
+  padding: 0.25rem 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.osd-battery {
+  color: var(--hud-primary, #00ff88);
+}
+
+.osd-battery.good {
+  color: #00ff88;
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.osd-battery.warn {
+  color: #ffaa00;
+  border-color: rgba(255, 170, 0, 0.3);
+}
+
+.osd-battery.crit {
+  color: #ff4444;
+  border-color: rgba(255, 68, 68, 0.3);
+  animation: blink 0.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.osd-mode {
+  color: #88aaff;
+  border-color: rgba(136, 170, 255, 0.3);
+  font-size: 0.7rem;
+}
+
+.osd-speed {
+  color: #ffffff;
+}
+
+.osd-gps {
+  color: #aaaaaa;
+  font-size: 0.7rem;
+}
+
+/* Hover overlay with action hint */
 .preview-overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.5);
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.25s;
+  z-index: 10;
 }
 
 .drone-card:hover .preview-overlay {
@@ -225,68 +298,31 @@
 }
 
 .preview-hint {
-  padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.7);
+  padding: 0.6rem 1.2rem;
+  background: rgba(0, 0, 0, 0.8);
   border: 1px solid var(--hud-primary, #00ff88);
   color: var(--hud-primary, #00ff88);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-
-.no-camera {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  color: #666;
-  font-size: 0.85rem;
-}
-
-.no-camera .camera-icon {
-  font-size: 2rem;
-  opacity: 0.4;
-}
-
-/* Telemetry grid */
-.drone-card-telemetry {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.telem-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.telem-label {
-  font-size: 0.65rem;
-  opacity: 0.5;
+  font-size: 0.8rem;
+  font-weight: 600;
   letter-spacing: 0.1em;
 }
 
-.telem-value {
-  font-size: 1rem;
-  font-weight: 600;
+/* No camera fallback */
+.no-camera {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: #555;
+  font-size: 0.8rem;
 }
 
-.telem-value.good {
-  color: #00ff88;
-}
-
-.telem-value.warn {
-  color: #ffaa00;
-}
-
-.telem-value.crit {
-  color: #ff4444;
-}
-
-.telem-value.mode {
-  font-size: 0.85rem;
+.no-camera .camera-icon {
+  font-size: 2.5rem;
+  opacity: 0.3;
 }
 
 /* No drones state */

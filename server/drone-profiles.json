@@ -3,8 +3,8 @@
     "1": {
       "droneId": 1,
       "name": "Drone Alpha",
-      "frontCameraUrl": "http://192.168.88.15:8888/cam1/index.m3u8?username=admin&password=123456",
-      "rearCameraUrl": "http://192.168.88.15:8888/cam2/index.m3u8?username=admin&password=123456",
+      "frontCameraUrl": "http://192.168.88.15:8888/cam1/index.m3u8",
+      "rearCameraUrl": "http://192.168.88.15:8888/cam2/index.m3u8",
       "color": "#00ff88",
       "updatedAt": 1734300000000
     }

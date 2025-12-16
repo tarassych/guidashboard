@@ -11,52 +11,52 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
   const isOnline = telemetry?.connected
   // Use rear camera (cam2) for dashboard preview - lower bandwidth
   const previewCameraUrl = profile?.rearCameraUrl
+  const droneName = profile?.name || `Drone ${droneId}`
   
   return (
     <div 
       className={`drone-card ${isOnline ? 'online' : 'offline'}`}
       onClick={onClick}
     >
+      {/* Title bar */}
       <div className="drone-card-header">
-        <span className="drone-id">#{droneId}</span>
-        <span className="drone-name">{profile?.name || `Drone ${droneId}`}</span>
+        <span className="drone-title">#{droneId} {droneName}</span>
         <span className={`drone-status ${isOnline ? 'online' : 'offline'}`}>
           {isOnline ? '● ONLINE' : '○ OFFLINE'}
         </span>
       </div>
       
-      <div className="drone-card-preview">
+      {/* Video with OSD overlay */}
+      <div className="drone-card-video">
         {previewCameraUrl ? (
           <CameraFeed streamUrl={previewCameraUrl} variant="thumbnail" />
         ) : (
           <div className="no-camera">
             <span className="camera-icon">◇</span>
-            <span>No camera configured</span>
+            <span>No camera</span>
           </div>
         )}
+        
+        {/* OSD Elements overlaid on video */}
+        <div className="card-osd-overlay">
+          {/* Top row - Battery & Mode */}
+          <div className="osd-top">
+            <span className={`osd-battery ${telemetry?.batt_v >= 35 ? 'good' : telemetry?.batt_v >= 30 ? 'warn' : 'crit'}`}>
+              ⚡ {telemetry?.batt_v?.toFixed(1) || '--'}V
+            </span>
+            <span className="osd-mode">{telemetry?.md_str || '--'}</span>
+          </div>
+          
+          {/* Bottom row - Speed & GPS */}
+          <div className="osd-bottom">
+            <span className="osd-speed">{telemetry?.speed?.toFixed(0) || '--'} km/h</span>
+            <span className="osd-gps">◎ {telemetry?.satellites || '--'}</span>
+          </div>
+        </div>
+        
+        {/* Hover hint */}
         <div className="preview-overlay">
-          <span className="preview-hint">Click to view OSD</span>
-        </div>
-      </div>
-      
-      <div className="drone-card-telemetry">
-        <div className="telem-row">
-          <span className="telem-label">BAT</span>
-          <span className={`telem-value ${telemetry?.batt_v >= 35 ? 'good' : telemetry?.batt_v >= 30 ? 'warn' : 'crit'}`}>
-            {telemetry?.batt_v?.toFixed(1) || '--'}V
-          </span>
-        </div>
-        <div className="telem-row">
-          <span className="telem-label">SPD</span>
-          <span className="telem-value">{telemetry?.speed?.toFixed(1) || '--'} km/h</span>
-        </div>
-        <div className="telem-row">
-          <span className="telem-label">MODE</span>
-          <span className="telem-value mode">{telemetry?.md_str || '--'}</span>
-        </div>
-        <div className="telem-row">
-          <span className="telem-label">GPS</span>
-          <span className="telem-value">{telemetry?.satellites || '--'} SAT</span>
+          <span className="preview-hint">▶ VIEW OSD</span>
         </div>
       </div>
     </div>
