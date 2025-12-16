@@ -350,7 +350,7 @@ function DroneProfileEditor() {
                       to={`/drone/${droneId}`} 
                       className="view-osd-btn"
                     >
-                      Open OSD →
+                      Open →
                     </Link>
                   </div>
                 </div>

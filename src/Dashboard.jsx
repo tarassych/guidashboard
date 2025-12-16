@@ -56,7 +56,7 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
         
         {/* Hover hint */}
         <div className="preview-overlay">
-          <span className="preview-hint">▶ VIEW OSD</span>
+          <span className="preview-hint">▶ FULL SCREEN</span>
         </div>
       </div>
     </div>
