@@ -35,7 +35,7 @@ export const config = {
   defaultTheme: import.meta.env.VITE_DEFAULT_THEME || 'digital-green',
   
   // Google Maps API Key
-  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBMh5UJX91WEJRuhPl3Ha3D0OyIuNVd0JU',
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
   
   // Available themes (add new themes here)
   themes: {
