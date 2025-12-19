@@ -78,10 +78,11 @@ app.get('/api/drones', (req, res) => {
     
     // Load profiles to check which drones are configured
     const profiles = loadProfiles();
-    const configuredIds = Object.keys(profiles.drones).map(id => parseInt(id));
+    const configuredIds = Object.keys(profiles.drones);
     
     // Find unknown drones (in DB but not in profiles)
-    const unknownDrones = droneIds.filter(id => !configuredIds.includes(id));
+    // Convert both to strings for comparison since drone_id can be numeric or string
+    const unknownDrones = droneIds.filter(id => !configuredIds.includes(String(id)));
 
     res.json({
       success: true,
@@ -107,10 +108,10 @@ app.get('/api/profiles', (req, res) => {
 
 // Create or update a drone profile
 app.post('/api/profiles/:droneId', (req, res) => {
-  const droneId = parseInt(req.params.droneId);
+  const droneId = req.params.droneId;
   const profileData = req.body;
   
-  if (isNaN(droneId)) {
+  if (!droneId || droneId.trim() === '') {
     return res.status(400).json({ error: 'Invalid drone ID' });
   }
 
@@ -134,7 +135,7 @@ app.post('/api/profiles/:droneId', (req, res) => {
 
 // Delete a drone profile
 app.delete('/api/profiles/:droneId', (req, res) => {
-  const droneId = parseInt(req.params.droneId);
+  const droneId = req.params.droneId;
   
   const profiles = loadProfiles();
   if (profiles.drones[droneId]) {
@@ -162,7 +163,7 @@ app.get('/api/telemetry', (req, res) => {
   try {
     const lastId = parseInt(req.query.lastId) || 0;
     const limit = parseInt(req.query.limit) || 100;
-    const droneId = req.query.droneId ? parseInt(req.query.droneId) : null;
+    const droneId = req.query.droneId || null;
 
     let rows;
     if (droneId !== null) {

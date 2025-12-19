@@ -52,9 +52,9 @@ const createInitialState = () => ({
 })
 
 function App() {
-  // Get drone ID from URL params
+  // Get drone ID from URL params (can be numeric string like "1604695971")
   const { droneId: droneIdParam } = useParams()
-  const droneId = droneIdParam ? parseInt(droneIdParam) : 1
+  const droneId = droneIdParam || '1'
   
   // Drone profile state
   const [droneProfile, setDroneProfile] = useState(null)
@@ -473,7 +473,7 @@ function Speedometer({ speed, dist }) {
 function PowerIndicator({ power }) {
   const levels = [0, 1, 2]
   const labels = ['OFF', 'ECO', 'MAX']
-  
+
   return (
     <div className="power-indicator">
       <div className="power-label">PWR</div>

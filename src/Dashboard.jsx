@@ -9,8 +9,8 @@ const API_BASE_URL = config.apiUrl
 // Mini drone preview card with live telemetry and camera feed
 function DroneCard({ droneId, profile, telemetry, onClick }) {
   const isOnline = telemetry?.connected
-  // Use rear camera (cam2) for dashboard preview - lower bandwidth
-  const previewCameraUrl = profile?.rearCameraUrl
+  // Use front camera for dashboard preview
+  const previewCameraUrl = profile?.frontCameraUrl
   const droneName = profile?.name || `Drone ${droneId}`
   
   return (
@@ -63,7 +63,7 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
   )
 }
 
-// Unknown drone alert
+// Unknown drone alert - lists ALL unknown drone IDs
 function UnknownDroneAlert({ droneIds, onAddProfile }) {
   if (!droneIds || droneIds.length === 0) return null
   
@@ -71,10 +71,12 @@ function UnknownDroneAlert({ droneIds, onAddProfile }) {
     <div className="unknown-drone-alert">
       <div className="alert-icon">⚠</div>
       <div className="alert-content">
-        <span className="alert-title">Unknown Drones Detected</span>
-        <span className="alert-text">
-          Drone ID{droneIds.length > 1 ? 's' : ''}: {droneIds.join(', ')} found in telemetry but not configured.
-        </span>
+        <span className="alert-title">Unknown Drones in Database ({droneIds.length})</span>
+        <div className="alert-drone-list">
+          {droneIds.map(id => (
+            <span key={id} className="alert-drone-id">#{id}</span>
+          ))}
+        </div>
       </div>
       <button className="alert-action" onClick={onAddProfile}>
         Configure Profiles →
@@ -206,8 +208,8 @@ function Dashboard() {
     navigate(`/drone/${droneId}`)
   }, [navigate])
   
-  // Combine configured and unknown drones for display
-  const allDroneIds = [...new Set([...Object.keys(profiles).map(Number), ...droneIds])]
+  // Combine configured and unknown drones for display (keep as strings)
+  const allDroneIds = [...new Set([...Object.keys(profiles), ...droneIds.map(String)])]
   
   if (loading) {
     return (

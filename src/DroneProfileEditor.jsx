@@ -205,7 +205,7 @@ function DroneProfileEditor() {
         })
         setEditingDrone(null)
         // Add back to unknown if in DB
-        if (droneIds.includes(droneId)) {
+        if (droneIds.map(String).includes(String(droneId))) {
           setUnknownDrones(prev => [...prev, droneId])
         }
       }
@@ -215,9 +215,9 @@ function DroneProfileEditor() {
   }
   
   const handleAddNewDrone = () => {
-    const id = parseInt(newDroneId)
-    if (isNaN(id) || id <= 0) {
-      alert('Please enter a valid drone ID (positive number)')
+    const id = newDroneId.trim()
+    if (!id) {
+      alert('Please enter a valid drone ID')
       return
     }
     if (profiles[id]) {
@@ -237,7 +237,7 @@ function DroneProfileEditor() {
     )
   }
   
-  const configuredDroneIds = Object.keys(profiles).map(Number).sort((a, b) => a - b)
+  const configuredDroneIds = Object.keys(profiles).sort((a, b) => String(a).localeCompare(String(b)))
   
   return (
     <div className="profile-editor">
@@ -276,9 +276,8 @@ function DroneProfileEditor() {
         <h2>Add New Drone Profile</h2>
         <div className="add-form">
           <input
-            type="number"
-            min="1"
-            placeholder="Drone ID"
+            type="text"
+            placeholder="Drone ID (e.g. 1604695971)"
             value={newDroneId}
             onChange={(e) => setNewDroneId(e.target.value)}
           />

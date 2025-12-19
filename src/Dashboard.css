@@ -112,6 +112,24 @@
   opacity: 0.8;
 }
 
+.alert-drone-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.alert-drone-id {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: rgba(255, 170, 0, 0.2);
+  border: 1px solid #ffaa00;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #ffaa00;
+}
+
 .alert-action {
   padding: 0.5rem 1rem;
   background: #ffaa00;
