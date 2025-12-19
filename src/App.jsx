@@ -81,40 +81,8 @@ function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   
-  // Manual fuse overrides: null = use telemetry, true = manual armed
-  const [fuseOverrides, setFuseOverrides] = useState({ f1: null, f2: null })
-  
-  // Get effective fuse states (override or telemetry)
-  const f1Armed = fuseOverrides.f1 !== null ? fuseOverrides.f1 : telemetry.f1
-  const f2Armed = fuseOverrides.f2 !== null ? fuseOverrides.f2 : telemetry.f2
-  
-  // Create effective telemetry data for theme switching (includes manual fuse overrides)
-  // Use useMemo to ensure stable reference and proper change detection
-  const effectiveTelemetryData = useMemo(() => ({
-    ...(latestTelemetryData || {}),
-    f1: f1Armed,
-    f2: f2Armed
-  }), [latestTelemetryData, f1Armed, f2Armed])
-  
-  // Theme management - reacts to effective telemetry data (with fuse overrides)
-  const { currentTheme } = useTheme(effectiveTelemetryData)
-  
-  // Toggle fuse override (3-state: null -> true -> false -> null)
-  // null = use telemetry, true = manual ON (armed), false = manual OFF (safe)
-  const toggleFuseOverride = useCallback((fuse) => {
-    setFuseOverrides(prev => {
-      const current = prev[fuse]
-      let next
-      if (current === null) {
-        next = true  // telemetry -> manual ON
-      } else if (current === true) {
-        next = false // manual ON -> manual OFF
-      } else {
-        next = null  // manual OFF -> back to telemetry
-      }
-      return { ...prev, [fuse]: next }
-    })
-  }, [])
+  // Theme management - reacts to telemetry data
+  const { currentTheme } = useTheme(latestTelemetryData)
 
   // Handle telemetry updates from TelemetryLog
   const handleTelemetryUpdate = useCallback((data) => {
@@ -203,28 +171,18 @@ function App() {
 
         {/* Fuse Switches & Rear View Mirror */}
         <div className="hud-mirror-section">
-          <FuseSwitch 
-            label="F1" 
-            armed={f1Armed} 
-            isManual={fuseOverrides.f1 !== null}
-            onClick={() => toggleFuseOverride('f1')} 
-          />
+          <FuseSwitch label="F1" armed={telemetry.f1} />
           <div className="rear-mirror">
             <div className="mirror-frame">
               <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
               <span className="mirror-label">REAR</span>
             </div>
           </div>
-          <FuseSwitch 
-            label="F2" 
-            armed={f2Armed} 
-            isManual={fuseOverrides.f2 !== null}
-            onClick={() => toggleFuseOverride('f2')} 
-          />
+          <FuseSwitch label="F2" armed={telemetry.f2} />
         </div>
 
         {/* Heading Tape or Warning Banner */}
-        {(f1Armed && f2Armed) ? (
+        {(telemetry.f1 && telemetry.f2) ? (
           <div className="hud-warning-banner">
             <WarningBanner />
           </div>
@@ -302,26 +260,17 @@ function BatteryIndicator({ voltage }) {
   )
 }
 
-// Fuse Switch Indicator
-function FuseSwitch({ label, armed, isManual, onClick }) {
-  const getTooltip = () => {
-    if (!isManual) return 'Click to arm manually'
-    if (armed) return 'Click to disarm manually'
-    return 'Click to return to telemetry'
-  }
-  
+// Fuse Switch Indicator (read-only, driven by telemetry)
+function FuseSwitch({ label, armed }) {
   return (
-    <div className={`fuse-switch ${armed ? 'armed' : 'safe'} ${isManual ? 'manual' : ''}`}>
+    <div className={`fuse-switch ${armed ? 'armed' : 'safe'}`}>
       <div className="fuse-label">{label}</div>
-      <div className="fuse-icon" onClick={onClick} title={getTooltip()}>
+      <div className="fuse-icon">
         <div className="fuse-body">
           <div className={`fuse-element ${armed ? 'active' : ''}`}></div>
         </div>
       </div>
-      <div className="fuse-status">
-        {armed ? 'ON' : 'OFF'}
-        {isManual && <span className="manual-indicator">●</span>}
-      </div>
+      <div className="fuse-status">{armed ? 'ON' : 'OFF'}</div>
     </div>
   )
 }
