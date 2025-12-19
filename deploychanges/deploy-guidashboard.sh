@@ -3,7 +3,7 @@ set -e
 
 REPO_DIR="/home/orangepi/guidashboard"
 NGINX_ROOT="/var/www/html"
-REPO_URL="https://github.com/tarassych/guidashboard.git"
+REPO_URL="git@github.com:tarassych/guidashboard.git"
 BRANCH="main"
 SERVER_NAME="guidashboard-server"
 NGINX_CONF="/etc/nginx/sites-enabled/default"
@@ -121,7 +121,10 @@ fi
 
 cd "$REPO_DIR"
 
-git fetch origin "$BRANCH" >/dev/null 2>&1
+# Fetch with timeout to prevent hanging
+if ! timeout 30 git fetch origin "$BRANCH"; then
+  echo "WARNING: git fetch failed, continuing with local state..."
+fi
 
 LOCAL=$(git rev-parse "$BRANCH")
 REMOTE=$(git rev-parse "origin/$BRANCH")
@@ -135,7 +138,11 @@ fi
 # Behind remote → perform pull
 if [ "$LOCAL" = "$BASE" ]; then
   echo "Updating from GitHub..."
-  git pull --ff-only >/dev/null 2>&1
+  # Use timeout to prevent hanging on auth prompts
+  if ! timeout 30 git pull --ff-only; then
+    echo "ERROR: git pull failed. Check credentials/SSH keys."
+    exit 1
+  fi
 
   # Check dist exists
   if [ ! -d "$REPO_DIR/dist" ]; then
