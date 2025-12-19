@@ -80,79 +80,99 @@ section h2 {
   margin: 0 0 1rem 0;
 }
 
-.unknown-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+/* Unknown drones grid with maps */
+.unknown-drones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 
-.unknown-drone-btn {
+.unknown-drone-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #ffaa00;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unknown-drone-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 170, 0, 0.2);
+  border-color: #ffcc00;
+}
+
+.unknown-drone-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
   padding: 0.75rem 1rem;
   background: rgba(255, 170, 0, 0.1);
-  border: 1px solid #ffaa00;
-  color: #ffaa00;
-  font-family: inherit;
+  border-bottom: 1px solid rgba(255, 170, 0, 0.3);
+}
+
+.drone-id-badge {
+  font-family: 'Courier New', monospace;
   font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.unknown-drone-btn:hover {
-  background: #ffaa00;
-  color: #000;
-}
-
-.unknown-drone-btn .drone-id {
   font-weight: 600;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
 }
 
-.unknown-drone-btn .add-text {
-  opacity: 0.8;
+.add-profile-hint {
+  font-size: 0.8rem;
+  color: #ffaa00;
+  opacity: 0.7;
 }
 
-/* Add section */
-.add-section {
-  padding: 1.5rem 2rem;
+.unknown-drone-card:hover .add-profile-hint {
+  opacity: 1;
 }
 
-.add-form {
+.unknown-drone-map {
+  height: 150px;
+  background: #1a1a1a;
+}
+
+.mini-map {
+  width: 100%;
+  height: 100%;
+}
+
+.mini-map-loading,
+.mini-map-no-data {
   display: flex;
-  gap: 1rem;
-  max-width: 400px;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 0.85rem;
+  color: #666;
 }
 
-.add-form input {
-  flex: 1;
-  padding: 0.6rem 1rem;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: inherit;
-  font-family: inherit;
-  font-size: 0.9rem;
+.unknown-drone-info {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.3);
 }
 
-.add-form input:focus {
-  outline: none;
-  border-color: var(--hud-primary, #00ff88);
+.unknown-drone-info .coords {
+  font-family: 'Courier New', monospace;
+  color: #888;
 }
 
-.add-form button {
-  padding: 0.6rem 1.25rem;
-  background: transparent;
-  border: 1px solid var(--hud-primary, #00ff88);
-  color: var(--hud-primary, #00ff88);
-  font-family: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
+.unknown-drone-info .no-coords {
+  color: #666;
+  font-style: italic;
 }
 
-.add-form button:hover {
-  background: var(--hud-primary, #00ff88);
-  color: #000;
+.unknown-drone-info .last-seen {
+  color: #666;
+  font-size: 0.75rem;
 }
 
 /* Profiles grid */

@@ -59,7 +59,7 @@ function saveProfiles(profiles) {
   }
 }
 
-// Get all unique drone IDs from database
+// Get all unique drone IDs from database (detected via GPS telemetry)
 app.get('/api/drones', (req, res) => {
   if (!db) {
     if (!connectDatabase()) {
@@ -68,9 +68,11 @@ app.get('/api/drones', (req, res) => {
   }
 
   try {
+    // Get drones that have GPS telemetry records
     const stmt = db.prepare(`
       SELECT DISTINCT drone_id 
       FROM telemetry 
+      WHERE data LIKE '%"type":"gps"%'
       ORDER BY drone_id ASC
     `);
     const rows = stmt.all();
@@ -81,8 +83,41 @@ app.get('/api/drones', (req, res) => {
     const configuredIds = Object.keys(profiles.drones);
     
     // Find unknown drones (in DB but not in profiles)
-    // Convert both to strings for comparison since drone_id can be numeric or string
-    const unknownDrones = droneIds.filter(id => !configuredIds.includes(String(id)));
+    const unknownDroneIds = droneIds.filter(id => !configuredIds.includes(String(id)));
+    
+    // Get latest GPS coordinates for each unknown drone
+    const unknownDrones = unknownDroneIds.map(droneId => {
+      const gpsStmt = db.prepare(`
+        SELECT data, timestamp 
+        FROM telemetry 
+        WHERE drone_id = ? AND data LIKE '%"type":"gps"%'
+        ORDER BY ID DESC 
+        LIMIT 1
+      `);
+      const gpsRow = gpsStmt.get(droneId);
+      
+      let latitude = null;
+      let longitude = null;
+      let timestamp = null;
+      
+      if (gpsRow) {
+        try {
+          const gpsData = JSON.parse(gpsRow.data);
+          latitude = gpsData.latitude;
+          longitude = gpsData.longitude;
+          timestamp = gpsRow.timestamp;
+        } catch (e) {
+          // ignore parse errors
+        }
+      }
+      
+      return {
+        droneId: String(droneId),
+        latitude,
+        longitude,
+        lastSeen: timestamp
+      };
+    });
 
     res.json({
       success: true,

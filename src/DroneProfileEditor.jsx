@@ -1,9 +1,64 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import config from './config'
 import './DroneProfileEditor.css'
 
 const API_BASE_URL = config.apiUrl
+
+// Dark map style for mini maps
+const miniMapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a1a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#4a5a6a" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a2a2a" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a1520" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+]
+
+// Mini map component for showing drone position
+function DroneLocationMap({ latitude, longitude }) {
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: config.googleMapsApiKey
+  })
+  
+  if (!isLoaded) {
+    return <div className="mini-map-loading">Loading map...</div>
+  }
+  
+  if (!latitude || !longitude) {
+    return <div className="mini-map-no-data">No GPS data</div>
+  }
+  
+  return (
+    <GoogleMap
+      mapContainerClassName="mini-map"
+      center={{ lat: latitude, lng: longitude }}
+      zoom={14}
+      options={{
+        styles: miniMapStyles,
+        disableDefaultUI: true,
+        zoomControl: false,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      }}
+    >
+      <Marker
+        position={{ lat: latitude, lng: longitude }}
+        icon={{
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#ffaa00',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        }}
+      />
+    </GoogleMap>
+  )
+}
 
 // Default profile template
 const defaultProfile = {
@@ -124,10 +179,9 @@ function DroneProfileEditor() {
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
-  const [unknownDrones, setUnknownDrones] = useState([])
+  const [unknownDrones, setUnknownDrones] = useState([]) // Now contains objects with GPS data
   const [loading, setLoading] = useState(true)
   const [editingDrone, setEditingDrone] = useState(null)
-  const [newDroneId, setNewDroneId] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
   
   // Fetch data
@@ -178,9 +232,8 @@ function DroneProfileEditor() {
         }))
         setEditingDrone(null)
         setShowNewForm(false)
-        setNewDroneId('')
-        // Remove from unknown drones if it was there
-        setUnknownDrones(prev => prev.filter(id => id !== droneId))
+        // Remove from unknown drones if it was there (unknownDrones is now array of objects)
+        setUnknownDrones(prev => prev.filter(d => String(d.droneId) !== String(droneId)))
       }
     } catch (error) {
       console.error('Failed to save profile:', error)
@@ -204,28 +257,13 @@ function DroneProfileEditor() {
           return updated
         })
         setEditingDrone(null)
-        // Add back to unknown if in DB
-        if (droneIds.map(String).includes(String(droneId))) {
-          setUnknownDrones(prev => [...prev, droneId])
-        }
+        setShowNewForm(false)
+        // Refresh data to get updated unknown drones list
+        window.location.reload()
       }
     } catch (error) {
       console.error('Failed to delete profile:', error)
     }
-  }
-  
-  const handleAddNewDrone = () => {
-    const id = newDroneId.trim()
-    if (!id) {
-      alert('Please enter a valid drone ID')
-      return
-    }
-    if (profiles[id]) {
-      alert(`Drone #${id} already has a profile`)
-      return
-    }
-    setEditingDrone(id)
-    setShowNewForm(true)
   }
   
   if (loading) {
@@ -248,42 +286,50 @@ function DroneProfileEditor() {
         </div>
       </header>
       
-      {/* Unknown drones section */}
+      {/* Unknown drones section - with maps */}
       {unknownDrones.length > 0 && (
         <section className="unknown-section">
-          <h2>⚠ Unknown Drones in Database</h2>
-          <p>These drone IDs have telemetry data but no profile configured.</p>
-          <div className="unknown-list">
-            {unknownDrones.map(id => (
-              <button
-                key={id}
-                className="unknown-drone-btn"
+          <h2>⚠ Unknown Drones Detected ({unknownDrones.length})</h2>
+          <p>These drones have GPS telemetry data but no profile configured. Click to add a profile.</p>
+          <div className="unknown-drones-grid">
+            {unknownDrones.map(drone => (
+              <div
+                key={drone.droneId}
+                className="unknown-drone-card"
                 onClick={() => {
-                  setEditingDrone(id)
+                  setEditingDrone(drone.droneId)
                   setShowNewForm(true)
                 }}
               >
-                <span className="drone-id">#{id}</span>
-                <span className="add-text">+ Add Profile</span>
-              </button>
+                <div className="unknown-drone-header">
+                  <span className="drone-id-badge">ID: {drone.droneId}</span>
+                  <span className="add-profile-hint">+ Add Profile</span>
+                </div>
+                <div className="unknown-drone-map">
+                  <DroneLocationMap 
+                    latitude={drone.latitude} 
+                    longitude={drone.longitude} 
+                  />
+                </div>
+                <div className="unknown-drone-info">
+                  {drone.latitude && drone.longitude ? (
+                    <span className="coords">
+                      {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}
+                    </span>
+                  ) : (
+                    <span className="no-coords">No GPS coordinates</span>
+                  )}
+                  {drone.lastSeen && (
+                    <span className="last-seen">
+                      Last seen: {new Date(drone.lastSeen).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </section>
       )}
-      
-      {/* Add new drone */}
-      <section className="add-section">
-        <h2>Add New Drone Profile</h2>
-        <div className="add-form">
-          <input
-            type="text"
-            placeholder="Drone ID (e.g. 1604695971)"
-            value={newDroneId}
-            onChange={(e) => setNewDroneId(e.target.value)}
-          />
-          <button onClick={handleAddNewDrone}>+ Add Profile</button>
-        </div>
-      </section>
       
       {/* New/Edit form modal */}
       {(editingDrone !== null && showNewForm) && (

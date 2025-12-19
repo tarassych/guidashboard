@@ -64,17 +64,17 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
 }
 
 // Unknown drone alert - lists ALL unknown drone IDs
-function UnknownDroneAlert({ droneIds, onAddProfile }) {
-  if (!droneIds || droneIds.length === 0) return null
+function UnknownDroneAlert({ unknownDrones, onAddProfile }) {
+  if (!unknownDrones || unknownDrones.length === 0) return null
   
   return (
     <div className="unknown-drone-alert">
       <div className="alert-icon">⚠</div>
       <div className="alert-content">
-        <span className="alert-title">Unknown Drones in Database ({droneIds.length})</span>
+        <span className="alert-title">Unknown Drones in Database ({unknownDrones.length})</span>
         <div className="alert-drone-list">
-          {droneIds.map(id => (
-            <span key={id} className="alert-drone-id">#{id}</span>
+          {unknownDrones.map(drone => (
+            <span key={drone.droneId} className="alert-drone-id">#{drone.droneId}</span>
           ))}
         </div>
       </div>
@@ -236,7 +236,7 @@ function Dashboard() {
       
       {unknownDrones.length > 0 && (
         <UnknownDroneAlert 
-          droneIds={unknownDrones} 
+          unknownDrones={unknownDrones} 
           onAddProfile={() => navigate('/profiles')} 
         />
       )}
