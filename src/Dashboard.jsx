@@ -208,8 +208,8 @@ function Dashboard() {
     navigate(`/drone/${droneId}`)
   }, [navigate])
   
-  // Combine configured and unknown drones for display (keep as strings)
-  const allDroneIds = [...new Set([...Object.keys(profiles), ...droneIds.map(String)])]
+  // Only show drones with configured profiles
+  const configuredDroneIds = Object.keys(profiles)
   
   if (loading) {
     return (
@@ -242,15 +242,15 @@ function Dashboard() {
       )}
       
       <main className="dashboard-grid">
-        {allDroneIds.length === 0 ? (
+        {configuredDroneIds.length === 0 ? (
           <div className="no-drones">
             <span className="no-drones-icon">◇</span>
-            <h2>No Drones Detected</h2>
-            <p>No telemetry data found in the database.</p>
-            <Link to="/profiles" className="add-drone-btn">+ Add Drone Profile</Link>
+            <h2>No Configured Drones</h2>
+            <p>Add drone profiles to see them here.</p>
+            <Link to="/profiles" className="add-drone-btn">⚙ Manage Profiles</Link>
           </div>
         ) : (
-          allDroneIds.map(droneId => (
+          configuredDroneIds.map(droneId => (
             <DroneCard
               key={droneId}
               droneId={droneId}
@@ -264,7 +264,7 @@ function Dashboard() {
       
       <footer className="dashboard-footer">
         <span className="footer-text">
-          {allDroneIds.length} drone{allDroneIds.length !== 1 ? 's' : ''} • 
+          {configuredDroneIds.length} drone{configuredDroneIds.length !== 1 ? 's' : ''} • 
           {Object.values(droneTelemetry).filter(t => t?.connected).length} online
         </span>
       </footer>
