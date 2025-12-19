@@ -23,7 +23,8 @@ let db = null;
 
 function connectDatabase() {
   try {
-    db = new Database(config.dbPath, { readonly: true });
+    // WAL mode requires write access even for reading (for -wal and -shm files)
+    db = new Database(config.dbPath);
     console.log(`Connected to database: ${config.dbPath}`);
     return true;
   } catch (error) {
@@ -69,10 +70,11 @@ app.get('/api/drones', (req, res) => {
 
   try {
     // Get drones that have GPS telemetry records
+    // Use flexible pattern to match "type": "gps" with or without spaces
     const stmt = db.prepare(`
       SELECT DISTINCT drone_id 
       FROM telemetry 
-      WHERE data LIKE '%"type":"gps"%'
+      WHERE data LIKE '%"type":%"gps"%'
       ORDER BY drone_id ASC
     `);
     const rows = stmt.all();
@@ -90,7 +92,7 @@ app.get('/api/drones', (req, res) => {
       const gpsStmt = db.prepare(`
         SELECT data, timestamp 
         FROM telemetry 
-        WHERE drone_id = ? AND data LIKE '%"type":"gps"%'
+        WHERE drone_id = ? AND data LIKE '%"type":%"gps"%'
         ORDER BY ID DESC 
         LIMIT 1
       `);
