@@ -846,6 +846,8 @@ section h2 {
 }
 
 .discovered-drone-card {
+  display: flex;
+  flex-direction: column;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid #00aaff;
   border-radius: 4px;
@@ -978,6 +980,7 @@ section h2 {
 }
 
 .discovered-drone-actions {
+  margin-top: auto;
   padding: 0.75rem 1rem;
   background: rgba(0, 0, 0, 0.3);
 }
