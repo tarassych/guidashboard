@@ -184,6 +184,9 @@ function DroneProfileEditor() {
   const [editingDrone, setEditingDrone] = useState(null)
   const [showNewForm, setShowNewForm] = useState(false)
   
+  // Tab state: 'connected' or 'discover'
+  const [activeTab, setActiveTab] = useState('connected')
+  
   // Discovery state
   const [discoveredDrones, setDiscoveredDrones] = useState([])
   const [isDiscovering, setIsDiscovering] = useState(false)
@@ -195,6 +198,11 @@ function DroneProfileEditor() {
   
   // Pairing state (keyed by drone IP)
   const [pairingStatus, setPairingStatus] = useState({}) // { ip: { status: 'pairing'|'checking'|'success'|'failed', message: '' } }
+  
+  // Check if any drone is currently pairing (to disable other pair buttons and discover)
+  const isPairingAny = Object.values(pairingStatus).some(
+    s => s.status === 'pairing' || s.status === 'checking'
+  )
   
   // Auto-scroll terminal to bottom when logs change
   useEffect(() => {
@@ -483,7 +491,7 @@ function DroneProfileEditor() {
     )
   }
   
-  const configuredDroneIds = Object.keys(profiles).sort((a, b) => String(a).localeCompare(String(b)))
+  const connectedDroneIds = Object.keys(profiles).sort((a, b) => String(a).localeCompare(String(b)))
   
   return (
     <div className="profile-editor">
@@ -494,249 +502,22 @@ function DroneProfileEditor() {
         </div>
       </header>
       
-      {/* Discover Drones Section */}
-      <section className="discover-section">
-        <div className="discover-header">
-          <div className="discover-title">
-            <h2>🔍 Discover Drones</h2>
-            <p>Scan the network for new drones to pair</p>
-          </div>
-          <button 
-            className={`discover-btn ${isDiscovering ? 'discovering' : ''}`}
-            onClick={handleDiscover}
-            disabled={isDiscovering}
-          >
-            {isDiscovering ? (
-              <>
-                <span className="discover-spinner">◌</span>
-                Scanning...
-              </>
-            ) : (
-              'Discover Drones'
-            )}
-          </button>
-        </div>
-        
-        {discoverError && (
-          <div className="discover-error">
-            ⚠ {discoverError}
-          </div>
-        )}
-        
-        {/* Split layout: Discovered drones (left) + Terminal (right) */}
-        {(discoveredDrones.length > 0 || terminalLogs.length > 0) && (
-          <div className="discover-content-split">
-            {/* Discovered Drones - Left side (60%) */}
-            {discoveredDrones.length > 0 && (
-              <div className="discovered-drones-panel">
-                <div className="discovered-drones-grid">
-                  {discoveredDrones.map(drone => {
-                    const status = pairingStatus[drone.ip]
-                    const isPairing = status?.status === 'pairing' || status?.status === 'checking'
-                    const isSuccess = status?.status === 'success'
-                    const isFailed = status?.status === 'failed'
-                    
-                    return (
-                      <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''}`}>
-                        <div className="discovered-drone-header">
-                          <span className="drone-id-badge">ID: {drone.drone_id}</span>
-                          <span className="drone-method">{drone.method.toUpperCase()}</span>
-                        </div>
-                        
-                        <div className="discovered-drone-details">
-                          <div className="detail-row">
-                            <span className="detail-label">IP:</span>
-                            <span className="detail-value">{drone.ip}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="detail-label">MAC:</span>
-                            <span className="detail-value">{drone.mac}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="detail-label">Target:</span>
-                            <span className="detail-value">{drone.target_ip}</span>
-                          </div>
-                        </div>
-                        
-                        {status?.message && (
-                          <div className={`pairing-message ${status.status}`}>
-                            {isPairing && <span className="pairing-spinner">◌</span>}
-                            {isSuccess && <span className="success-icon">✓</span>}
-                            {isFailed && <span className="failed-icon">✕</span>}
-                            {status.message}
-                          </div>
-                        )}
-                        
-                        <div className="discovered-drone-actions">
-                          <button
-                            className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''}`}
-                            onClick={() => handlePair(drone)}
-                            disabled={isPairing || isSuccess}
-                          >
-                            {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : 'Pair'}
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {/* Terminal Output - Right side (40%) */}
-            {terminalLogs.length > 0 && (
-              <div className="terminal-output">
-                <div className="terminal-header">
-                  <span className="terminal-title">📟 Terminal Output</span>
-                  <button 
-                    className="terminal-clear-btn"
-                    onClick={() => setTerminalLogs([])}
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div className="terminal-body" ref={terminalRef}>
-                  {terminalLogs.map((log, idx) => (
-                    <div key={idx} className={`terminal-entry ${log.type} ${log.status}`}>
-                      {/* Command line */}
-                      {log.command && (
-                        <div className="terminal-command-line">
-                          <span className="prompt">$</span>
-                          <span className="command">{log.command}</span>
-                          {log.status === 'running' && <span className="discover-spinner">◌</span>}
-                        </div>
-                      )}
-                      
-                      {/* Info message */}
-                      {log.type === 'info' && (
-                        <div className="terminal-info">{log.message}</div>
-                      )}
-                      
-                      {/* Stdout */}
-                      {log.stdout && (
-                        <div className="terminal-section">
-                          <pre className="terminal-content">{log.stdout}</pre>
-                        </div>
-                      )}
-                      
-                      {/* Stderr */}
-                      {log.stderr && (
-                        <div className="terminal-section stderr">
-                          <div className="terminal-label">stderr:</div>
-                          <pre className="terminal-content">{log.stderr}</pre>
-                        </div>
-                      )}
-                      
-                      {/* Parse Error */}
-                      {log.parseError && (
-                        <div className="terminal-section warning">
-                          <div className="terminal-label">⚠ Parse Warning:</div>
-                          <pre className="terminal-content">{log.parseError}</pre>
-                        </div>
-                      )}
-                      
-                      {/* Error */}
-                      {log.error && (
-                        <div className="terminal-section error">
-                          <div className="terminal-label">✕ Error:</div>
-                          <pre className="terminal-content">{log.error}</pre>
-                        </div>
-                      )}
-                      
-                      {/* Result summary for discover */}
-                      {log.type === 'discover' && log.status !== 'running' && (
-                        <div className="terminal-result">
-                          {log.dronesFound > 0 ? (
-                            <span className="result-success">✓ Found {log.dronesFound} drone(s) on network</span>
-                          ) : log.error ? (
-                            <span className="result-error">✕ Discovery failed</span>
-                          ) : (
-                            <span className="result-empty">○ No drones found on network</span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Result summary for pair */}
-                      {log.type === 'pair' && log.status !== 'running' && (
-                        <div className="terminal-result">
-                          {log.result ? (
-                            <span className="result-success">✓ Pair command sent to drone {log.droneId}</span>
-                          ) : (
-                            <span className="result-error">✕ Pairing failed for drone {log.droneId}</span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Telemetry check result */}
-                      {log.type === 'telemetry-check' && (
-                        <div className="terminal-result">
-                          {log.hasTelemetry ? (
-                            <span className="result-success">✓ Telemetry received from drone {log.droneId} - Paired successfully!</span>
-                          ) : (
-                            <span className="result-error">✕ No telemetry from drone {log.droneId} - Try pairing again</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {!isDiscovering && discoveredDrones.length === 0 && terminalLogs.length === 0 && !discoverError && (
-          <div className="discover-empty">
-            <span className="empty-icon">📡</span>
-            <span>Click "Discover Drones" to scan for available drones on the network</span>
-          </div>
-        )}
-      </section>
-      
-      {/* Detected drones section - with maps */}
-      {detectedDrones.length > 0 && (
-        <section className="detected-section">
-          <h2>📡 Detected Drones ({detectedDrones.length})</h2>
-          <p>Telemetry active. Click to create profile.</p>
-          <div className="detected-drones-grid">
-            {detectedDrones.map(drone => (
-              <div
-                key={drone.droneId}
-                className="detected-drone-card"
-                onClick={() => {
-                  setEditingDrone(drone.droneId)
-                  setShowNewForm(true)
-                }}
-              >
-                <div className="detected-drone-header">
-                  <span className="drone-id-badge">ID: {drone.droneId}</span>
-                  <span className="add-profile-hint">+ Add Profile</span>
-                </div>
-                <div className="detected-drone-map">
-                  <DroneLocationMap 
-                    latitude={drone.latitude} 
-                    longitude={drone.longitude} 
-                  />
-                </div>
-                <div className="detected-drone-info">
-                  {drone.latitude && drone.longitude ? (
-                    <span className="coords">
-                      {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}
-                    </span>
-                  ) : (
-                    <span className="no-coords">No GPS coordinates</span>
-                  )}
-                  {drone.lastSeen && (
-                    <span className="last-seen">
-                      Last seen: {new Date(drone.lastSeen).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Tab Navigation */}
+      <nav className="tabs-nav">
+        <button 
+          className={`tab-btn ${activeTab === 'connected' ? 'active' : ''}`}
+          onClick={() => setActiveTab('connected')}
+        >
+          📶 Connected ({connectedDroneIds.length})
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'discover' ? 'active' : ''}`}
+          onClick={() => setActiveTab('discover')}
+        >
+          🔍 Discover & Pair
+          {isPairingAny && <span className="tab-badge pairing">●</span>}
+        </button>
+      </nav>
       
       {/* New/Edit form modal */}
       {(editingDrone !== null && showNewForm) && (
@@ -753,64 +534,321 @@ function DroneProfileEditor() {
         </div>
       )}
       
-      {/* Existing profiles */}
-      <section className="profiles-section">
-        <h2>Configured Drones ({configuredDroneIds.length})</h2>
-        
-        {configuredDroneIds.length === 0 ? (
-          <div className="no-profiles">
-            <p>No drone profiles configured yet.</p>
-          </div>
-        ) : (
-          <div className="profiles-grid">
-            {configuredDroneIds.map(droneId => {
-              const profile = profiles[droneId]
-              return (
-                <div
-                  key={droneId}
-                  className="profile-card"
-                  style={{ '--accent-color': profile.color }}
-                >
-                  <div className="profile-card-header">
-                    <span className="profile-id">#{droneId}</span>
-                    <span className="profile-name">{profile.name || `Drone ${droneId}`}</span>
-                    <button 
-                      className="edit-btn"
-                      onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
+      {/* TAB: Connected Drones */}
+      {activeTab === 'connected' && (
+        <div className="tab-content">
+          {/* Connected drone profiles */}
+          <section className="profiles-section">
+            <h2>Connected Drones ({connectedDroneIds.length})</h2>
+            
+            {connectedDroneIds.length === 0 ? (
+              <div className="no-profiles">
+                <p>No connected drones yet. Go to Discover & Pair to add drones.</p>
+              </div>
+            ) : (
+              <div className="profiles-grid">
+                {connectedDroneIds.map(droneId => {
+                  const profile = profiles[droneId]
+                  return (
+                    <div
+                      key={droneId}
+                      className="profile-card"
+                      style={{ '--accent-color': profile.color }}
                     >
-                      Edit
-                    </button>
-                  </div>
-                  
-                  <div className="profile-details">
-                    <div className="detail-row">
-                      <span className="detail-label">Front Camera:</span>
-                      <span className="detail-value">
-                        {profile.frontCameraUrl || <em>Not set</em>}
-                      </span>
+                      <div className="profile-card-header">
+                        <span className="profile-id">#{droneId}</span>
+                        <span className="profile-name">{profile.name || `Drone ${droneId}`}</span>
+                        <button 
+                          className="edit-btn"
+                          onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      
+                      <div className="profile-details">
+                        <div className="detail-row">
+                          <span className="detail-label">Front Camera:</span>
+                          <span className="detail-value">
+                            {profile.frontCameraUrl || <em>Not set</em>}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Rear Camera:</span>
+                          <span className="detail-value">
+                            {profile.rearCameraUrl || <em>Not set</em>}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="profile-actions">
+                        <Link 
+                          to={`/drone/${droneId}`} 
+                          className="view-osd-btn"
+                        >
+                          Open →
+                        </Link>
+                      </div>
                     </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Rear Camera:</span>
-                      <span className="detail-value">
-                        {profile.rearCameraUrl || <em>Not set</em>}
-                      </span>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+          
+          {/* Detected drones - telemetry but no profile */}
+          {detectedDrones.length > 0 && (
+            <section className="detected-section">
+              <h2>📡 Detected Drones ({detectedDrones.length})</h2>
+              <p>Telemetry active. Click to create profile.</p>
+              <div className="detected-drones-grid">
+                {detectedDrones.map(drone => (
+                  <div
+                    key={drone.droneId}
+                    className="detected-drone-card"
+                    onClick={() => {
+                      setEditingDrone(drone.droneId)
+                      setShowNewForm(true)
+                    }}
+                  >
+                    <div className="detected-drone-header">
+                      <span className="drone-id-badge">ID: {drone.droneId}</span>
+                      <span className="add-profile-hint">+ Add Profile</span>
+                    </div>
+                    <div className="detected-drone-map">
+                      <DroneLocationMap 
+                        latitude={drone.latitude} 
+                        longitude={drone.longitude} 
+                      />
+                    </div>
+                    <div className="detected-drone-info">
+                      {drone.latitude && drone.longitude ? (
+                        <span className="coords">
+                          {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}
+                        </span>
+                      ) : (
+                        <span className="no-coords">No GPS coordinates</span>
+                      )}
+                      {drone.lastSeen && (
+                        <span className="last-seen">
+                          Last seen: {new Date(drone.lastSeen).toLocaleString()}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="profile-actions">
-                    <Link 
-                      to={`/drone/${droneId}`} 
-                      className="view-osd-btn"
-                    >
-                      Open →
-                    </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+      
+      {/* TAB: Discover & Pair */}
+      {activeTab === 'discover' && (
+        <div className="tab-content">
+          <section className="discover-section">
+            <div className="discover-header">
+              <div className="discover-title">
+                <h2>🔍 Discover Drones</h2>
+                <p>Scan the network for new drones to pair</p>
+              </div>
+              <button 
+                className={`discover-btn ${isDiscovering ? 'discovering' : ''} ${isPairingAny ? 'disabled-pairing' : ''}`}
+                onClick={handleDiscover}
+                disabled={isDiscovering || isPairingAny}
+              >
+                {isDiscovering ? (
+                  <>
+                    <span className="discover-spinner">◌</span>
+                    Scanning...
+                  </>
+                ) : isPairingAny ? (
+                  'Pairing in progress...'
+                ) : (
+                  'Discover Drones'
+                )}
+              </button>
+            </div>
+            
+            {discoverError && (
+              <div className="discover-error">
+                ⚠ {discoverError}
+              </div>
+            )}
+            
+            {/* Split layout: Discovered drones (left) + Terminal (right) */}
+            {(discoveredDrones.length > 0 || terminalLogs.length > 0) && (
+              <div className="discover-content-split">
+                {/* Discovered Drones - Left side (60%) */}
+                {discoveredDrones.length > 0 && (
+                  <div className="discovered-drones-panel">
+                    <div className="discovered-drones-grid">
+                      {discoveredDrones.map(drone => {
+                        const status = pairingStatus[drone.ip]
+                        const isPairing = status?.status === 'pairing' || status?.status === 'checking'
+                        const isSuccess = status?.status === 'success'
+                        const isFailed = status?.status === 'failed'
+                        // Disable if any other drone is pairing
+                        const isDisabledByOther = isPairingAny && !isPairing
+                        
+                        return (
+                          <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''}`}>
+                            <div className="discovered-drone-header">
+                              <span className="drone-id-badge">ID: {drone.drone_id}</span>
+                              <span className="drone-method">{drone.method.toUpperCase()}</span>
+                            </div>
+                            
+                            <div className="discovered-drone-details">
+                              <div className="detail-row">
+                                <span className="detail-label">IP:</span>
+                                <span className="detail-value">{drone.ip}</span>
+                              </div>
+                              <div className="detail-row">
+                                <span className="detail-label">MAC:</span>
+                                <span className="detail-value">{drone.mac}</span>
+                              </div>
+                              <div className="detail-row">
+                                <span className="detail-label">Target:</span>
+                                <span className="detail-value">{drone.target_ip}</span>
+                              </div>
+                            </div>
+                            
+                            {status?.message && (
+                              <div className={`pairing-message ${status.status}`}>
+                                {isPairing && <span className="pairing-spinner">◌</span>}
+                                {isSuccess && <span className="success-icon">✓</span>}
+                                {isFailed && <span className="failed-icon">✕</span>}
+                                {status.message}
+                              </div>
+                            )}
+                            
+                            <div className="discovered-drone-actions">
+                              <button
+                                className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''} ${isDisabledByOther ? 'disabled-other' : ''}`}
+                                onClick={() => handlePair(drone)}
+                                disabled={isPairing || isSuccess || isDisabledByOther}
+                              >
+                                {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : isDisabledByOther ? 'Wait...' : 'Pair'}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
+                )}
+                
+                {/* Terminal Output - Right side (40%) */}
+                {terminalLogs.length > 0 && (
+                  <div className="terminal-output">
+                    <div className="terminal-header">
+                      <span className="terminal-title">📟 Terminal Output</span>
+                      <button 
+                        className="terminal-clear-btn"
+                        onClick={() => setTerminalLogs([])}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="terminal-body" ref={terminalRef}>
+                      {terminalLogs.map((log, idx) => (
+                        <div key={idx} className={`terminal-entry ${log.type} ${log.status}`}>
+                          {/* Command line */}
+                          {log.command && (
+                            <div className="terminal-command-line">
+                              <span className="prompt">$</span>
+                              <span className="command">{log.command}</span>
+                              {log.status === 'running' && <span className="discover-spinner">◌</span>}
+                            </div>
+                          )}
+                          
+                          {/* Info message */}
+                          {log.type === 'info' && (
+                            <div className="terminal-info">{log.message}</div>
+                          )}
+                          
+                          {/* Stdout */}
+                          {log.stdout && (
+                            <div className="terminal-section">
+                              <pre className="terminal-content">{log.stdout}</pre>
+                            </div>
+                          )}
+                          
+                          {/* Stderr */}
+                          {log.stderr && (
+                            <div className="terminal-section stderr">
+                              <div className="terminal-label">stderr:</div>
+                              <pre className="terminal-content">{log.stderr}</pre>
+                            </div>
+                          )}
+                          
+                          {/* Parse Error */}
+                          {log.parseError && (
+                            <div className="terminal-section warning">
+                              <div className="terminal-label">⚠ Parse Warning:</div>
+                              <pre className="terminal-content">{log.parseError}</pre>
+                            </div>
+                          )}
+                          
+                          {/* Error */}
+                          {log.error && (
+                            <div className="terminal-section error">
+                              <div className="terminal-label">✕ Error:</div>
+                              <pre className="terminal-content">{log.error}</pre>
+                            </div>
+                          )}
+                          
+                          {/* Result summary for discover */}
+                          {log.type === 'discover' && log.status !== 'running' && (
+                            <div className="terminal-result">
+                              {log.dronesFound > 0 ? (
+                                <span className="result-success">✓ Found {log.dronesFound} drone(s) on network</span>
+                              ) : log.error ? (
+                                <span className="result-error">✕ Discovery failed</span>
+                              ) : (
+                                <span className="result-empty">○ No drones found on network</span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Result summary for pair */}
+                          {log.type === 'pair' && log.status !== 'running' && (
+                            <div className="terminal-result">
+                              {log.result ? (
+                                <span className="result-success">✓ Pair command sent to drone {log.droneId}</span>
+                              ) : (
+                                <span className="result-error">✕ Pairing failed for drone {log.droneId}</span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Telemetry check result */}
+                          {log.type === 'telemetry-check' && (
+                            <div className="terminal-result">
+                              {log.hasTelemetry ? (
+                                <span className="result-success">✓ Telemetry received from drone {log.droneId} - Paired successfully!</span>
+                              ) : (
+                                <span className="result-error">✕ No telemetry from drone {log.droneId} - Try pairing again</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!isDiscovering && discoveredDrones.length === 0 && terminalLogs.length === 0 && !discoverError && (
+              <div className="discover-empty">
+                <span className="empty-icon">📡</span>
+                <span>Click "Discover Drones" to scan for available drones on the network</span>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   )
 }

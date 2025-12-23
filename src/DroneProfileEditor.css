@@ -51,6 +51,61 @@
   margin: 0;
 }
 
+/* Tab Navigation */
+.tabs-nav {
+  display: flex;
+  gap: 0;
+  padding: 0 2rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn {
+  padding: 1rem 2rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab-btn:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-btn.active {
+  color: var(--hud-primary, #00ff88);
+  border-bottom-color: var(--hud-primary, #00ff88);
+}
+
+.tab-badge {
+  font-size: 0.6rem;
+  margin-left: 0.25rem;
+}
+
+.tab-badge.pairing {
+  color: #ffaa00;
+  animation: pulse-badge 1s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 60vh;
+}
+
 /* Sections */
 section {
   padding: 2rem;
@@ -905,6 +960,16 @@ section h2 {
 .pair-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.pair-btn.disabled-other {
+  background: #333;
+  opacity: 0.5;
+}
+
+.discover-btn.disabled-pairing {
+  background: #444;
+  opacity: 0.6;
 }
 
 .pair-btn.pairing {
