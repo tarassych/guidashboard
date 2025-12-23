@@ -500,6 +500,138 @@ section h2 {
   to { transform: rotate(360deg); }
 }
 
+/* Terminal Output Display */
+.terminal-output {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.terminal-title {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.terminal-command {
+  font-size: 0.75rem;
+  color: #00aaff;
+  background: rgba(0, 150, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+
+.terminal-body {
+  padding: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.terminal-line {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #aaa;
+}
+
+.terminal-line.waiting {
+  color: #00aaff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.terminal-line.empty {
+  color: #666;
+  font-style: italic;
+}
+
+.terminal-section {
+  margin-bottom: 1rem;
+}
+
+.terminal-section:last-child {
+  margin-bottom: 0;
+}
+
+.terminal-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.terminal-section.stderr .terminal-label {
+  color: #ff9944;
+}
+
+.terminal-section.warning .terminal-label {
+  color: #ffaa00;
+}
+
+.terminal-section.error .terminal-label {
+  color: #ff4444;
+}
+
+.terminal-content {
+  margin: 0;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #ccc;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+
+.terminal-section.stderr .terminal-content {
+  color: #ff9944;
+  background: rgba(255, 153, 68, 0.05);
+}
+
+.terminal-section.warning .terminal-content {
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.05);
+}
+
+.terminal-section.error .terminal-content {
+  color: #ff6666;
+  background: rgba(255, 68, 68, 0.05);
+}
+
+.terminal-result {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+  font-size: 0.9rem;
+}
+
+.terminal-result .result-success {
+  color: #00ff88;
+}
+
+.terminal-result .result-error {
+  color: #ff6666;
+}
+
+.terminal-result .result-empty {
+  color: #888;
+}
+
 .discover-error {
   background: rgba(255, 68, 68, 0.1);
   border: 1px solid rgba(255, 68, 68, 0.3);

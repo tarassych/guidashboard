@@ -282,42 +282,62 @@ app.get('/api/telemetry', (req, res) => {
 
 // Discover drones on the network
 app.get('/api/discover', async (req, res) => {
+  const scriptPath = path.join(config.scriptsPath, 'discover.sh');
+  const command = `cd ${config.scriptsPath} && ./discover.sh`;
+  
+  // Check if script exists
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(404).json({ 
+      success: false,
+      error: 'Discover script not found',
+      path: scriptPath,
+      command: null,
+      stdout: '',
+      stderr: ''
+    });
+  }
+  
   try {
-    const scriptPath = path.join(config.scriptsPath, 'discover.sh');
-    
-    // Check if script exists
-    if (!fs.existsSync(scriptPath)) {
-      return res.status(404).json({ 
-        error: 'Discover script not found',
-        path: scriptPath 
-      });
-    }
-    
-    const { stdout, stderr } = await execAsync(`cd ${config.scriptsPath} && ./discover.sh`, {
+    const { stdout, stderr } = await execAsync(command, {
       timeout: 30000 // 30 second timeout
     });
     
-    // Parse JSON output from discover.sh
+    // Try to parse JSON output from discover.sh
     let drones = [];
+    let parseError = null;
+    
     try {
-      drones = JSON.parse(stdout.trim());
-    } catch (parseError) {
-      console.error('Failed to parse discover output:', stdout);
-      return res.status(500).json({ 
-        error: 'Failed to parse discover script output',
-        raw: stdout 
-      });
+      // Find JSON array in output (in case there's other text before/after)
+      const jsonMatch = stdout.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        drones = JSON.parse(jsonMatch[0]);
+      } else if (stdout.trim() === '[]' || stdout.trim() === '') {
+        drones = [];
+      } else {
+        parseError = 'No JSON array found in output';
+      }
+    } catch (e) {
+      parseError = e.message;
     }
     
     res.json({
       success: true,
-      drones
+      drones,
+      parseError,
+      command,
+      stdout: stdout || '',
+      stderr: stderr || ''
     });
   } catch (error) {
     console.error('Discover error:', error.message);
-    res.status(500).json({ 
+    res.json({ 
+      success: false,
+      drones: [],
       error: error.message,
-      code: error.code 
+      code: error.code,
+      command,
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
     });
   }
 });

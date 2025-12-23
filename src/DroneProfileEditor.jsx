@@ -188,6 +188,7 @@ function DroneProfileEditor() {
   const [discoveredDrones, setDiscoveredDrones] = useState([])
   const [isDiscovering, setIsDiscovering] = useState(false)
   const [discoverError, setDiscoverError] = useState(null)
+  const [discoverOutput, setDiscoverOutput] = useState(null) // { command, stdout, stderr, parseError }
   
   // Pairing state (keyed by drone IP)
   const [pairingStatus, setPairingStatus] = useState({}) // { ip: { status: 'pairing'|'checking'|'success'|'failed', message: '' } }
@@ -279,26 +280,48 @@ function DroneProfileEditor() {
     setIsDiscovering(true)
     setDiscoverError(null)
     setDiscoveredDrones([])
+    setDiscoverOutput(null)
     
     try {
       const response = await fetch(`${API_BASE_URL}/api/discover`)
       const data = await response.json()
       
-      if (data.success) {
+      // Always store the output for debugging
+      setDiscoverOutput({
+        command: data.command || 'discover.sh',
+        stdout: data.stdout || '',
+        stderr: data.stderr || '',
+        parseError: data.parseError || null,
+        error: data.error || null
+      })
+      
+      if (data.success || data.drones) {
         // Filter out drones that already have telemetry (are in unknownDrones)
         const unknownIds = unknownDrones.map(d => String(d.droneId))
         const configuredIds = Object.keys(profiles)
-        const newDrones = data.drones.filter(d => 
+        const drones = data.drones || []
+        const newDrones = drones.filter(d => 
           !unknownIds.includes(String(d.drone_id)) && 
           !configuredIds.includes(String(d.drone_id))
         )
         setDiscoveredDrones(newDrones)
+        
+        if (!data.success) {
+          setDiscoverError(data.error || 'Discovery completed with errors')
+        }
       } else {
         setDiscoverError(data.error || 'Discovery failed')
       }
     } catch (error) {
       console.error('Failed to discover:', error)
       setDiscoverError(error.message)
+      setDiscoverOutput({
+        command: 'discover.sh',
+        stdout: '',
+        stderr: '',
+        parseError: null,
+        error: error.message
+      })
     } finally {
       setIsDiscovering(false)
     }
@@ -432,6 +455,71 @@ function DroneProfileEditor() {
             )}
           </button>
         </div>
+        
+        {/* Terminal Output Display */}
+        {(isDiscovering || discoverOutput) && (
+          <div className="terminal-output">
+            <div className="terminal-header">
+              <span className="terminal-title">📟 Terminal Output</span>
+              {discoverOutput?.command && (
+                <span className="terminal-command">$ {discoverOutput.command}</span>
+              )}
+            </div>
+            <div className="terminal-body">
+              {isDiscovering && !discoverOutput && (
+                <div className="terminal-line waiting">
+                  <span className="discover-spinner">◌</span> Running discover.sh...
+                </div>
+              )}
+              
+              {discoverOutput?.stdout && (
+                <div className="terminal-section">
+                  <div className="terminal-label">stdout:</div>
+                  <pre className="terminal-content">{discoverOutput.stdout}</pre>
+                </div>
+              )}
+              
+              {discoverOutput?.stderr && (
+                <div className="terminal-section stderr">
+                  <div className="terminal-label">stderr:</div>
+                  <pre className="terminal-content">{discoverOutput.stderr}</pre>
+                </div>
+              )}
+              
+              {discoverOutput?.parseError && (
+                <div className="terminal-section warning">
+                  <div className="terminal-label">⚠ Parse Warning:</div>
+                  <pre className="terminal-content">{discoverOutput.parseError}</pre>
+                </div>
+              )}
+              
+              {discoverOutput?.error && (
+                <div className="terminal-section error">
+                  <div className="terminal-label">✕ Error:</div>
+                  <pre className="terminal-content">{discoverOutput.error}</pre>
+                </div>
+              )}
+              
+              {discoverOutput && !discoverOutput.stdout && !discoverOutput.stderr && !discoverOutput.error && (
+                <div className="terminal-line empty">
+                  (no output)
+                </div>
+              )}
+              
+              {discoverOutput && (
+                <div className="terminal-result">
+                  {discoveredDrones.length > 0 ? (
+                    <span className="result-success">✓ Found {discoveredDrones.length} new drone(s)</span>
+                  ) : discoverOutput.error ? (
+                    <span className="result-error">✕ Discovery failed</span>
+                  ) : (
+                    <span className="result-empty">○ No new drones found on network</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {discoverError && (
           <div className="discover-error">
