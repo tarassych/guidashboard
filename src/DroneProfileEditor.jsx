@@ -296,15 +296,9 @@ function DroneProfileEditor() {
       })
       
       if (data.success || data.drones) {
-        // Filter out drones that already have telemetry (are in unknownDrones)
-        const unknownIds = unknownDrones.map(d => String(d.droneId))
-        const configuredIds = Object.keys(profiles)
+        // Show all discovered drones (they can be paired even if already have telemetry)
         const drones = data.drones || []
-        const newDrones = drones.filter(d => 
-          !unknownIds.includes(String(d.drone_id)) && 
-          !configuredIds.includes(String(d.drone_id))
-        )
-        setDiscoveredDrones(newDrones)
+        setDiscoveredDrones(drones)
         
         if (!data.success) {
           setDiscoverError(data.error || 'Discovery completed with errors')
@@ -509,11 +503,11 @@ function DroneProfileEditor() {
               {discoverOutput && (
                 <div className="terminal-result">
                   {discoveredDrones.length > 0 ? (
-                    <span className="result-success">✓ Found {discoveredDrones.length} new drone(s)</span>
+                    <span className="result-success">✓ Found {discoveredDrones.length} drone(s) on network</span>
                   ) : discoverOutput.error ? (
                     <span className="result-error">✕ Discovery failed</span>
                   ) : (
-                    <span className="result-empty">○ No new drones found on network</span>
+                    <span className="result-empty">○ No drones found on network</span>
                   )}
                 </div>
               )}
