@@ -500,6 +500,38 @@ section h2 {
   to { transform: rotate(360deg); }
 }
 
+/* Split Layout: Drones + Terminal side by side */
+.discover-content-split {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* On wider screens, split 60/40 */
+@media (min-width: 1024px) {
+  .discover-content-split {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  .discovered-drones-panel {
+    flex: 0 0 60%;
+    max-width: 60%;
+  }
+  
+  .discover-content-split .terminal-output {
+    flex: 0 0 38%;
+    max-width: 38%;
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+/* Drones Panel */
+.discovered-drones-panel {
+  min-width: 0;
+}
+
 /* Terminal Output Display */
 .terminal-output {
   background: #0a0a0a;
