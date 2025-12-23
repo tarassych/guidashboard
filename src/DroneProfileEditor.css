@@ -880,6 +880,32 @@ section h2 {
   text-transform: uppercase;
 }
 
+/* Already paired drone styling */
+.discovered-drone-card.already-paired {
+  border-color: #00c896;
+}
+
+.discovered-drone-card.already-paired .discovered-drone-header {
+  background: rgba(0, 200, 150, 0.1);
+  border-bottom-color: rgba(0, 200, 150, 0.3);
+}
+
+.already-paired-notice {
+  padding: 0.5rem 1rem;
+  background: rgba(0, 200, 150, 0.15);
+  color: #00c896;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(0, 200, 150, 0.2);
+}
+
+.pair-btn.re-pair {
+  background: linear-gradient(135deg, #006655, #00aa88);
+}
+
+.pair-btn.re-pair:hover:not(:disabled) {
+  background: linear-gradient(135deg, #007766, #00bb99);
+}
+
 .discovered-drone-details {
   padding: 1rem;
   font-size: 0.85rem;

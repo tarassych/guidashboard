@@ -600,7 +600,7 @@ function DroneProfileEditor() {
           {detectedDrones.length > 0 && (
             <section className="detected-section">
               <h2>📡 Detected Drones ({detectedDrones.length})</h2>
-              <p>Telemetry active. Click to create profile.</p>
+              <p>Telemetry active. Click to connect.</p>
               <div className="detected-drones-grid">
                 {detectedDrones.map(drone => (
                   <div
@@ -613,7 +613,7 @@ function DroneProfileEditor() {
                   >
                     <div className="detected-drone-header">
                       <span className="drone-id-badge">ID: {drone.droneId}</span>
-                      <span className="add-profile-hint">+ Add Profile</span>
+                      <span className="add-profile-hint">+ Connect Drone</span>
                     </div>
                     <div className="detected-drone-map">
                       <DroneLocationMap 
@@ -690,13 +690,32 @@ function DroneProfileEditor() {
                         const isFailed = status?.status === 'failed'
                         // Disable if any other drone is pairing
                         const isDisabledByOther = isPairingAny && !isPairing
+                        // Check if this drone already has telemetry (already paired)
+                        const alreadyHasTelemetry = droneIds.includes(String(drone.drone_id)) || 
+                          detectedDrones.some(d => String(d.droneId) === String(drone.drone_id))
+                        
+                        const handlePairClick = () => {
+                          if (alreadyHasTelemetry) {
+                            if (confirm(`Drone ${drone.drone_id} already has active telemetry.\n\nAre you sure you want to re-pair this drone?`)) {
+                              handlePair(drone)
+                            }
+                          } else {
+                            handlePair(drone)
+                          }
+                        }
                         
                         return (
-                          <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''}`}>
+                          <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''} ${alreadyHasTelemetry ? 'already-paired' : ''}`}>
                             <div className="discovered-drone-header">
                               <span className="drone-id-badge">ID: {drone.drone_id}</span>
                               <span className="drone-method">{drone.method.toUpperCase()}</span>
                             </div>
+                            
+                            {alreadyHasTelemetry && !status && (
+                              <div className="already-paired-notice">
+                                ✓ Already paired - telemetry active
+                              </div>
+                            )}
                             
                             <div className="discovered-drone-details">
                               <div className="detail-row">
@@ -724,11 +743,11 @@ function DroneProfileEditor() {
                             
                             <div className="discovered-drone-actions">
                               <button
-                                className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''} ${isDisabledByOther ? 'disabled-other' : ''}`}
-                                onClick={() => handlePair(drone)}
+                                className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''} ${isDisabledByOther ? 'disabled-other' : ''} ${alreadyHasTelemetry && !isPairing && !isSuccess ? 're-pair' : ''}`}
+                                onClick={handlePairClick}
                                 disabled={isPairing || isSuccess || isDisabledByOther}
                               >
-                                {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : isDisabledByOther ? 'Wait...' : 'Pair'}
+                                {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : isDisabledByOther ? 'Wait...' : alreadyHasTelemetry ? 'Re-pair' : 'Pair'}
                               </button>
                             </div>
                           </div>
