@@ -350,41 +350,63 @@ app.post('/api/pair', async (req, res) => {
     return res.status(400).json({ error: 'IP and droneId are required' });
   }
   
+  const scriptPath = path.join(config.scriptsPath, 'pair.sh');
+  const command = `./pair.sh ${ip} ${droneId}`;
+  
+  // Check if script exists
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(404).json({ 
+      success: false,
+      error: 'Pair script not found',
+      path: scriptPath,
+      command,
+      stdout: '',
+      stderr: ''
+    });
+  }
+  
   try {
-    const scriptPath = path.join(config.scriptsPath, 'pair.sh');
-    
-    // Check if script exists
-    if (!fs.existsSync(scriptPath)) {
-      return res.status(404).json({ 
-        error: 'Pair script not found',
-        path: scriptPath 
-      });
-    }
-    
     const { stdout, stderr } = await execAsync(
-      `cd ${config.scriptsPath} && ./pair.sh ${ip} ${droneId}`,
+      `cd ${config.scriptsPath} && ${command}`,
       { timeout: 30000 }
     );
     
-    // Parse JSON output from pair.sh
+    // Try to parse JSON output from pair.sh
     let result = { result: false };
+    let parseError = null;
+    
     try {
-      result = JSON.parse(stdout.trim());
-    } catch (parseError) {
-      console.error('Failed to parse pair output:', stdout);
-      // If output is not JSON but command succeeded, assume success
+      const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0]);
+      } else {
+        // If output is not JSON but command succeeded, assume success
+        result = { result: true };
+      }
+    } catch (e) {
+      parseError = e.message;
+      // Command succeeded but couldn't parse, assume success
       result = { result: true };
     }
     
     res.json({
       success: true,
-      result: result.result
+      result: result.result,
+      command,
+      stdout: stdout || '',
+      stderr: stderr || '',
+      parseError
     });
   } catch (error) {
     console.error('Pair error:', error.message);
-    res.status(500).json({ 
+    res.json({ 
+      success: false,
+      result: false,
       error: error.message,
-      code: error.code 
+      code: error.code,
+      command,
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
     });
   }
 });

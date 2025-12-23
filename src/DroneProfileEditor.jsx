@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import config from './config'
@@ -188,10 +188,20 @@ function DroneProfileEditor() {
   const [discoveredDrones, setDiscoveredDrones] = useState([])
   const [isDiscovering, setIsDiscovering] = useState(false)
   const [discoverError, setDiscoverError] = useState(null)
-  const [discoverOutput, setDiscoverOutput] = useState(null) // { command, stdout, stderr, parseError }
+  
+  // Terminal logs - array of { type, command, stdout, stderr, error, timestamp, result }
+  const [terminalLogs, setTerminalLogs] = useState([])
+  const terminalRef = useRef(null)
   
   // Pairing state (keyed by drone IP)
   const [pairingStatus, setPairingStatus] = useState({}) // { ip: { status: 'pairing'|'checking'|'success'|'failed', message: '' } }
+  
+  // Auto-scroll terminal to bottom when logs change
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
+    }
+  }, [terminalLogs])
   
   // Fetch data
   useEffect(() => {
@@ -275,28 +285,41 @@ function DroneProfileEditor() {
     }
   }
   
+  // Add a log entry to terminal
+  const addTerminalLog = (log) => {
+    setTerminalLogs(prev => [...prev, { ...log, timestamp: Date.now() }])
+  }
+  
   // Discover drones on network
   const handleDiscover = async () => {
     setIsDiscovering(true)
     setDiscoverError(null)
     setDiscoveredDrones([])
-    setDiscoverOutput(null)
+    
+    // Add "running" log
+    addTerminalLog({
+      type: 'discover',
+      status: 'running',
+      command: 'discover.sh'
+    })
     
     try {
       const response = await fetch(`${API_BASE_URL}/api/discover`)
       const data = await response.json()
       
-      // Always store the output for debugging
-      setDiscoverOutput({
+      // Add result log
+      addTerminalLog({
+        type: 'discover',
+        status: data.success ? 'success' : 'error',
         command: data.command || 'discover.sh',
         stdout: data.stdout || '',
         stderr: data.stderr || '',
         parseError: data.parseError || null,
-        error: data.error || null
+        error: data.error || null,
+        dronesFound: (data.drones || []).length
       })
       
       if (data.success || data.drones) {
-        // Show all discovered drones (they can be paired even if already have telemetry)
         const drones = data.drones || []
         setDiscoveredDrones(drones)
         
@@ -309,11 +332,10 @@ function DroneProfileEditor() {
     } catch (error) {
       console.error('Failed to discover:', error)
       setDiscoverError(error.message)
-      setDiscoverOutput({
+      addTerminalLog({
+        type: 'discover',
+        status: 'error',
         command: 'discover.sh',
-        stdout: '',
-        stderr: '',
-        parseError: null,
         error: error.message
       })
     } finally {
@@ -324,12 +346,22 @@ function DroneProfileEditor() {
   // Pair with a discovered drone
   const handlePair = async (drone) => {
     const { ip, drone_id } = drone
+    const pairCommand = `pair.sh ${ip} ${drone_id}`
     
     // Set pairing status
     setPairingStatus(prev => ({
       ...prev,
       [ip]: { status: 'pairing', message: 'Initiating pairing...' }
     }))
+    
+    // Add "running" log
+    addTerminalLog({
+      type: 'pair',
+      status: 'running',
+      command: pairCommand,
+      droneId: drone_id,
+      ip
+    })
     
     try {
       // Call pair API
@@ -340,6 +372,19 @@ function DroneProfileEditor() {
       })
       
       const pairData = await pairResponse.json()
+      
+      // Add pair result log
+      addTerminalLog({
+        type: 'pair',
+        status: pairData.success ? 'success' : 'error',
+        command: pairData.command || pairCommand,
+        stdout: pairData.stdout || '',
+        stderr: pairData.stderr || '',
+        error: pairData.error || null,
+        result: pairData.result,
+        droneId: drone_id,
+        ip
+      })
       
       if (!pairData.success || !pairData.result) {
         setPairingStatus(prev => ({
@@ -355,12 +400,26 @@ function DroneProfileEditor() {
         [ip]: { status: 'checking', message: 'Waiting for telemetry...' }
       }))
       
+      // Add waiting log
+      addTerminalLog({
+        type: 'info',
+        message: `Waiting 10 seconds for telemetry from drone ${drone_id}...`
+      })
+      
       // Wait at least 10 seconds, then check for telemetry
       await new Promise(resolve => setTimeout(resolve, 10000))
       
       // Check if telemetry appeared
       const telemetryResponse = await fetch(`${API_BASE_URL}/api/drone/${drone_id}/has-telemetry`)
       const telemetryData = await telemetryResponse.json()
+      
+      // Add telemetry check result log
+      addTerminalLog({
+        type: 'telemetry-check',
+        status: telemetryData.hasTelemetry ? 'success' : 'failed',
+        droneId: drone_id,
+        hasTelemetry: telemetryData.hasTelemetry
+      })
       
       if (telemetryData.success && telemetryData.hasTelemetry) {
         // Success! Move drone to unknown drones
@@ -400,6 +459,14 @@ function DroneProfileEditor() {
       }
     } catch (error) {
       console.error('Pairing error:', error)
+      addTerminalLog({
+        type: 'pair',
+        status: 'error',
+        command: pairCommand,
+        error: error.message,
+        droneId: drone_id,
+        ip
+      })
       setPairingStatus(prev => ({
         ...prev,
         [ip]: { status: 'failed', message: error.message }
@@ -451,66 +518,101 @@ function DroneProfileEditor() {
         </div>
         
         {/* Terminal Output Display */}
-        {(isDiscovering || discoverOutput) && (
+        {terminalLogs.length > 0 && (
           <div className="terminal-output">
             <div className="terminal-header">
               <span className="terminal-title">📟 Terminal Output</span>
-              {discoverOutput?.command && (
-                <span className="terminal-command">$ {discoverOutput.command}</span>
-              )}
+              <button 
+                className="terminal-clear-btn"
+                onClick={() => setTerminalLogs([])}
+              >
+                Clear
+              </button>
             </div>
-            <div className="terminal-body">
-              {isDiscovering && !discoverOutput && (
-                <div className="terminal-line waiting">
-                  <span className="discover-spinner">◌</span> Running discover.sh...
-                </div>
-              )}
-              
-              {discoverOutput?.stdout && (
-                <div className="terminal-section">
-                  <div className="terminal-label">stdout:</div>
-                  <pre className="terminal-content">{discoverOutput.stdout}</pre>
-                </div>
-              )}
-              
-              {discoverOutput?.stderr && (
-                <div className="terminal-section stderr">
-                  <div className="terminal-label">stderr:</div>
-                  <pre className="terminal-content">{discoverOutput.stderr}</pre>
-                </div>
-              )}
-              
-              {discoverOutput?.parseError && (
-                <div className="terminal-section warning">
-                  <div className="terminal-label">⚠ Parse Warning:</div>
-                  <pre className="terminal-content">{discoverOutput.parseError}</pre>
-                </div>
-              )}
-              
-              {discoverOutput?.error && (
-                <div className="terminal-section error">
-                  <div className="terminal-label">✕ Error:</div>
-                  <pre className="terminal-content">{discoverOutput.error}</pre>
-                </div>
-              )}
-              
-              {discoverOutput && !discoverOutput.stdout && !discoverOutput.stderr && !discoverOutput.error && (
-                <div className="terminal-line empty">
-                  (no output)
-                </div>
-              )}
-              
-              {discoverOutput && (
-                <div className="terminal-result">
-                  {discoveredDrones.length > 0 ? (
-                    <span className="result-success">✓ Found {discoveredDrones.length} drone(s) on network</span>
-                  ) : discoverOutput.error ? (
-                    <span className="result-error">✕ Discovery failed</span>
-                  ) : (
-                    <span className="result-empty">○ No drones found on network</span>
+            <div className="terminal-body" ref={terminalRef}>
+              {terminalLogs.map((log, idx) => (
+                <div key={idx} className={`terminal-entry ${log.type} ${log.status}`}>
+                  {/* Command line */}
+                  {log.command && (
+                    <div className="terminal-command-line">
+                      <span className="prompt">$</span>
+                      <span className="command">{log.command}</span>
+                      {log.status === 'running' && <span className="discover-spinner">◌</span>}
+                    </div>
+                  )}
+                  
+                  {/* Info message */}
+                  {log.type === 'info' && (
+                    <div className="terminal-info">{log.message}</div>
+                  )}
+                  
+                  {/* Stdout */}
+                  {log.stdout && (
+                    <div className="terminal-section">
+                      <pre className="terminal-content">{log.stdout}</pre>
+                    </div>
+                  )}
+                  
+                  {/* Stderr */}
+                  {log.stderr && (
+                    <div className="terminal-section stderr">
+                      <div className="terminal-label">stderr:</div>
+                      <pre className="terminal-content">{log.stderr}</pre>
+                    </div>
+                  )}
+                  
+                  {/* Parse Error */}
+                  {log.parseError && (
+                    <div className="terminal-section warning">
+                      <div className="terminal-label">⚠ Parse Warning:</div>
+                      <pre className="terminal-content">{log.parseError}</pre>
+                    </div>
+                  )}
+                  
+                  {/* Error */}
+                  {log.error && (
+                    <div className="terminal-section error">
+                      <div className="terminal-label">✕ Error:</div>
+                      <pre className="terminal-content">{log.error}</pre>
+                    </div>
+                  )}
+                  
+                  {/* Result summary for discover */}
+                  {log.type === 'discover' && log.status !== 'running' && (
+                    <div className="terminal-result">
+                      {log.dronesFound > 0 ? (
+                        <span className="result-success">✓ Found {log.dronesFound} drone(s) on network</span>
+                      ) : log.error ? (
+                        <span className="result-error">✕ Discovery failed</span>
+                      ) : (
+                        <span className="result-empty">○ No drones found on network</span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Result summary for pair */}
+                  {log.type === 'pair' && log.status !== 'running' && (
+                    <div className="terminal-result">
+                      {log.result ? (
+                        <span className="result-success">✓ Pair command sent to drone {log.droneId}</span>
+                      ) : (
+                        <span className="result-error">✕ Pairing failed for drone {log.droneId}</span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Telemetry check result */}
+                  {log.type === 'telemetry-check' && (
+                    <div className="terminal-result">
+                      {log.hasTelemetry ? (
+                        <span className="result-success">✓ Telemetry received from drone {log.droneId} - Paired successfully!</span>
+                      ) : (
+                        <span className="result-error">✕ No telemetry from drone {log.droneId} - Try pairing again</span>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              ))}
             </div>
           </div>
         )}
