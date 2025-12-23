@@ -179,7 +179,7 @@ function DroneProfileEditor() {
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
-  const [unknownDrones, setUnknownDrones] = useState([]) // Now contains objects with GPS data
+  const [detectedDrones, setDetectedDrones] = useState([]) // Drones with telemetry but no profile
   const [loading, setLoading] = useState(true)
   const [editingDrone, setEditingDrone] = useState(null)
   const [showNewForm, setShowNewForm] = useState(false)
@@ -221,7 +221,7 @@ function DroneProfileEditor() {
         
         if (dronesData.success) {
           setDroneIds(dronesData.droneIds)
-          setUnknownDrones(dronesData.unknownDrones)
+          setDetectedDrones(dronesData.detectedDrones || [])
         }
         
         setLoading(false)
@@ -251,8 +251,8 @@ function DroneProfileEditor() {
         }))
         setEditingDrone(null)
         setShowNewForm(false)
-        // Remove from unknown drones if it was there (unknownDrones is now array of objects)
-        setUnknownDrones(prev => prev.filter(d => String(d.droneId) !== String(droneId)))
+        // Remove from detected drones if it was there
+        setDetectedDrones(prev => prev.filter(d => String(d.droneId) !== String(droneId)))
       }
     } catch (error) {
       console.error('Failed to save profile:', error)
@@ -277,7 +277,7 @@ function DroneProfileEditor() {
         })
         setEditingDrone(null)
         setShowNewForm(false)
-        // Refresh data to get updated unknown drones list
+        // Refresh data to get updated detected drones list
         window.location.reload()
       }
     } catch (error) {
@@ -422,14 +422,14 @@ function DroneProfileEditor() {
       })
       
       if (telemetryData.success && telemetryData.hasTelemetry) {
-        // Success! Move drone to unknown drones
+        // Success! Move drone to detected drones
         setPairingStatus(prev => ({
           ...prev,
           [ip]: { status: 'success', message: 'Drone paired successfully!' }
         }))
         
-        // Add to unknown drones list (it now has telemetry)
-        setUnknownDrones(prev => [
+        // Add to detected drones list (it now has telemetry)
+        setDetectedDrones(prev => [
           ...prev,
           {
             droneId: String(drone_id),
@@ -693,32 +693,32 @@ function DroneProfileEditor() {
         )}
       </section>
       
-      {/* Unknown drones section - with maps */}
-      {unknownDrones.length > 0 && (
-        <section className="unknown-section">
-          <h2>⚠ Unknown Drones Detected ({unknownDrones.length})</h2>
-          <p>These drones have GPS telemetry data but no profile configured. Click to add a profile.</p>
-          <div className="unknown-drones-grid">
-            {unknownDrones.map(drone => (
+      {/* Detected drones section - with maps */}
+      {detectedDrones.length > 0 && (
+        <section className="detected-section">
+          <h2>📡 Detected Drones ({detectedDrones.length})</h2>
+          <p>Telemetry active. Click to create profile.</p>
+          <div className="detected-drones-grid">
+            {detectedDrones.map(drone => (
               <div
                 key={drone.droneId}
-                className="unknown-drone-card"
+                className="detected-drone-card"
                 onClick={() => {
                   setEditingDrone(drone.droneId)
                   setShowNewForm(true)
                 }}
               >
-                <div className="unknown-drone-header">
+                <div className="detected-drone-header">
                   <span className="drone-id-badge">ID: {drone.droneId}</span>
                   <span className="add-profile-hint">+ Add Profile</span>
                 </div>
-                <div className="unknown-drone-map">
+                <div className="detected-drone-map">
                   <DroneLocationMap 
                     latitude={drone.latitude} 
                     longitude={drone.longitude} 
                   />
                 </div>
-                <div className="unknown-drone-info">
+                <div className="detected-drone-info">
                   {drone.latitude && drone.longitude ? (
                     <span className="coords">
                       {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}

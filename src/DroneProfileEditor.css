@@ -64,51 +64,51 @@ section h2 {
   opacity: 0.7;
 }
 
-/* Unknown drones */
-.unknown-section {
-  background: rgba(255, 170, 0, 0.05);
-  border-bottom-color: rgba(255, 170, 0, 0.2);
+/* Detected drones (telemetry active, no profile) */
+.detected-section {
+  background: rgba(0, 200, 150, 0.05);
+  border-bottom-color: rgba(0, 200, 150, 0.2);
 }
 
-.unknown-section h2 {
-  color: #ffaa00;
+.detected-section h2 {
+  color: #00c896;
 }
 
-.unknown-section p {
+.detected-section p {
   font-size: 0.85rem;
   opacity: 0.6;
   margin: 0 0 1rem 0;
 }
 
-/* Unknown drones grid with maps */
-.unknown-drones-grid {
+/* Detected drones grid with maps */
+.detected-drones-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
 }
 
-.unknown-drone-card {
+.detected-drone-card {
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid #ffaa00;
+  border: 1px solid #00c896;
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.unknown-drone-card:hover {
+.detected-drone-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 170, 0, 0.2);
-  border-color: #ffcc00;
+  box-shadow: 0 4px 20px rgba(0, 200, 150, 0.2);
+  border-color: #00ffbb;
 }
 
-.unknown-drone-header {
+.detected-drone-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: rgba(255, 170, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 170, 0, 0.3);
+  background: rgba(0, 200, 150, 0.1);
+  border-bottom: 1px solid rgba(0, 200, 150, 0.3);
 }
 
 .drone-id-badge {
@@ -127,11 +127,11 @@ section h2 {
   opacity: 0.7;
 }
 
-.unknown-drone-card:hover .add-profile-hint {
+.detected-drone-card:hover .add-profile-hint {
   opacity: 1;
 }
 
-.unknown-drone-map {
+.detected-drone-map {
   height: 150px;
   background: #1a1a1a;
 }
@@ -151,7 +151,7 @@ section h2 {
   color: #666;
 }
 
-.unknown-drone-info {
+.detected-drone-info {
   padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
@@ -160,17 +160,17 @@ section h2 {
   background: rgba(0, 0, 0, 0.3);
 }
 
-.unknown-drone-info .coords {
+.detected-drone-info .coords {
   font-family: 'Courier New', monospace;
   color: #888;
 }
 
-.unknown-drone-info .no-coords {
+.detected-drone-info .no-coords {
   color: #666;
   font-style: italic;
 }
 
-.unknown-drone-info .last-seen {
+.detected-drone-info .last-seen {
   color: #666;
   font-size: 0.75rem;
 }

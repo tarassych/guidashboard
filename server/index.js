@@ -88,11 +88,11 @@ app.get('/api/drones', (req, res) => {
     const profiles = loadProfiles();
     const configuredIds = Object.keys(profiles.drones);
     
-    // Find unknown drones (in DB but not in profiles)
-    const unknownDroneIds = droneIds.filter(id => !configuredIds.includes(String(id)));
+    // Find detected drones (in DB but not in profiles)
+    const detectedDroneIds = droneIds.filter(id => !configuredIds.includes(String(id)));
     
-    // Get latest GPS coordinates for each unknown drone
-    const unknownDrones = unknownDroneIds.map(droneId => {
+    // Get latest GPS coordinates for each detected drone
+    const detectedDrones = detectedDroneIds.map(droneId => {
       const gpsStmt = db.prepare(`
         SELECT data, timestamp 
         FROM telemetry 
@@ -129,7 +129,7 @@ app.get('/api/drones', (req, res) => {
       success: true,
       droneIds,
       configuredDrones: configuredIds,
-      unknownDrones,
+      detectedDrones,
       count: droneIds.length
     });
   } catch (error) {

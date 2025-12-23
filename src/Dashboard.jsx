@@ -63,17 +63,17 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
   )
 }
 
-// Unknown drone alert - lists ALL unknown drone IDs
-function UnknownDroneAlert({ unknownDrones, onAddProfile }) {
-  if (!unknownDrones || unknownDrones.length === 0) return null
+// Detected drone alert - drones with telemetry but no profile
+function DetectedDroneAlert({ detectedDrones, onAddProfile }) {
+  if (!detectedDrones || detectedDrones.length === 0) return null
   
   return (
-    <div className="unknown-drone-alert">
-      <div className="alert-icon">⚠</div>
+    <div className="detected-drone-alert">
+      <div className="alert-icon">📡</div>
       <div className="alert-content">
-        <span className="alert-title">Unknown Drones in Database ({unknownDrones.length})</span>
+        <span className="alert-title">Detected Drones ({detectedDrones.length})</span>
         <div className="alert-drone-list">
-          {unknownDrones.map(drone => (
+          {detectedDrones.map(drone => (
             <span key={drone.droneId} className="alert-drone-id">#{drone.droneId}</span>
           ))}
         </div>
@@ -89,7 +89,7 @@ function Dashboard() {
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
-  const [unknownDrones, setUnknownDrones] = useState([])
+  const [detectedDrones, setDetectedDrones] = useState([])
   const [droneTelemetry, setDroneTelemetry] = useState({})
   const [loading, setLoading] = useState(true)
   const lastIdsRef = useRef({}) // Track last ID per drone
@@ -112,7 +112,7 @@ function Dashboard() {
         
         if (dronesData.success) {
           setDroneIds(dronesData.droneIds)
-          setUnknownDrones(dronesData.unknownDrones)
+          setDetectedDrones(dronesData.detectedDrones || [])
         }
         
         setLoading(false)
@@ -234,9 +234,9 @@ function Dashboard() {
         </div>
       </header>
       
-      {unknownDrones.length > 0 && (
-        <UnknownDroneAlert 
-          unknownDrones={unknownDrones} 
+      {detectedDrones.length > 0 && (
+        <DetectedDroneAlert 
+          detectedDrones={detectedDrones} 
           onAddProfile={() => navigate('/profiles')} 
         />
       )}

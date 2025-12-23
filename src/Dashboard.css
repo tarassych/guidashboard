@@ -80,8 +80,8 @@
   color: #000;
 }
 
-/* Unknown drone alert */
-.unknown-drone-alert {
+/* Detected drone alert */
+.detected-drone-alert {
   display: flex;
   align-items: center;
   gap: 1rem;
