@@ -4,7 +4,11 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { config } from './config.js';
+
+const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -276,12 +280,132 @@ app.get('/api/telemetry', (req, res) => {
   }
 });
 
+// Discover drones on the network
+app.get('/api/discover', async (req, res) => {
+  try {
+    const scriptPath = path.join(config.scriptsPath, 'discover.sh');
+    
+    // Check if script exists
+    if (!fs.existsSync(scriptPath)) {
+      return res.status(404).json({ 
+        error: 'Discover script not found',
+        path: scriptPath 
+      });
+    }
+    
+    const { stdout, stderr } = await execAsync(`cd ${config.scriptsPath} && ./discover.sh`, {
+      timeout: 30000 // 30 second timeout
+    });
+    
+    // Parse JSON output from discover.sh
+    let drones = [];
+    try {
+      drones = JSON.parse(stdout.trim());
+    } catch (parseError) {
+      console.error('Failed to parse discover output:', stdout);
+      return res.status(500).json({ 
+        error: 'Failed to parse discover script output',
+        raw: stdout 
+      });
+    }
+    
+    res.json({
+      success: true,
+      drones
+    });
+  } catch (error) {
+    console.error('Discover error:', error.message);
+    res.status(500).json({ 
+      error: error.message,
+      code: error.code 
+    });
+  }
+});
+
+// Pair with a drone
+app.post('/api/pair', async (req, res) => {
+  const { ip, droneId } = req.body;
+  
+  if (!ip || !droneId) {
+    return res.status(400).json({ error: 'IP and droneId are required' });
+  }
+  
+  try {
+    const scriptPath = path.join(config.scriptsPath, 'pair.sh');
+    
+    // Check if script exists
+    if (!fs.existsSync(scriptPath)) {
+      return res.status(404).json({ 
+        error: 'Pair script not found',
+        path: scriptPath 
+      });
+    }
+    
+    const { stdout, stderr } = await execAsync(
+      `cd ${config.scriptsPath} && ./pair.sh ${ip} ${droneId}`,
+      { timeout: 30000 }
+    );
+    
+    // Parse JSON output from pair.sh
+    let result = { result: false };
+    try {
+      result = JSON.parse(stdout.trim());
+    } catch (parseError) {
+      console.error('Failed to parse pair output:', stdout);
+      // If output is not JSON but command succeeded, assume success
+      result = { result: true };
+    }
+    
+    res.json({
+      success: true,
+      result: result.result
+    });
+  } catch (error) {
+    console.error('Pair error:', error.message);
+    res.status(500).json({ 
+      error: error.message,
+      code: error.code 
+    });
+  }
+});
+
+// Check if drone has telemetry in database
+app.get('/api/drone/:droneId/has-telemetry', (req, res) => {
+  const { droneId } = req.params;
+  
+  if (!db) {
+    if (!connectDatabase()) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+  }
+  
+  try {
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM telemetry 
+      WHERE drone_id = ?
+      LIMIT 1
+    `);
+    const row = stmt.get(droneId);
+    
+    res.json({
+      success: true,
+      hasTelemetry: row.count > 0,
+      droneId
+    });
+  } catch (error) {
+    console.error('Query error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     dbConnected: db !== null,
-    dbPath: config.dbPath
+    dbPath: config.dbPath,
+    scriptsPath: config.scriptsPath
   });
 });
 

@@ -184,6 +184,14 @@ function DroneProfileEditor() {
   const [editingDrone, setEditingDrone] = useState(null)
   const [showNewForm, setShowNewForm] = useState(false)
   
+  // Discovery state
+  const [discoveredDrones, setDiscoveredDrones] = useState([])
+  const [isDiscovering, setIsDiscovering] = useState(false)
+  const [discoverError, setDiscoverError] = useState(null)
+  
+  // Pairing state (keyed by drone IP)
+  const [pairingStatus, setPairingStatus] = useState({}) // { ip: { status: 'pairing'|'checking'|'success'|'failed', message: '' } }
+  
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
@@ -266,6 +274,122 @@ function DroneProfileEditor() {
     }
   }
   
+  // Discover drones on network
+  const handleDiscover = async () => {
+    setIsDiscovering(true)
+    setDiscoverError(null)
+    setDiscoveredDrones([])
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/discover`)
+      const data = await response.json()
+      
+      if (data.success) {
+        // Filter out drones that already have telemetry (are in unknownDrones)
+        const unknownIds = unknownDrones.map(d => String(d.droneId))
+        const configuredIds = Object.keys(profiles)
+        const newDrones = data.drones.filter(d => 
+          !unknownIds.includes(String(d.drone_id)) && 
+          !configuredIds.includes(String(d.drone_id))
+        )
+        setDiscoveredDrones(newDrones)
+      } else {
+        setDiscoverError(data.error || 'Discovery failed')
+      }
+    } catch (error) {
+      console.error('Failed to discover:', error)
+      setDiscoverError(error.message)
+    } finally {
+      setIsDiscovering(false)
+    }
+  }
+  
+  // Pair with a discovered drone
+  const handlePair = async (drone) => {
+    const { ip, drone_id } = drone
+    
+    // Set pairing status
+    setPairingStatus(prev => ({
+      ...prev,
+      [ip]: { status: 'pairing', message: 'Initiating pairing...' }
+    }))
+    
+    try {
+      // Call pair API
+      const pairResponse = await fetch(`${API_BASE_URL}/api/pair`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, droneId: drone_id })
+      })
+      
+      const pairData = await pairResponse.json()
+      
+      if (!pairData.success || !pairData.result) {
+        setPairingStatus(prev => ({
+          ...prev,
+          [ip]: { status: 'failed', message: 'Pairing command failed' }
+        }))
+        return
+      }
+      
+      // Update status to checking
+      setPairingStatus(prev => ({
+        ...prev,
+        [ip]: { status: 'checking', message: 'Waiting for telemetry...' }
+      }))
+      
+      // Wait at least 10 seconds, then check for telemetry
+      await new Promise(resolve => setTimeout(resolve, 10000))
+      
+      // Check if telemetry appeared
+      const telemetryResponse = await fetch(`${API_BASE_URL}/api/drone/${drone_id}/has-telemetry`)
+      const telemetryData = await telemetryResponse.json()
+      
+      if (telemetryData.success && telemetryData.hasTelemetry) {
+        // Success! Move drone to unknown drones
+        setPairingStatus(prev => ({
+          ...prev,
+          [ip]: { status: 'success', message: 'Drone paired successfully!' }
+        }))
+        
+        // Add to unknown drones list (it now has telemetry)
+        setUnknownDrones(prev => [
+          ...prev,
+          {
+            droneId: String(drone_id),
+            latitude: null,
+            longitude: null,
+            lastSeen: new Date().toISOString()
+          }
+        ])
+        
+        // Remove from discovered drones
+        setDiscoveredDrones(prev => prev.filter(d => d.ip !== ip))
+        
+        // Clear success status after a moment
+        setTimeout(() => {
+          setPairingStatus(prev => {
+            const updated = { ...prev }
+            delete updated[ip]
+            return updated
+          })
+        }, 3000)
+      } else {
+        // No telemetry found
+        setPairingStatus(prev => ({
+          ...prev,
+          [ip]: { status: 'failed', message: 'No telemetry received. Try again.' }
+        }))
+      }
+    } catch (error) {
+      console.error('Pairing error:', error)
+      setPairingStatus(prev => ({
+        ...prev,
+        [ip]: { status: 'failed', message: error.message }
+      }))
+    }
+  }
+  
   if (loading) {
     return (
       <div className="profile-editor loading">
@@ -285,6 +409,97 @@ function DroneProfileEditor() {
           <h1>Drone Profile Manager</h1>
         </div>
       </header>
+      
+      {/* Discover Drones Section */}
+      <section className="discover-section">
+        <div className="discover-header">
+          <div className="discover-title">
+            <h2>🔍 Discover Drones</h2>
+            <p>Scan the network for new drones to pair</p>
+          </div>
+          <button 
+            className={`discover-btn ${isDiscovering ? 'discovering' : ''}`}
+            onClick={handleDiscover}
+            disabled={isDiscovering}
+          >
+            {isDiscovering ? (
+              <>
+                <span className="discover-spinner">◌</span>
+                Scanning...
+              </>
+            ) : (
+              'Discover Drones'
+            )}
+          </button>
+        </div>
+        
+        {discoverError && (
+          <div className="discover-error">
+            ⚠ {discoverError}
+          </div>
+        )}
+        
+        {discoveredDrones.length > 0 && (
+          <div className="discovered-drones-grid">
+            {discoveredDrones.map(drone => {
+              const status = pairingStatus[drone.ip]
+              const isPairing = status?.status === 'pairing' || status?.status === 'checking'
+              const isSuccess = status?.status === 'success'
+              const isFailed = status?.status === 'failed'
+              
+              return (
+                <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''}`}>
+                  <div className="discovered-drone-header">
+                    <span className="drone-id-badge">ID: {drone.drone_id}</span>
+                    <span className="drone-method">{drone.method.toUpperCase()}</span>
+                  </div>
+                  
+                  <div className="discovered-drone-details">
+                    <div className="detail-row">
+                      <span className="detail-label">IP:</span>
+                      <span className="detail-value">{drone.ip}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">MAC:</span>
+                      <span className="detail-value">{drone.mac}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Target:</span>
+                      <span className="detail-value">{drone.target_ip}</span>
+                    </div>
+                  </div>
+                  
+                  {status?.message && (
+                    <div className={`pairing-message ${status.status}`}>
+                      {isPairing && <span className="pairing-spinner">◌</span>}
+                      {isSuccess && <span className="success-icon">✓</span>}
+                      {isFailed && <span className="failed-icon">✕</span>}
+                      {status.message}
+                    </div>
+                  )}
+                  
+                  <div className="discovered-drone-actions">
+                    <button
+                      className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''}`}
+                      onClick={() => handlePair(drone)}
+                      disabled={isPairing || isSuccess}
+                    >
+                      {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : 'Pair'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        
+        {!isDiscovering && discoveredDrones.length === 0 && !discoverError && (
+          <div className="discover-empty">
+            <span className="empty-icon">📡</span>
+            <span>Click "Discover Drones" to scan for available drones on the network</span>
+          </div>
+        )}
+      </section>
       
       {/* Unknown drones section - with maps */}
       {unknownDrones.length > 0 && (

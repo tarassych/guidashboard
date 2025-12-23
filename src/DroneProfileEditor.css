@@ -434,4 +434,255 @@ section h2 {
   filter: brightness(1.1);
 }
 
+/* ==================== DISCOVER SECTION ==================== */
+.discover-section {
+  background: rgba(0, 150, 255, 0.05);
+  border-bottom-color: rgba(0, 150, 255, 0.2);
+}
+
+.discover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.discover-title h2 {
+  color: #00aaff;
+  margin: 0 0 0.25rem 0;
+}
+
+.discover-title p {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.discover-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #0066cc, #0099ff);
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 10px rgba(0, 150, 255, 0.3);
+}
+
+.discover-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 150, 255, 0.4);
+}
+
+.discover-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.discover-btn.discovering {
+  background: linear-gradient(135deg, #004488, #0077cc);
+}
+
+.discover-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.discover-error {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff6666;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.discover-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed rgba(0, 150, 255, 0.3);
+  border-radius: 8px;
+  gap: 1rem;
+  color: #666;
+  text-align: center;
+}
+
+.discover-empty .empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.5;
+}
+
+/* Discovered Drones Grid */
+.discovered-drones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.discovered-drone-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #00aaff;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.discovered-drone-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 150, 255, 0.2);
+}
+
+.discovered-drone-card.success {
+  border-color: #00ff88;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+}
+
+.discovered-drone-card.failed {
+  border-color: #ff6666;
+}
+
+.discovered-drone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 150, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 150, 255, 0.3);
+}
+
+.discovered-drone-header .drone-id-badge {
+  color: #00aaff;
+  background: rgba(0, 150, 255, 0.2);
+}
+
+.drone-method {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.discovered-drone-details {
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+
+.discovered-drone-details .detail-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.discovered-drone-details .detail-label {
+  color: #666;
+  min-width: 60px;
+}
+
+.discovered-drone-details .detail-value {
+  font-family: 'Courier New', monospace;
+  color: #aaa;
+}
+
+.pairing-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pairing-message.pairing,
+.pairing-message.checking {
+  background: rgba(0, 150, 255, 0.1);
+  color: #00aaff;
+}
+
+.pairing-message.success {
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+}
+
+.pairing-message.failed {
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff6666;
+}
+
+.pairing-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+.success-icon {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.failed-icon {
+  color: #ff6666;
+  font-weight: bold;
+}
+
+.discovered-drone-actions {
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.pair-btn {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #0066cc, #0099ff);
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.pair-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.pair-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pair-btn.pairing {
+  background: linear-gradient(135deg, #004488, #0077cc);
+  animation: pulse-pairing 1.5s ease-in-out infinite;
+}
+
+.pair-btn.success {
+  background: linear-gradient(135deg, #00aa66, #00ff88);
+  color: #000;
+}
+
+@keyframes pulse-pairing {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 
