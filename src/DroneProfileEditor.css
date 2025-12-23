@@ -617,6 +617,16 @@ section h2 {
   font-size: 0.8rem;
   color: #888;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.terminal-icon {
+  color: var(--hud-primary, #00ff88);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 .terminal-clear-btn {

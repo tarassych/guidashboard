@@ -69,7 +69,7 @@ function DetectedDroneAlert({ detectedDrones, onAddProfile }) {
   
   return (
     <div className="detected-drone-alert">
-      <div className="alert-icon">📡</div>
+      <div className="alert-icon">◈</div>
       <div className="alert-content">
         <span className="alert-title">Detected Drones ({detectedDrones.length})</span>
         <div className="alert-drone-list">

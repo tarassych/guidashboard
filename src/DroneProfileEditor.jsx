@@ -508,13 +508,13 @@ function DroneProfileEditor() {
           className={`tab-btn ${activeTab === 'connected' ? 'active' : ''}`}
           onClick={() => setActiveTab('connected')}
         >
-          📶 Connected ({connectedDroneIds.length})
+          Connected ({connectedDroneIds.length})
         </button>
         <button 
           className={`tab-btn ${activeTab === 'discover' ? 'active' : ''}`}
           onClick={() => setActiveTab('discover')}
         >
-          🔍 Discover & Pair
+          Discover & Pair
           {isPairingAny && <span className="tab-badge pairing">●</span>}
         </button>
       </nav>
@@ -599,7 +599,7 @@ function DroneProfileEditor() {
           {/* Detected drones - telemetry but no profile */}
           {detectedDrones.length > 0 && (
             <section className="detected-section">
-              <h2>📡 Detected Drones ({detectedDrones.length})</h2>
+              <h2>Detected Drones ({detectedDrones.length})</h2>
               <p>Telemetry active. Click to connect.</p>
               <div className="detected-drones-grid">
                 {detectedDrones.map(drone => (
@@ -649,7 +649,7 @@ function DroneProfileEditor() {
           <section className="discover-section">
             <div className="discover-header">
               <div className="discover-title">
-                <h2>🔍 Discover Drones</h2>
+                <h2>Discover Drones</h2>
                 <p>Scan the network for new drones to pair</p>
               </div>
               <button 
@@ -761,7 +761,7 @@ function DroneProfileEditor() {
                 {terminalLogs.length > 0 && (
                   <div className="terminal-output">
                     <div className="terminal-header">
-                      <span className="terminal-title">📟 Terminal Output</span>
+                      <span className="terminal-title"><span className="terminal-icon">&gt;_</span> Terminal</span>
                       <button 
                         className="terminal-clear-btn"
                         onClick={() => setTerminalLogs([])}
@@ -861,7 +861,7 @@ function DroneProfileEditor() {
             
             {!isDiscovering && discoveredDrones.length === 0 && terminalLogs.length === 0 && !discoverError && (
               <div className="discover-empty">
-                <span className="empty-icon">📡</span>
+                <span className="empty-icon">◇</span>
                 <span>Click "Discover Drones" to scan for available drones on the network</span>
               </div>
             )}

@@ -311,7 +311,7 @@ function SatelliteIndicator({ satellites }) {
 
   return (
     <div className="hud-satellites">
-      <div className="sat-label"><span className="sat-icon">📡</span> SAT</div>
+      <div className="sat-label"><span className="sat-icon">◎</span> SAT</div>
       <div className="sat-grid">
         {satArray.map((active, i) => (
           <div 
