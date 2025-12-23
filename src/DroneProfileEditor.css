@@ -1,7 +1,11 @@
 /* Drone Profile Editor Styles */
 
 .profile-editor {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
   color: var(--hud-primary, #00ff88);
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -103,7 +107,10 @@
 
 /* Tab Content */
 .tab-content {
-  min-height: 60vh;
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 120px); /* Account for header + tabs */
+  padding-bottom: 2rem;
 }
 
 /* Sections */
