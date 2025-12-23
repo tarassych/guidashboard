@@ -204,6 +204,9 @@ function DroneProfileEditor() {
     s => s.status === 'pairing' || s.status === 'checking'
   )
   
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, onCancel }
+  
   // Auto-scroll terminal to bottom when logs change
   useEffect(() => {
     if (terminalRef.current) {
@@ -267,30 +270,36 @@ function DroneProfileEditor() {
     }
   }
   
-  const handleDeleteProfile = async (droneId) => {
-    if (!confirm(`Delete profile for Drone #${droneId}?`)) return
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/profiles/${droneId}`, {
-        method: 'DELETE'
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setProfiles(prev => {
-          const updated = { ...prev }
-          delete updated[droneId]
-          return updated
-        })
-        setEditingDrone(null)
-        setShowNewForm(false)
-        // Refresh data to get updated detected drones list
-        window.location.reload()
-      }
-    } catch (error) {
-      console.error('Failed to delete profile:', error)
-    }
+  const handleDeleteProfile = (droneId) => {
+    setConfirmModal({
+      title: 'Delete Profile',
+      message: `Are you sure you want to delete the profile for Drone #${droneId}?`,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/profiles/${droneId}`, {
+            method: 'DELETE'
+          })
+          
+          const data = await response.json()
+          
+          if (data.success) {
+            setProfiles(prev => {
+              const updated = { ...prev }
+              delete updated[droneId]
+              return updated
+            })
+            setEditingDrone(null)
+            setShowNewForm(false)
+            // Refresh data to get updated detected drones list
+            window.location.reload()
+          }
+        } catch (error) {
+          console.error('Failed to delete profile:', error)
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    })
   }
   
   // Add a log entry to terminal
@@ -696,9 +705,15 @@ function DroneProfileEditor() {
                         
                         const handlePairClick = () => {
                           if (alreadyHasTelemetry) {
-                            if (confirm(`Drone ${drone.drone_id} already has active telemetry.\n\nAre you sure you want to re-pair this drone?`)) {
-                              handlePair(drone)
-                            }
+                            setConfirmModal({
+                              title: 'Re-pair Drone',
+                              message: `Drone ${drone.drone_id} already has active telemetry. Are you sure you want to re-pair this drone?`,
+                              onConfirm: () => {
+                                setConfirmModal(null)
+                                handlePair(drone)
+                              },
+                              onCancel: () => setConfirmModal(null)
+                            })
                           } else {
                             handlePair(drone)
                           }
@@ -866,6 +881,29 @@ function DroneProfileEditor() {
               </div>
             )}
           </section>
+        </div>
+      )}
+      
+      {/* Confirm Modal */}
+      {confirmModal && (
+        <div className="confirm-modal-overlay" onClick={confirmModal.onCancel}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-header">
+              <span className="confirm-modal-icon">⚠</span>
+              <h3>{confirmModal.title}</h3>
+            </div>
+            <div className="confirm-modal-body">
+              <p>{confirmModal.message}</p>
+            </div>
+            <div className="confirm-modal-actions">
+              <button className="confirm-modal-btn cancel" onClick={confirmModal.onCancel}>
+                Cancel
+              </button>
+              <button className="confirm-modal-btn confirm" onClick={confirmModal.onConfirm}>
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

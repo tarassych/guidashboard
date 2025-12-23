@@ -1033,4 +1033,117 @@ section h2 {
   50% { opacity: 1; }
 }
 
+/* Confirm Modal */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.confirm-modal {
+  background: linear-gradient(135deg, #0a0f0a 0%, #0d1a0d 100%);
+  border: 2px solid #00ff88;
+  border-radius: 4px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 136, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.5);
+  animation: modal-appear 0.2s ease-out;
+}
+
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.confirm-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(0, 255, 136, 0.1);
+  border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.confirm-modal-icon {
+  font-size: 1.5rem;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+.confirm-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #00ff88;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.confirm-modal-body {
+  padding: 1.5rem;
+}
+
+.confirm-modal-body p {
+  margin: 0;
+  color: #aaffcc;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.5rem 1.5rem;
+  justify-content: flex-end;
+}
+
+.confirm-modal-btn {
+  padding: 0.6rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.confirm-modal-btn.cancel {
+  background: transparent;
+  border-color: #666;
+  color: #888;
+}
+
+.confirm-modal-btn.cancel:hover {
+  border-color: #888;
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.confirm-modal-btn.confirm {
+  background: linear-gradient(135deg, #00aa66, #00ff88);
+  border-color: #00ff88;
+  color: #001a0a;
+}
+
+.confirm-modal-btn.confirm:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+}
+
 
