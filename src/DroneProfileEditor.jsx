@@ -63,6 +63,7 @@ function DroneLocationMap({ latitude, longitude }) {
 // Default profile template
 const defaultProfile = {
   name: '',
+  ipAddress: '',
   frontCameraUrl: '',
   rearCameraUrl: '',
   color: '#00ff88'
@@ -115,6 +116,19 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
           onChange={handleChange}
           placeholder={`Drone ${droneId}`}
         />
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor={`ip-${droneId}`}>IP Address</label>
+        <input
+          id={`ip-${droneId}`}
+          name="ipAddress"
+          type="text"
+          value={formData.ipAddress || ''}
+          onChange={handleChange}
+          placeholder="192.168.0.xxx"
+        />
+        <span className="form-hint">IP address from pairing (auto-filled)</span>
       </div>
       
       <div className="form-group">
@@ -445,16 +459,41 @@ function DroneProfileEditor() {
           [ip]: { status: 'success', message: 'Drone paired successfully!' }
         }))
         
-        // Add to detected drones list (it now has telemetry)
-        setDetectedDrones(prev => [
-          ...prev,
-          {
-            droneId: String(drone_id),
-            latitude: null,
-            longitude: null,
-            lastSeen: new Date().toISOString()
+        // Create or update profile with IP address
+        try {
+          const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${drone_id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...defaultProfile,
+              ...profiles[drone_id], // Keep existing profile data if any
+              ipAddress: ip
+            })
+          })
+          
+          const profileData = await profileResponse.json()
+          
+          if (profileData.success) {
+            setProfiles(prev => ({
+              ...prev,
+              [drone_id]: profileData.profile
+            }))
+            // Also remove from detected drones since it now has a profile
+            setDetectedDrones(prev => prev.filter(d => String(d.droneId) !== String(drone_id)))
           }
-        ])
+        } catch (profileError) {
+          console.error('Failed to save profile with IP:', profileError)
+          // Still add to detected drones if profile save failed
+          setDetectedDrones(prev => [
+            ...prev,
+            {
+              droneId: String(drone_id),
+              latitude: null,
+              longitude: null,
+              lastSeen: new Date().toISOString()
+            }
+          ])
+        }
         
         // Remove from discovered drones
         setDiscoveredDrones(prev => prev.filter(d => d.ip !== ip))
@@ -566,7 +605,7 @@ function DroneProfileEditor() {
                     >
                       <div className="profile-card-header">
                         <span className="profile-id">#{droneId}</span>
-                        <span className="profile-name">{profile.name || `Drone ${droneId}`}</span>
+                        <span className="profile-name">{profile.ipAddress || profile.name || `Drone ${droneId}`}</span>
                         <button 
                           className="edit-btn"
                           onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
@@ -576,6 +615,12 @@ function DroneProfileEditor() {
                       </div>
                       
                       <div className="profile-details">
+                        <div className="detail-row">
+                          <span className="detail-label">IP Address:</span>
+                          <span className="detail-value">
+                            {profile.ipAddress || <em>Not set</em>}
+                          </span>
+                        </div>
                         <div className="detail-row">
                           <span className="detail-label">Front Camera:</span>
                           <span className="detail-value">
