@@ -152,6 +152,8 @@ app.post('/api/profiles/:droneId', (req, res) => {
   const droneId = req.params.droneId;
   const profileData = req.body;
   
+  console.log(`Saving profile for drone ${droneId}:`, JSON.stringify(profileData));
+  
   if (!droneId || droneId.trim() === '') {
     return res.status(400).json({ error: 'Invalid drone ID' });
   }
@@ -163,6 +165,8 @@ app.post('/api/profiles/:droneId', (req, res) => {
     droneId,
     updatedAt: Date.now()
   };
+  
+  console.log(`Final profile for drone ${droneId}:`, JSON.stringify(profiles.drones[droneId]));
 
   if (saveProfiles(profiles)) {
     res.json({

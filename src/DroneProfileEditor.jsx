@@ -461,13 +461,20 @@ function DroneProfileEditor() {
         
         // Create or update profile with IP address
         try {
+          // First fetch the current profile to avoid stale closure issues
+          const currentProfileRes = await fetch(`${API_BASE_URL}/api/profiles`)
+          const currentProfileData = await currentProfileRes.json()
+          const existingProfile = currentProfileData.success ? currentProfileData.profiles[drone_id] : null
+          
+          console.log('Saving profile with IP:', ip, 'for drone:', drone_id)
+          
           const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${drone_id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...defaultProfile,
-              ...profiles[drone_id], // Keep existing profile data if any
-              ipAddress: ip
+              ...existingProfile, // Keep existing profile data if any
+              ipAddress: ip || '' // Ensure ip is defined
             })
           })
           
