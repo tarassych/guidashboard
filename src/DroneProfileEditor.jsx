@@ -157,24 +157,36 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   }
   
   const handleSaveAssignments = () => {
+    // Generate HLS URL: http://{camera_ip}:8888/cam{serial_number}/index.m3u8
+    const generateHlsUrl = (camera) => {
+      const serialNumber = camera.onvif?.serial_number || camera.ip.replace(/\./g, '')
+      return `http://${camera.ip}:8888/cam${serialNumber}/index.m3u8`
+    }
+    
     const frontCamera = selectedFront ? {
       ip: selectedFront.ip,
+      hlsUrl: generateHlsUrl(selectedFront),
       snapshotUrl: selectedFront.snapshot?.url || '',
       rtspUrl: `rtsp://${selectedFront.login}:${selectedFront.password}@${selectedFront.ip}:${selectedFront.rtsp?.port || 554}${selectedFront.rtsp?.path || '/stream0'}`,
       rtspPort: selectedFront.rtsp?.port || 554,
       rtspPath: selectedFront.rtsp?.path || '/stream0',
       login: selectedFront.login || '',
-      password: selectedFront.password || ''
+      password: selectedFront.password || '',
+      serialNumber: selectedFront.onvif?.serial_number || '',
+      model: selectedFront.onvif?.model || ''
     } : null
     
     const rearCamera = selectedRear ? {
       ip: selectedRear.ip,
+      hlsUrl: generateHlsUrl(selectedRear),
       snapshotUrl: selectedRear.snapshot?.url || '',
       rtspUrl: `rtsp://${selectedRear.login}:${selectedRear.password}@${selectedRear.ip}:${selectedRear.rtsp?.port || 554}${selectedRear.rtsp?.path || '/stream0'}`,
       rtspPort: selectedRear.rtsp?.port || 554,
       rtspPath: selectedRear.rtsp?.path || '/stream0',
       login: selectedRear.login || '',
-      password: selectedRear.password || ''
+      password: selectedRear.password || '',
+      serialNumber: selectedRear.onvif?.serial_number || '',
+      model: selectedRear.onvif?.model || ''
     } : null
     
     onSave(frontCamera, rearCamera)
@@ -563,9 +575,9 @@ function DroneProfileEditor() {
           ...existingProfile,
           frontCamera,
           rearCamera,
-          // Also set legacy URL fields for backwards compatibility
-          frontCameraUrl: frontCamera?.rtspUrl || existingProfile.frontCameraUrl || '',
-          rearCameraUrl: rearCamera?.rtspUrl || existingProfile.rearCameraUrl || ''
+          // Set HLS URL fields (format: http://{camera_ip}:8888/cam{serial_number}/index.m3u8)
+          frontCameraUrl: frontCamera?.hlsUrl || existingProfile.frontCameraUrl || '',
+          rearCameraUrl: rearCamera?.hlsUrl || existingProfile.rearCameraUrl || ''
         })
       })
       
