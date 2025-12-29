@@ -84,7 +84,7 @@ app.get('/api/drones', (req, res) => {
     
     // Single optimized query: Get recent drone IDs with their latest GPS data
     // Uses json_extract for exact type matching (types: gps, batt, state)
-    // IMPORTANT: timestamp filter MUST come before json_extract for index usage
+    // INDEXED BY forces SQLite to use timestamp index (otherwise it picks wrong index)
     const recentDronesStmt = db.prepare(`
       SELECT 
         t.drone_id,
@@ -93,7 +93,7 @@ app.get('/api/drones', (req, res) => {
       FROM telemetry t
       INNER JOIN (
         SELECT drone_id, MAX(ID) as max_id
-        FROM telemetry
+        FROM telemetry INDEXED BY idx_telemetry_timestamp
         WHERE timestamp >= ?
           AND json_extract(data, '$.type') = 'gps'
         GROUP BY drone_id
