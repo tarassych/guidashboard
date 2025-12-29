@@ -64,7 +64,7 @@ function saveProfiles(profiles) {
   }
 }
 
-// Get all unique drone IDs from database (detected via GPS telemetry)
+// Get recently active drones from database (GPS telemetry within last 10 minutes)
 app.get('/api/drones', (req, res) => {
   if (!db) {
     if (!connectDatabase()) {
@@ -77,68 +77,55 @@ app.get('/api/drones', (req, res) => {
     const ACTIVE_THRESHOLD_MINUTES = 10;
     const cutoffTime = new Date(Date.now() - ACTIVE_THRESHOLD_MINUTES * 60 * 1000).toISOString();
     
-    // Get ALL drones that have any GPS telemetry records (for droneIds list)
-    const allDronesStmt = db.prepare(`
-      SELECT DISTINCT drone_id 
-      FROM telemetry 
-      WHERE data LIKE '%"type":%"gps"%'
-      ORDER BY drone_id ASC
-    `);
-    const allRows = allDronesStmt.all();
-    const droneIds = allRows.map(r => r.drone_id);
-    
     // Load profiles to check which drones are configured
     const profiles = loadProfiles();
     const configuredIds = Object.keys(profiles.drones);
     
-    // Get drones with RECENT activity (within last 10 minutes) that are not in profiles
-    // These are the "detected" drones - actively sending telemetry but not yet configured
+    // Single optimized query: Get recent drone IDs with their latest GPS data
+    // Uses json_extract for exact type matching (types: gps, batt, state)
+    // Only scans records from last 10 minutes
     const recentDronesStmt = db.prepare(`
-      SELECT DISTINCT drone_id 
-      FROM telemetry 
-      WHERE data LIKE '%"type":%"gps"%'
-        AND timestamp >= ?
-      ORDER BY drone_id ASC
+      SELECT 
+        t.drone_id,
+        t.data,
+        t.timestamp
+      FROM telemetry t
+      INNER JOIN (
+        SELECT drone_id, MAX(ID) as max_id
+        FROM telemetry
+        WHERE json_extract(data, '$.type') = 'gps'
+          AND timestamp >= ?
+        GROUP BY drone_id
+      ) latest ON t.ID = latest.max_id
+      ORDER BY t.drone_id ASC
     `);
     const recentRows = recentDronesStmt.all(cutoffTime);
-    const recentDroneIds = recentRows.map(r => r.drone_id);
     
-    // Filter to only those without profiles
-    const detectedDroneIds = recentDroneIds.filter(id => !configuredIds.includes(String(id)));
+    // All recently active drone IDs (for reference)
+    const droneIds = recentRows.map(r => r.drone_id);
     
-    // Get latest GPS coordinates for each detected drone
-    const detectedDrones = detectedDroneIds.map(droneId => {
-      const gpsStmt = db.prepare(`
-        SELECT data, timestamp 
-        FROM telemetry 
-        WHERE drone_id = ? AND data LIKE '%"type":%"gps"%'
-        ORDER BY ID DESC 
-        LIMIT 1
-      `);
-      const gpsRow = gpsStmt.get(droneId);
-      
-      let latitude = null;
-      let longitude = null;
-      let timestamp = null;
-      
-      if (gpsRow) {
+    // Build detected drones list (not in profiles) with GPS coordinates
+    const detectedDrones = recentRows
+      .filter(row => !configuredIds.includes(String(row.drone_id)))
+      .map(row => {
+        let latitude = null;
+        let longitude = null;
+        
         try {
-          const gpsData = JSON.parse(gpsRow.data);
+          const gpsData = JSON.parse(row.data);
           latitude = gpsData.latitude;
           longitude = gpsData.longitude;
-          timestamp = gpsRow.timestamp;
         } catch (e) {
           // ignore parse errors
         }
-      }
-      
-      return {
-        droneId: String(droneId),
-        latitude,
-        longitude,
-        lastSeen: timestamp
-      };
-    });
+        
+        return {
+          droneId: String(row.drone_id),
+          latitude,
+          longitude,
+          lastSeen: row.timestamp
+        };
+      });
 
     res.json({
       success: true,
