@@ -350,6 +350,74 @@ app.get('/api/discover', async (req, res) => {
   }
 });
 
+// Scan for cameras on a drone's network
+app.get('/api/scan-cameras/:ip', async (req, res) => {
+  const { ip } = req.params;
+  
+  if (!ip) {
+    return res.status(400).json({ error: 'IP address is required' });
+  }
+  
+  const scriptPath = path.join(config.scriptsPath, 'scan_cam.sh');
+  const command = `cd ${config.scriptsPath} && ./scan_cam.sh ${ip}`;
+  
+  // Check if script exists
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(404).json({ 
+      success: false,
+      error: 'Camera scan script not found',
+      path: scriptPath,
+      command: null,
+      stdout: '',
+      stderr: ''
+    });
+  }
+  
+  try {
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 60000 // 60 second timeout for camera scan
+    });
+    
+    // Try to parse JSON output from scan_cam.sh
+    let cameras = [];
+    let parseError = null;
+    
+    try {
+      // Find JSON array in output (in case there's other text before/after)
+      const jsonMatch = stdout.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        cameras = JSON.parse(jsonMatch[0]);
+      } else if (stdout.trim() === '[]' || stdout.trim() === '') {
+        cameras = [];
+      } else {
+        parseError = 'No JSON array found in output';
+      }
+    } catch (e) {
+      parseError = e.message;
+    }
+    
+    res.json({
+      success: true,
+      cameras,
+      parseError,
+      command,
+      stdout: stdout || '',
+      stderr: stderr || ''
+    });
+  } catch (error) {
+    console.error('Camera scan error:', error.message);
+    res.json({ 
+      success: false,
+      cameras: [],
+      error: error.message,
+      code: error.code,
+      command,
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
+    });
+  }
+});
+
 // Pair with a drone
 app.post('/api/pair', async (req, res) => {
   const { ip, droneId } = req.body;

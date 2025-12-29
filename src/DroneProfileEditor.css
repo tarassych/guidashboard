@@ -1146,4 +1146,339 @@ section h2 {
   box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
 }
 
+/* Camera Scanner Modal */
+.camera-scanner-container {
+  max-width: 900px;
+  width: 90vw;
+}
 
+.camera-scanner-modal {
+  padding: 0;
+}
+
+.camera-scanner-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.camera-scanner-header h3 {
+  margin: 0 0 0.25rem 0;
+  color: var(--hud-primary, #00ff88);
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.scanner-subtitle {
+  color: #668877;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.camera-scanner-actions {
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.scan-btn {
+  padding: 0.8rem 2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #003322, #004433);
+  border: 1px solid var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.scan-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #004433, #005544);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.scan-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scan-btn.scanning {
+  background: linear-gradient(135deg, #1a3322, #2a4433);
+}
+
+.scan-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
+}
+
+.scan-error {
+  margin: 0 1.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 100, 100, 0.1);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 4px;
+  color: #ff8888;
+  font-size: 0.9rem;
+}
+
+/* Cameras Grid */
+.cameras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  padding: 0 1.5rem 1.5rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.camera-card {
+  background: rgba(0, 20, 10, 0.8);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.camera-card:hover {
+  border-color: rgba(0, 255, 136, 0.4);
+}
+
+.camera-card.assigned-front {
+  border-color: #00aaff;
+  box-shadow: 0 0 15px rgba(0, 170, 255, 0.2);
+}
+
+.camera-card.assigned-rear {
+  border-color: #ffaa00;
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.2);
+}
+
+.camera-snapshot {
+  width: 100%;
+  height: 150px;
+  background: #0a1510;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.camera-snapshot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.snapshot-placeholder {
+  color: #445;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.camera-info {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+}
+
+.camera-ip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--hud-primary, #00ff88);
+}
+
+.camera-model {
+  font-size: 0.75rem;
+  color: #668877;
+  margin-top: 0.25rem;
+}
+
+.camera-assignment {
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.assignment-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.assignment-badge.front {
+  background: rgba(0, 170, 255, 0.2);
+  color: #00aaff;
+  border: 1px solid rgba(0, 170, 255, 0.4);
+}
+
+.assignment-badge.rear {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 170, 0, 0.4);
+}
+
+.camera-buttons {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.assign-btn {
+  flex: 1;
+  padding: 0.5rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assign-btn.front {
+  background: transparent;
+  border-color: #00aaff;
+  color: #00aaff;
+}
+
+.assign-btn.front:hover {
+  background: rgba(0, 170, 255, 0.15);
+}
+
+.assign-btn.front.selected {
+  background: rgba(0, 170, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+}
+
+.assign-btn.rear {
+  background: transparent;
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+
+.assign-btn.rear:hover {
+  background: rgba(255, 170, 0, 0.15);
+}
+
+.assign-btn.rear.selected {
+  background: rgba(255, 170, 0, 0.3);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+}
+
+.camera-scanner-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.camera-scanner-footer .cancel-btn {
+  padding: 0.6rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid #666;
+  color: #888;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.camera-scanner-footer .cancel-btn:hover {
+  border-color: #888;
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.camera-scanner-footer .save-btn {
+  padding: 0.6rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #00aa66, #00ff88);
+  border: 1px solid #00ff88;
+  color: #001a0a;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.camera-scanner-footer .save-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+}
+
+.camera-scanner-footer .save-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Set Camera Button in Profile Card */
+.set-camera-btn {
+  padding: 0.2rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.set-camera-btn:hover {
+  background: rgba(0, 255, 136, 0.15);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+}
+
+.camera-set {
+  color: #668877;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+.camera-row {
+  align-items: center;
+}
+
+/* Scan Cameras Button in Profile Actions */
+.scan-cameras-btn {
+  padding: 0.4rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid #668877;
+  color: #668877;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scan-cameras-btn:hover {
+  border-color: var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.profile-actions {
+  gap: 0.5rem;
+}

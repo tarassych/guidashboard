@@ -64,9 +64,201 @@ function DroneLocationMap({ latitude, longitude }) {
 const defaultProfile = {
   name: '',
   ipAddress: '',
+  frontCamera: null,
+  rearCamera: null,
+  // Legacy fields for backwards compatibility
   frontCameraUrl: '',
   rearCameraUrl: '',
   color: '#00ff88'
+}
+
+// Camera Scanner Modal Component
+function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState(null)
+  const [cameras, setCameras] = useState([])
+  const [selectedFront, setSelectedFront] = useState(null)
+  const [selectedRear, setSelectedRear] = useState(null)
+  
+  const handleScan = async () => {
+    if (!droneIp) {
+      setScanError('Drone IP address is not set. Please set it first.')
+      return
+    }
+    
+    setIsScanning(true)
+    setScanError(null)
+    setCameras([])
+    setSelectedFront(null)
+    setSelectedRear(null)
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/scan-cameras/${droneIp}`)
+      const data = await response.json()
+      
+      if (data.success && data.cameras && data.cameras.length > 0) {
+        setCameras(data.cameras)
+      } else {
+        setScanError(data.error || 'No cameras found on the network')
+      }
+    } catch (error) {
+      console.error('Camera scan error:', error)
+      setScanError(error.message)
+    } finally {
+      setIsScanning(false)
+    }
+  }
+  
+  const handleAssignFront = (camera) => {
+    // If already selected as rear, unselect it there
+    if (selectedRear?.ip === camera.ip) {
+      setSelectedRear(null)
+    }
+    setSelectedFront(camera)
+  }
+  
+  const handleAssignRear = (camera) => {
+    // If already selected as front, unselect it there
+    if (selectedFront?.ip === camera.ip) {
+      setSelectedFront(null)
+    }
+    setSelectedRear(camera)
+  }
+  
+  const handleSaveAssignments = () => {
+    const frontCamera = selectedFront ? {
+      ip: selectedFront.ip,
+      snapshotUrl: selectedFront.snapshot?.url || '',
+      rtspUrl: `rtsp://${selectedFront.login}:${selectedFront.password}@${selectedFront.ip}:${selectedFront.rtsp?.port || 554}${selectedFront.rtsp?.path || '/stream0'}`,
+      rtspPort: selectedFront.rtsp?.port || 554,
+      rtspPath: selectedFront.rtsp?.path || '/stream0',
+      login: selectedFront.login || '',
+      password: selectedFront.password || ''
+    } : null
+    
+    const rearCamera = selectedRear ? {
+      ip: selectedRear.ip,
+      snapshotUrl: selectedRear.snapshot?.url || '',
+      rtspUrl: `rtsp://${selectedRear.login}:${selectedRear.password}@${selectedRear.ip}:${selectedRear.rtsp?.port || 554}${selectedRear.rtsp?.path || '/stream0'}`,
+      rtspPort: selectedRear.rtsp?.port || 554,
+      rtspPath: selectedRear.rtsp?.path || '/stream0',
+      login: selectedRear.login || '',
+      password: selectedRear.password || ''
+    } : null
+    
+    onSave(frontCamera, rearCamera)
+  }
+  
+  const getCameraAssignment = (camera) => {
+    if (selectedFront?.ip === camera.ip) return 'front'
+    if (selectedRear?.ip === camera.ip) return 'rear'
+    return null
+  }
+  
+  return (
+    <div className="camera-scanner-modal">
+      <div className="camera-scanner-header">
+        <h3>Camera Scanner</h3>
+        <span className="scanner-subtitle">Drone #{droneId} • IP: {droneIp || 'Not set'}</span>
+      </div>
+      
+      <div className="camera-scanner-actions">
+        <button 
+          className={`scan-btn ${isScanning ? 'scanning' : ''}`}
+          onClick={handleScan}
+          disabled={isScanning || !droneIp}
+        >
+          {isScanning ? (
+            <>
+              <span className="scan-spinner">◌</span>
+              Scanning...
+            </>
+          ) : (
+            'Scan for Cameras'
+          )}
+        </button>
+      </div>
+      
+      {scanError && (
+        <div className="scan-error">
+          ⚠ {scanError}
+        </div>
+      )}
+      
+      {cameras.length > 0 && (
+        <div className="cameras-grid">
+          {cameras.map((camera, index) => {
+            const assignment = getCameraAssignment(camera)
+            return (
+              <div 
+                key={camera.ip || index} 
+                className={`camera-card ${assignment ? `assigned-${assignment}` : ''}`}
+              >
+                <div className="camera-snapshot">
+                  {camera.snapshot?.url ? (
+                    <img 
+                      src={camera.snapshot.url} 
+                      alt={`Camera ${camera.ip}`}
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextSibling.style.display = 'flex'
+                      }}
+                    />
+                  ) : null}
+                  <div className="snapshot-placeholder" style={{ display: camera.snapshot?.url ? 'none' : 'flex' }}>
+                    No snapshot
+                  </div>
+                </div>
+                
+                <div className="camera-info">
+                  <div className="camera-ip">{camera.ip}</div>
+                  {camera.onvif?.model && (
+                    <div className="camera-model">{camera.onvif.manufacturer} {camera.onvif.model}</div>
+                  )}
+                </div>
+                
+                <div className="camera-assignment">
+                  {assignment && (
+                    <div className={`assignment-badge ${assignment}`}>
+                      {assignment === 'front' ? 'FRONT' : 'REAR'}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="camera-buttons">
+                  <button
+                    className={`assign-btn front ${assignment === 'front' ? 'selected' : ''}`}
+                    onClick={() => handleAssignFront(camera)}
+                  >
+                    {assignment === 'front' ? '✓ Front' : 'Set as Front'}
+                  </button>
+                  <button
+                    className={`assign-btn rear ${assignment === 'rear' ? 'selected' : ''}`}
+                    onClick={() => handleAssignRear(camera)}
+                  >
+                    {assignment === 'rear' ? '✓ Rear' : 'Set as Rear'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      
+      <div className="camera-scanner-footer">
+        <button className="cancel-btn" onClick={onClose}>
+          Cancel
+        </button>
+        <button 
+          className="save-btn"
+          onClick={handleSaveAssignments}
+          disabled={!selectedFront && !selectedRear}
+        >
+          Save Camera Settings
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
@@ -221,6 +413,9 @@ function DroneProfileEditor() {
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, onCancel }
   
+  // Camera scanner modal state
+  const [cameraScannerDrone, setCameraScannerDrone] = useState(null) // { droneId, droneIp }
+  
   // Auto-scroll terminal to bottom when logs change
   useEffect(() => {
     if (terminalRef.current) {
@@ -281,6 +476,41 @@ function DroneProfileEditor() {
       }
     } catch (error) {
       console.error('Failed to save profile:', error)
+    }
+  }
+  
+  // Handle camera settings save from scanner modal
+  const handleSaveCameraSettings = async (frontCamera, rearCamera) => {
+    if (!cameraScannerDrone) return
+    
+    const { droneId } = cameraScannerDrone
+    const existingProfile = profiles[droneId] || {}
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/profiles/${droneId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...existingProfile,
+          frontCamera,
+          rearCamera,
+          // Also set legacy URL fields for backwards compatibility
+          frontCameraUrl: frontCamera?.rtspUrl || existingProfile.frontCameraUrl || '',
+          rearCameraUrl: rearCamera?.rtspUrl || existingProfile.rearCameraUrl || ''
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setProfiles(prev => ({
+          ...prev,
+          [droneId]: data.profile
+        }))
+        setCameraScannerDrone(null)
+      }
+    } catch (error) {
+      console.error('Failed to save camera settings:', error)
     }
   }
   
@@ -628,21 +858,58 @@ function DroneProfileEditor() {
                             {profile.ipAddress || <em>Not set</em>}
                           </span>
                         </div>
-                        <div className="detail-row">
+                        <div className="detail-row camera-row">
                           <span className="detail-label">Front Camera:</span>
                           <span className="detail-value">
-                            {profile.frontCameraUrl || <em>Not set</em>}
+                            {profile.frontCamera?.ip || profile.frontCameraUrl ? (
+                              <span className="camera-set">
+                                {profile.frontCamera?.ip || 'Configured'}
+                              </span>
+                            ) : (
+                              <button 
+                                className="set-camera-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                }}
+                              >
+                                SET
+                              </button>
+                            )}
                           </span>
                         </div>
-                        <div className="detail-row">
+                        <div className="detail-row camera-row">
                           <span className="detail-label">Rear Camera:</span>
                           <span className="detail-value">
-                            {profile.rearCameraUrl || <em>Not set</em>}
+                            {profile.rearCamera?.ip || profile.rearCameraUrl ? (
+                              <span className="camera-set">
+                                {profile.rearCamera?.ip || 'Configured'}
+                              </span>
+                            ) : (
+                              <button 
+                                className="set-camera-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                }}
+                              >
+                                SET
+                              </button>
+                            )}
                           </span>
                         </div>
                       </div>
                       
                       <div className="profile-actions">
+                        <button
+                          className="scan-cameras-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                          }}
+                        >
+                          Cameras
+                        </button>
                         <Link 
                           to={`/drone/${droneId}`} 
                           className="view-osd-btn"
@@ -955,6 +1222,20 @@ function DroneProfileEditor() {
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Camera Scanner Modal */}
+      {cameraScannerDrone && (
+        <div className="modal-overlay" onClick={() => setCameraScannerDrone(null)}>
+          <div className="modal-content camera-scanner-container" onClick={(e) => e.stopPropagation()}>
+            <CameraScannerModal
+              droneId={cameraScannerDrone.droneId}
+              droneIp={cameraScannerDrone.droneIp}
+              onSave={handleSaveCameraSettings}
+              onClose={() => setCameraScannerDrone(null)}
+            />
           </div>
         </div>
       )}
