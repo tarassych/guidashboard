@@ -73,9 +73,10 @@ app.get('/api/drones', (req, res) => {
   }
 
   try {
-    // Calculate cutoff time (10 minutes ago) as ISO string
+    // Calculate cutoff time (10 minutes ago) as Unix milliseconds
+    // Database stores timestamps as Unix milliseconds (e.g., 1767017842866)
     const ACTIVE_THRESHOLD_MINUTES = 10;
-    const cutoffTime = new Date(Date.now() - ACTIVE_THRESHOLD_MINUTES * 60 * 1000).toISOString();
+    const cutoffTime = Date.now() - ACTIVE_THRESHOLD_MINUTES * 60 * 1000;
     
     // Load profiles to check which drones are configured
     const profiles = loadProfiles();
@@ -83,7 +84,7 @@ app.get('/api/drones', (req, res) => {
     
     // Single optimized query: Get recent drone IDs with their latest GPS data
     // Uses json_extract for exact type matching (types: gps, batt, state)
-    // Only scans records from last 10 minutes
+    // IMPORTANT: timestamp filter MUST come before json_extract for index usage
     const recentDronesStmt = db.prepare(`
       SELECT 
         t.drone_id,
@@ -93,8 +94,8 @@ app.get('/api/drones', (req, res) => {
       INNER JOIN (
         SELECT drone_id, MAX(ID) as max_id
         FROM telemetry
-        WHERE json_extract(data, '$.type') = 'gps'
-          AND timestamp >= ?
+        WHERE timestamp >= ?
+          AND json_extract(data, '$.type') = 'gps'
         GROUP BY drone_id
       ) latest ON t.ID = latest.max_id
       ORDER BY t.drone_id ASC
