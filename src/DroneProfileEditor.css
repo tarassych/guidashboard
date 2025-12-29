@@ -1548,17 +1548,19 @@ section h2 {
   box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
 }
 
-.camera-set {
-  color: #668877;
+.camera-status {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   margin-right: 0.5rem;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: inline-block;
-  vertical-align: middle;
+}
+
+.camera-status.set {
+  color: var(--hud-primary, #00ff88);
+}
+
+.camera-status.not-set {
+  color: #666;
+  font-style: italic;
 }
 
 .camera-row {

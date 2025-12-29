@@ -944,9 +944,7 @@ function DroneProfileEditor() {
                           <span className="detail-value">
                             {profile.frontCamera?.ip || profile.frontCameraUrl ? (
                               <>
-                                <span className="camera-set" title={profile.frontCameraUrl || profile.frontCamera?.hlsUrl}>
-                                  {profile.frontCameraUrl || profile.frontCamera?.hlsUrl || 'Configured'}
-                                </span>
+                                <span className="camera-status set">✓ Set</span>
                                 <button 
                                   className="set-camera-btn change"
                                   onClick={(e) => {
@@ -958,15 +956,18 @@ function DroneProfileEditor() {
                                 </button>
                               </>
                             ) : (
-                              <button 
-                                className="set-camera-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
-                                }}
-                              >
-                                SET
-                              </button>
+                              <>
+                                <span className="camera-status not-set">Not set</span>
+                                <button 
+                                  className="set-camera-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                  }}
+                                >
+                                  SET
+                                </button>
+                              </>
                             )}
                           </span>
                         </div>
@@ -975,9 +976,7 @@ function DroneProfileEditor() {
                           <span className="detail-value">
                             {profile.rearCamera?.ip || profile.rearCameraUrl ? (
                               <>
-                                <span className="camera-set" title={profile.rearCameraUrl || profile.rearCamera?.hlsUrl}>
-                                  {profile.rearCameraUrl || profile.rearCamera?.hlsUrl || 'Configured'}
-                                </span>
+                                <span className="camera-status set">✓ Set</span>
                                 <button 
                                   className="set-camera-btn change"
                                   onClick={(e) => {
@@ -989,15 +988,18 @@ function DroneProfileEditor() {
                                 </button>
                               </>
                             ) : (
-                              <button 
-                                className="set-camera-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
-                                }}
-                              >
-                                SET
-                              </button>
+                              <>
+                                <span className="camera-status not-set">Not set</span>
+                                <button 
+                                  className="set-camera-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                  }}
+                                >
+                                  SET
+                                </button>
+                              </>
                             )}
                           </span>
                         </div>
