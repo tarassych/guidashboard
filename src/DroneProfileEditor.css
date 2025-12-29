@@ -1551,8 +1551,14 @@ section h2 {
 .camera-set {
   color: #668877;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   margin-right: 0.5rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .camera-row {

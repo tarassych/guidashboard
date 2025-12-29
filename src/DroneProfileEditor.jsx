@@ -944,8 +944,8 @@ function DroneProfileEditor() {
                           <span className="detail-value">
                             {profile.frontCamera?.ip || profile.frontCameraUrl ? (
                               <>
-                                <span className="camera-set">
-                                  {profile.frontCamera?.ip || 'Configured'}
+                                <span className="camera-set" title={profile.frontCameraUrl || profile.frontCamera?.hlsUrl}>
+                                  {profile.frontCameraUrl || profile.frontCamera?.hlsUrl || 'Configured'}
                                 </span>
                                 <button 
                                   className="set-camera-btn change"
@@ -975,8 +975,8 @@ function DroneProfileEditor() {
                           <span className="detail-value">
                             {profile.rearCamera?.ip || profile.rearCameraUrl ? (
                               <>
-                                <span className="camera-set">
-                                  {profile.rearCamera?.ip || 'Configured'}
+                                <span className="camera-set" title={profile.rearCameraUrl || profile.rearCamera?.hlsUrl}>
+                                  {profile.rearCameraUrl || profile.rearCamera?.hlsUrl || 'Configured'}
                                 </span>
                                 <button 
                                   className="set-camera-btn change"
