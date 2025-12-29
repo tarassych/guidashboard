@@ -1178,7 +1178,7 @@ section h2 {
 
 /* Camera Scanner Terminal */
 .camera-scanner-terminal {
-  margin: 0 1.5rem 1rem;
+  margin: 1.5rem 1.5rem 1rem;
   background: rgba(0, 10, 5, 0.9);
   border: 1px solid rgba(0, 255, 136, 0.2);
   border-radius: 4px;
