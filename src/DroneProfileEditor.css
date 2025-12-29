@@ -1176,6 +1176,105 @@ section h2 {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Camera Scanner Terminal */
+.camera-scanner-terminal {
+  margin: 0 1.5rem 1rem;
+  background: rgba(0, 10, 5, 0.9);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.camera-scanner-terminal .terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 255, 136, 0.05);
+  border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+}
+
+.camera-scanner-terminal .terminal-title {
+  font-size: 0.8rem;
+  color: #668877;
+  font-weight: 500;
+}
+
+.camera-scanner-terminal .terminal-icon {
+  color: var(--hud-primary, #00ff88);
+  margin-right: 0.5rem;
+}
+
+.camera-scanner-terminal .terminal-body {
+  padding: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.camera-scanner-terminal .terminal-entry {
+  margin-bottom: 0.5rem;
+}
+
+.camera-scanner-terminal .terminal-command-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--hud-primary, #00ff88);
+}
+
+.camera-scanner-terminal .prompt {
+  color: #668877;
+}
+
+.camera-scanner-terminal .command {
+  color: var(--hud-primary, #00ff88);
+}
+
+.camera-scanner-terminal .running-indicator {
+  animation: spin 1s linear infinite;
+  color: #ffaa00;
+}
+
+.camera-scanner-terminal .terminal-stdout {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  color: #aaffcc;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.camera-scanner-terminal .terminal-stderr {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(100, 0, 0, 0.2);
+  border-radius: 3px;
+  color: #ff8888;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.camera-scanner-terminal .terminal-result {
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.camera-scanner-terminal .terminal-result.success {
+  color: var(--hud-primary, #00ff88);
+}
+
+.camera-scanner-terminal .terminal-result.error {
+  color: #ff6666;
+}
+
 .camera-scanner-actions {
   padding: 1rem 1.5rem;
   display: flex;

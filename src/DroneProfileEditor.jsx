@@ -79,6 +79,15 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   const [cameras, setCameras] = useState([])
   const [selectedFront, setSelectedFront] = useState(null)
   const [selectedRear, setSelectedRear] = useState(null)
+  const [scanLog, setScanLog] = useState(null) // { command, stdout, stderr, status }
+  const scanTerminalRef = useRef(null)
+  
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (scanTerminalRef.current) {
+      scanTerminalRef.current.scrollTop = scanTerminalRef.current.scrollHeight
+    }
+  }, [scanLog])
   
   const handleScan = async () => {
     if (!droneIp) {
@@ -92,9 +101,26 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     setSelectedFront(null)
     setSelectedRear(null)
     
+    // Set initial scanning log
+    setScanLog({
+      command: `scan_cam.sh ${droneIp}`,
+      stdout: '',
+      stderr: '',
+      status: 'running'
+    })
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/scan-cameras/${droneIp}`)
       const data = await response.json()
+      
+      // Update log with response
+      setScanLog({
+        command: data.command || `scan_cam.sh ${droneIp}`,
+        stdout: data.stdout || '',
+        stderr: data.stderr || '',
+        status: data.success ? 'success' : 'error',
+        camerasFound: data.cameras?.length || 0
+      })
       
       if (data.success && data.cameras && data.cameras.length > 0) {
         setCameras(data.cameras)
@@ -103,6 +129,11 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       }
     } catch (error) {
       console.error('Camera scan error:', error)
+      setScanLog(prev => ({
+        ...prev,
+        status: 'error',
+        stderr: error.message
+      }))
       setScanError(error.message)
     } finally {
       setIsScanning(false)
@@ -162,22 +193,39 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         <span className="scanner-subtitle">Drone #{droneId} • IP: {droneIp || 'Not set'}</span>
       </div>
       
-      <div className="camera-scanner-actions">
-        <button 
-          className={`scan-btn ${isScanning ? 'scanning' : ''}`}
-          onClick={handleScan}
-          disabled={isScanning || !droneIp}
-        >
-          {isScanning ? (
-            <>
-              <span className="scan-spinner">◌</span>
-              Scanning...
-            </>
-          ) : (
-            'Scan for Cameras'
-          )}
-        </button>
-      </div>
+      {/* Terminal Output */}
+      {scanLog && (
+        <div className="camera-scanner-terminal">
+          <div className="terminal-header">
+            <span className="terminal-title"><span className="terminal-icon">&gt;_</span> Terminal</span>
+          </div>
+          <div className="terminal-body" ref={scanTerminalRef}>
+            <div className={`terminal-entry scan ${scanLog.status}`}>
+              <div className="terminal-command-line">
+                <span className="prompt">$</span>
+                <span className="command">{scanLog.command}</span>
+                {scanLog.status === 'running' && <span className="running-indicator">◌</span>}
+              </div>
+              {scanLog.stdout && (
+                <pre className="terminal-stdout">{scanLog.stdout}</pre>
+              )}
+              {scanLog.stderr && (
+                <pre className="terminal-stderr">{scanLog.stderr}</pre>
+              )}
+              {scanLog.status === 'success' && (
+                <div className="terminal-result success">
+                  ✓ Found {scanLog.camerasFound} camera{scanLog.camerasFound !== 1 ? 's' : ''}
+                </div>
+              )}
+              {scanLog.status === 'error' && (
+                <div className="terminal-result error">
+                  ✗ Scan failed
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {scanError && (
         <div className="scan-error">
@@ -185,6 +233,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         </div>
       )}
       
+      {/* Cameras Grid */}
       {cameras.length > 0 && (
         <div className="cameras-grid">
           {cameras.map((camera, index) => {
@@ -244,6 +293,26 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
           })}
         </div>
       )}
+      
+      {/* Scan Button - below cameras */}
+      <div className="camera-scanner-actions">
+        <button 
+          className={`scan-btn ${isScanning ? 'scanning' : ''}`}
+          onClick={handleScan}
+          disabled={isScanning || !droneIp}
+        >
+          {isScanning ? (
+            <>
+              <span className="scan-spinner">◌</span>
+              Scanning...
+            </>
+          ) : cameras.length > 0 ? (
+            'Rescan for Cameras'
+          ) : (
+            'Scan for Cameras'
+          )}
+        </button>
+      </div>
       
       <div className="camera-scanner-footer">
         <button className="cancel-btn" onClick={onClose}>
