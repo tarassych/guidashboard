@@ -1453,27 +1453,28 @@ section h2 {
   color: #668877;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
+  margin-right: 0.5rem;
 }
 
 .camera-row {
   align-items: center;
 }
 
-/* Scan Cameras Button in Profile Actions */
-.scan-cameras-btn {
-  padding: 0.4rem 0.8rem;
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: transparent;
-  border: 1px solid #668877;
-  color: #668877;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.2s;
+.camera-row .detail-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.scan-cameras-btn:hover {
+/* Change button variant */
+.set-camera-btn.change {
+  border-color: #668877;
+  color: #668877;
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+}
+
+.set-camera-btn.change:hover {
   border-color: var(--hud-primary, #00ff88);
   color: var(--hud-primary, #00ff88);
   background: rgba(0, 255, 136, 0.1);

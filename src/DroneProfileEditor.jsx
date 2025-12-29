@@ -862,9 +862,20 @@ function DroneProfileEditor() {
                           <span className="detail-label">Front Camera:</span>
                           <span className="detail-value">
                             {profile.frontCamera?.ip || profile.frontCameraUrl ? (
-                              <span className="camera-set">
-                                {profile.frontCamera?.ip || 'Configured'}
-                              </span>
+                              <>
+                                <span className="camera-set">
+                                  {profile.frontCamera?.ip || 'Configured'}
+                                </span>
+                                <button 
+                                  className="set-camera-btn change"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                  }}
+                                >
+                                  Change
+                                </button>
+                              </>
                             ) : (
                               <button 
                                 className="set-camera-btn"
@@ -882,9 +893,20 @@ function DroneProfileEditor() {
                           <span className="detail-label">Rear Camera:</span>
                           <span className="detail-value">
                             {profile.rearCamera?.ip || profile.rearCameraUrl ? (
-                              <span className="camera-set">
-                                {profile.rearCamera?.ip || 'Configured'}
-                              </span>
+                              <>
+                                <span className="camera-set">
+                                  {profile.rearCamera?.ip || 'Configured'}
+                                </span>
+                                <button 
+                                  className="set-camera-btn change"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                  }}
+                                >
+                                  Change
+                                </button>
+                              </>
                             ) : (
                               <button 
                                 className="set-camera-btn"
@@ -901,15 +923,6 @@ function DroneProfileEditor() {
                       </div>
                       
                       <div className="profile-actions">
-                        <button
-                          className="scan-cameras-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
-                          }}
-                        >
-                          Cameras
-                        </button>
                         <Link 
                           to={`/drone/${droneId}`} 
                           className="view-osd-btn"
