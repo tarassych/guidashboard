@@ -1,0 +1,14 @@
+{
+  "drones": {
+    "DRONE_ID_HERE": {
+      "droneId": "DRONE_ID_HERE",
+      "name": "Drone Name",
+      "ipAddress": "",
+      "frontCameraUrl": "http://YOUR_SERVER:8888/cam1/index.m3u8",
+      "rearCameraUrl": "http://YOUR_SERVER:8888/cam2/index.m3u8",
+      "color": "#00ff88",
+      "updatedAt": 0
+    }
+  }
+}
+
