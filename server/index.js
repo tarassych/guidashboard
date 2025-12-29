@@ -73,23 +73,38 @@ app.get('/api/drones', (req, res) => {
   }
 
   try {
-    // Get drones that have GPS telemetry records
-    // Use flexible pattern to match "type": "gps" with or without spaces
-    const stmt = db.prepare(`
+    // Calculate cutoff time (10 minutes ago) as ISO string
+    const ACTIVE_THRESHOLD_MINUTES = 10;
+    const cutoffTime = new Date(Date.now() - ACTIVE_THRESHOLD_MINUTES * 60 * 1000).toISOString();
+    
+    // Get ALL drones that have any GPS telemetry records (for droneIds list)
+    const allDronesStmt = db.prepare(`
       SELECT DISTINCT drone_id 
       FROM telemetry 
       WHERE data LIKE '%"type":%"gps"%'
       ORDER BY drone_id ASC
     `);
-    const rows = stmt.all();
-    const droneIds = rows.map(r => r.drone_id);
+    const allRows = allDronesStmt.all();
+    const droneIds = allRows.map(r => r.drone_id);
     
     // Load profiles to check which drones are configured
     const profiles = loadProfiles();
     const configuredIds = Object.keys(profiles.drones);
     
-    // Find detected drones (in DB but not in profiles)
-    const detectedDroneIds = droneIds.filter(id => !configuredIds.includes(String(id)));
+    // Get drones with RECENT activity (within last 10 minutes) that are not in profiles
+    // These are the "detected" drones - actively sending telemetry but not yet configured
+    const recentDronesStmt = db.prepare(`
+      SELECT DISTINCT drone_id 
+      FROM telemetry 
+      WHERE data LIKE '%"type":%"gps"%'
+        AND timestamp >= ?
+      ORDER BY drone_id ASC
+    `);
+    const recentRows = recentDronesStmt.all(cutoffTime);
+    const recentDroneIds = recentRows.map(r => r.drone_id);
+    
+    // Filter to only those without profiles
+    const detectedDroneIds = recentDroneIds.filter(id => !configuredIds.includes(String(id)));
     
     // Get latest GPS coordinates for each detected drone
     const detectedDrones = detectedDroneIds.map(droneId => {
@@ -130,6 +145,7 @@ app.get('/api/drones', (req, res) => {
       droneIds,
       configuredDrones: configuredIds,
       detectedDrones,
+      activeThresholdMinutes: ACTIVE_THRESHOLD_MINUTES,
       count: droneIds.length
     });
   } catch (error) {
