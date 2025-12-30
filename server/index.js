@@ -64,6 +64,140 @@ function saveProfiles(profiles) {
   }
 }
 
+// MediaMTX paths.yml management
+const pathsYmlPath = path.join(config.mediamtxPath, 'paths.yml');
+
+// Load current paths.yml content
+function loadPathsYml() {
+  try {
+    if (fs.existsSync(pathsYmlPath)) {
+      return fs.readFileSync(pathsYmlPath, 'utf-8');
+    }
+  } catch (error) {
+    console.error('Failed to load paths.yml:', error.message);
+  }
+  return '';
+}
+
+// Parse paths.yml into a structured object
+function parsePathsYml(content) {
+  const paths = {};
+  const lines = content.split('\n');
+  let currentPath = null;
+  let currentConfig = {};
+  
+  for (const line of lines) {
+    // Match path name (e.g., "  cam123:")
+    const pathMatch = line.match(/^  (\S+):$/);
+    if (pathMatch) {
+      // Save previous path
+      if (currentPath) {
+        paths[currentPath] = currentConfig;
+      }
+      currentPath = pathMatch[1];
+      currentConfig = {};
+      continue;
+    }
+    
+    // Match config property (e.g., "    source: rtsp://...")
+    const propMatch = line.match(/^    (\w+):\s*(.*)$/);
+    if (propMatch && currentPath) {
+      currentConfig[propMatch[1]] = propMatch[2];
+    }
+  }
+  
+  // Save last path
+  if (currentPath) {
+    paths[currentPath] = currentConfig;
+  }
+  
+  return paths;
+}
+
+// Generate paths.yml content from structured object
+function generatePathsYml(paths) {
+  let content = '';
+  
+  for (const [pathName, config] of Object.entries(paths)) {
+    content += `  ${pathName}:\n`;
+    for (const [key, value] of Object.entries(config)) {
+      content += `    ${key}: ${value}\n`;
+    }
+    content += '\n';
+  }
+  
+  return content;
+}
+
+// Update camera config in paths.yml
+function updateCameraInPaths(camera, serialNumber) {
+  if (!camera || !serialNumber) {
+    console.log('updateCameraInPaths: missing camera or serialNumber');
+    return false;
+  }
+  
+  try {
+    const currentContent = loadPathsYml();
+    const paths = parsePathsYml(currentContent);
+    
+    const pathName = `cam${serialNumber}`;
+    const rtspPort = camera.rtspPort || 554;
+    const rtspPath = camera.rtspPath || '/stream0';
+    const login = camera.login || 'admin';
+    const password = camera.password || '';
+    
+    // Build RTSP URL
+    const rtspUrl = `rtsp://${login}:${password}@${camera.ip}:${rtspPort}${rtspPath}`;
+    
+    paths[pathName] = {
+      source: rtspUrl,
+      sourceOnDemand: 'yes',
+      sourceProtocol: 'tcp'
+    };
+    
+    console.log(`Updating paths.yml: ${pathName} -> ${rtspUrl}`);
+    
+    const newContent = generatePathsYml(paths);
+    fs.writeFileSync(pathsYmlPath, newContent);
+    
+    // Rebuild mediamtx.yml by running the rebuild script
+    const rebuildScript = path.join(config.mediamtxPath, 'rebuild-config.sh');
+    if (fs.existsSync(rebuildScript)) {
+      exec(`cd ${config.mediamtxPath} && ./rebuild-config.sh`, (error, stdout, stderr) => {
+        if (error) {
+          console.error('Failed to rebuild mediamtx config:', error.message);
+        } else {
+          console.log('MediaMTX config rebuilt:', stdout);
+        }
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to update paths.yml:', error.message);
+    return false;
+  }
+}
+
+// Update all cameras from a profile in paths.yml
+function updateProfileCamerasInPaths(profile) {
+  let updated = false;
+  
+  if (profile.frontCamera && profile.frontCamera.serialNumber) {
+    if (updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber)) {
+      updated = true;
+    }
+  }
+  
+  if (profile.rearCamera && profile.rearCamera.serialNumber) {
+    if (updateCameraInPaths(profile.rearCamera, profile.rearCamera.serialNumber)) {
+      updated = true;
+    }
+  }
+  
+  return updated;
+}
+
 // Get recently active drones from database (GPS telemetry within last 10 minutes)
 app.get('/api/drones', (req, res) => {
   if (!db) {
@@ -173,6 +307,13 @@ app.post('/api/profiles/:droneId', (req, res) => {
   console.log(`Final profile for drone ${droneId}:`, JSON.stringify(profiles.drones[droneId]));
 
   if (saveProfiles(profiles)) {
+    // Update mediamtx paths.yml if cameras are configured
+    const savedProfile = profiles.drones[droneId];
+    if (savedProfile.frontCamera || savedProfile.rearCamera) {
+      const pathsUpdated = updateProfileCamerasInPaths(savedProfile);
+      console.log(`MediaMTX paths.yml updated: ${pathsUpdated}`);
+    }
+    
     res.json({
       success: true,
       profile: profiles.drones[droneId]
@@ -523,7 +664,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     dbConnected: db !== null,
     dbPath: config.dbPath,
-    scriptsPath: config.scriptsPath
+    scriptsPath: config.scriptsPath,
+    mediamtxPath: config.mediamtxPath
   });
 });
 
