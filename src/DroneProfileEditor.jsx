@@ -1469,15 +1469,23 @@ function DroneProfileEditor() {
                         const isFailed = status?.status === 'failed'
                         // Disable if any other drone is pairing
                         const isDisabledByOther = isPairingAny && !isPairing
-                        // Check if this drone already has telemetry (already paired)
+                        // Check if this drone already has telemetry
                         const alreadyHasTelemetry = droneIds.includes(String(drone.drone_id)) || 
                           detectedDrones.some(d => String(d.droneId) === String(drone.drone_id))
+                        // Check if drone is already in profiles (connected)
+                        const existingProfile = profiles[String(drone.drone_id)]
+                        const isAlreadyConnected = !!existingProfile
+                        const droneName = existingProfile?.name
+                        // Show Re-pair if either has telemetry OR is already connected
+                        const needsRepair = alreadyHasTelemetry || isAlreadyConnected
                         
                         const handlePairClick = () => {
-                          if (alreadyHasTelemetry) {
+                          if (needsRepair) {
                             setConfirmModal({
                               title: 'Re-pair Drone',
-                              message: `Drone ${drone.drone_id} already has active telemetry. Are you sure you want to re-pair this drone?`,
+                              message: isAlreadyConnected 
+                                ? `Drone "${droneName || drone.drone_id}" is already connected. Re-pairing may update network settings. Continue?`
+                                : `Drone ${drone.drone_id} already has active telemetry. Are you sure you want to re-pair this drone?`,
                               onConfirm: () => {
                                 setConfirmModal(null)
                                 handlePair(drone)
@@ -1489,20 +1497,16 @@ function DroneProfileEditor() {
                           }
                         }
                         
-                        // Get profile name if drone is already paired
-                        const existingProfile = profiles[String(drone.drone_id)]
-                        const droneName = existingProfile?.name
-                        
                         return (
-                          <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''} ${alreadyHasTelemetry ? 'already-paired' : ''}`}>
+                          <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''} ${needsRepair ? 'already-paired' : ''}`}>
                             <div className="discovered-drone-header">
                               <span className="drone-id-badge">{droneName && <span className="drone-name">{droneName}</span>} ID: {drone.drone_id}</span>
                               <span className="drone-method">{drone.method.toUpperCase()}</span>
                             </div>
                             
-                            {alreadyHasTelemetry && !status && (
+                            {needsRepair && !status && (
                               <div className="already-paired-notice">
-                                ✓ Already paired - telemetry active
+                                ✓ {isAlreadyConnected ? 'Connected drone' : 'Already paired - telemetry active'}
                               </div>
                             )}
                             
@@ -1532,11 +1536,11 @@ function DroneProfileEditor() {
                             
                             <div className="discovered-drone-actions">
                               <button
-                                className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''} ${isDisabledByOther ? 'disabled-other' : ''} ${alreadyHasTelemetry && !isPairing && !isSuccess ? 're-pair' : ''}`}
+                                className={`pair-btn ${isPairing ? 'pairing' : ''} ${isSuccess ? 'success' : ''} ${isDisabledByOther ? 'disabled-other' : ''} ${needsRepair && !isPairing && !isSuccess ? 're-pair' : ''}`}
                                 onClick={handlePairClick}
                                 disabled={isPairing || isSuccess || isDisabledByOther}
                               >
-                                {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : isDisabledByOther ? 'Wait...' : alreadyHasTelemetry ? 'Re-pair' : 'Pair'}
+                                {isPairing ? 'Pairing...' : isSuccess ? 'Paired!' : isDisabledByOther ? 'Wait...' : needsRepair ? 'Re-pair' : 'Pair'}
                               </button>
                             </div>
                           </div>
