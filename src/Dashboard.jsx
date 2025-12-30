@@ -229,8 +229,8 @@ function Dashboard() {
           <h1>RATERA DRONE CONTROL CENTER</h1>
         </div>
         <div className="header-right">
-          <Link to="/profiles" className="header-btn">
-            ⚙ Manage Profiles
+          <Link to="/settings" className="header-btn">
+            ⚙ Settings
           </Link>
         </div>
       </header>
@@ -238,7 +238,7 @@ function Dashboard() {
       {detectedDrones.length > 0 && (
         <DetectedDroneAlert 
           detectedDrones={detectedDrones} 
-          onAddProfile={() => navigate('/profiles')} 
+          onAddProfile={() => navigate('/settings')} 
         />
       )}
       
@@ -248,7 +248,7 @@ function Dashboard() {
             <span className="no-drones-icon">◇</span>
             <h2>No Connected Drones</h2>
             <p>Add drone profiles to see them here.</p>
-            <Link to="/profiles" className="add-drone-btn">⚙ Manage Profiles</Link>
+            <Link to="/settings" className="add-drone-btn">⚙ Settings</Link>
           </div>
         ) : (
           connectedDroneIds.map(droneId => (

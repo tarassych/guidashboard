@@ -1213,7 +1213,7 @@ function DroneProfileEditor() {
       <header className="editor-header">
         <div className="header-left">
           <Link to="/" className="back-btn">← Back to Dashboard</Link>
-          <h1>Drone Profile Manager</h1>
+          <h1>Settings</h1>
         </div>
       </header>
       

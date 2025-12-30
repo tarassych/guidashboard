@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/drone/:droneId" element={<App />} />
-        <Route path="/profiles" element={<DroneProfileEditor />} />
+        <Route path="/settings" element={<DroneProfileEditor />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
