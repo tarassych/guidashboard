@@ -879,7 +879,7 @@ body {
   pointer-events: none;
   z-index: 4;
   border-radius: 4px;
-  background: rgba(0, 255, 136, 0.15);
+  background: rgba(0, 255, 136, 0.25);
   mix-blend-mode: multiply;
 }
 
@@ -1050,9 +1050,38 @@ body {
 
 .telemetry-strip {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.telemetry-strip.collapsed {
+  padding: 4px 0;
+}
+
+.telem-toggle {
+  background: rgba(0, 20, 40, 0.6);
+  border: 1px solid var(--theme-accent-primary-border, rgba(0, 255, 136, 0.3));
+  color: var(--theme-accent-primary, #00ff88);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  padding: 6px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.telem-toggle:hover {
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.telem-content {
+  display: flex;
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 .telem-item {
@@ -1287,12 +1316,17 @@ body {
     top: 120px;
   }
   
-  .telemetry-strip {
+  .telem-content {
     gap: 10px;
   }
   
   .telem-item {
     min-width: 55px;
+  }
+  
+  .telem-toggle {
+    font-size: 0.55rem;
+    padding: 4px 12px;
   }
   
   .telem-value {

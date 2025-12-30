@@ -449,7 +449,7 @@ body {
 
 /* Map theme overlay - green tint */
 .map-theme-overlay {
-  background: rgba(0, 255, 136, 0.15);
+  background: rgba(0, 255, 136, 0.25);
 }
 
 

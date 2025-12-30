@@ -464,7 +464,7 @@ body {
 
 /* Map theme overlay - red tint */
 .map-theme-overlay {
-  background: rgba(255, 34, 68, 0.15);
+  background: rgba(255, 34, 68, 0.25);
 }
 
 

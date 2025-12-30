@@ -647,6 +647,8 @@ function WarningBanner() {
 
 // Telemetry Strip - now using real telemetry data
 function TelemetryStrip({ telemetry }) {
+  const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
+  
   // Format telemetry_time as clock
   const formatClock = (timestamp) => {
     if (!timestamp) return '--:--:--'
@@ -660,51 +662,62 @@ function TelemetryStrip({ telemetry }) {
   }
 
   return (
-    <div className="telemetry-strip">
-      <div className="telem-item">
-        <span className="telem-label">LAT</span>
-        <span className="telem-value">{telemetry.latitude ? telemetry.latitude.toFixed(6) : '-.------'}°</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">LNG</span>
-        <span className="telem-value">{telemetry.longitude ? telemetry.longitude.toFixed(6) : '-.------'}°</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">ALT</span>
-        <span className="telem-value">{telemetry.altitude.toFixed(0)}m</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">HDG</span>
-        <span className="telem-value">{telemetry.heading.toFixed(0)}°</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">GS</span>
-        <span className="telem-value">{telemetry.groundspeed.toFixed(1)}</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">SPD</span>
-        <span className="telem-value">{telemetry.speed.toFixed(1)}</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">DIST</span>
-        <span className="telem-value">{telemetry.dist.toFixed(0)}m</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">BAT</span>
-        <span className="telem-value">{telemetry.batt_v.toFixed(1)}V</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">SAT</span>
-        <span className="telem-value">{telemetry.satellites}</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">MODE</span>
-        <span className="telem-value">{telemetry.md_str}</span>
-      </div>
-      <div className="telem-item">
-        <span className="telem-label">TIME</span>
-        <span className="telem-value">{formatClock(telemetry.telemetry_time)}</span>
-      </div>
+    <div className={`telemetry-strip ${isCollapsed ? 'collapsed' : ''}`}>
+      <button 
+        className="telem-toggle"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        {isCollapsed ? '▲ TELEMETRY' : '▼ TELEMETRY'}
+      </button>
+      
+      {!isCollapsed && (
+        <div className="telem-content">
+          <div className="telem-item">
+            <span className="telem-label">LAT</span>
+            <span className="telem-value">{telemetry.latitude ? telemetry.latitude.toFixed(6) : '-.------'}°</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">LNG</span>
+            <span className="telem-value">{telemetry.longitude ? telemetry.longitude.toFixed(6) : '-.------'}°</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">ALT</span>
+            <span className="telem-value">{telemetry.altitude.toFixed(0)}m</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">HDG</span>
+            <span className="telem-value">{telemetry.heading.toFixed(0)}°</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">GS</span>
+            <span className="telem-value">{telemetry.groundspeed.toFixed(1)}</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">SPD</span>
+            <span className="telem-value">{telemetry.speed.toFixed(1)}</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">DIST</span>
+            <span className="telem-value">{telemetry.dist.toFixed(0)}m</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">BAT</span>
+            <span className="telem-value">{telemetry.batt_v.toFixed(1)}V</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">SAT</span>
+            <span className="telem-value">{telemetry.satellites}</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">MODE</span>
+            <span className="telem-value">{telemetry.md_str}</span>
+          </div>
+          <div className="telem-item">
+            <span className="telem-label">TIME</span>
+            <span className="telem-value">{formatClock(telemetry.telemetry_time)}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
