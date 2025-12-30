@@ -222,6 +222,72 @@ async function updateProfileCamerasInPathsAsync(profile) {
     output.stderr += `[WARNING] rebuild-config.sh not found at ${rebuildScript}\n`;
   }
   
+  // Check MediaMTX status and restart/reload
+  output.stdout += '\n[MMTX] Checking MediaMTX status...\n';
+  const mediamtxBinary = path.join(config.mediamtxPath, 'mediamtx');
+  
+  try {
+    // Check if mediamtx is running
+    const { stdout: psOut } = await execAsync(
+      `pgrep -f "${mediamtxBinary}" || echo ""`,
+      { timeout: 5000 }
+    );
+    const mediamtxPid = psOut.trim().split('\n')[0];
+    
+    if (mediamtxPid) {
+      output.stdout += `[STATUS] MediaMTX running (PID: ${mediamtxPid})\n`;
+      
+      // Send SIGHUP to reload config without restart
+      output.stdout += '[RELOAD] Sending SIGHUP to reload config...\n';
+      try {
+        await execAsync(`kill -HUP ${mediamtxPid}`, { timeout: 5000 });
+        output.stdout += '[SUCCESS] Config reload signal sent\n';
+      } catch (reloadErr) {
+        output.stderr += `[WARNING] Could not reload: ${reloadErr.message}\n`;
+        
+        // Try restart instead
+        output.stdout += '[RESTART] Attempting full restart...\n';
+        try {
+          await execAsync(`kill ${mediamtxPid}`, { timeout: 5000 });
+          await new Promise(r => setTimeout(r, 1000));
+          await execAsync(
+            `cd ${config.mediamtxPath} && nohup ./mediamtx > /dev/null 2>&1 &`,
+            { timeout: 5000 }
+          );
+          output.stdout += '[SUCCESS] MediaMTX restarted\n';
+        } catch (restartErr) {
+          output.stderr += `[ERROR] Restart failed: ${restartErr.message}\n`;
+        }
+      }
+    } else {
+      output.stdout += '[STATUS] MediaMTX not running\n';
+      output.stdout += '[START] Starting MediaMTX...\n';
+      
+      try {
+        await execAsync(
+          `cd ${config.mediamtxPath} && nohup ./mediamtx > /dev/null 2>&1 &`,
+          { timeout: 5000 }
+        );
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Verify it started
+        const { stdout: verifyOut } = await execAsync(
+          `pgrep -f "${mediamtxBinary}" || echo ""`,
+          { timeout: 5000 }
+        );
+        if (verifyOut.trim()) {
+          output.stdout += `[SUCCESS] MediaMTX started (PID: ${verifyOut.trim().split('\n')[0]})\n`;
+        } else {
+          output.stderr += '[WARNING] MediaMTX may not have started properly\n';
+        }
+      } catch (startErr) {
+        output.stderr += `[ERROR] Failed to start MediaMTX: ${startErr.message}\n`;
+      }
+    }
+  } catch (error) {
+    output.stderr += `[ERROR] Status check failed: ${error.message}\n`;
+  }
+  
   return output;
 }
 
