@@ -1148,8 +1148,12 @@ body {
 }
 
 .telemetry-log.collapsed {
-  max-height: 80px;
-  width: 200px;
+  max-height: 90px;
+  width: 220px;
+}
+
+.telemetry-log.collapsed .tlog-header {
+  border-bottom: none;
 }
 
 .tlog-header {
@@ -1375,7 +1379,7 @@ body {
   }
   
   .telemetry-log.collapsed {
-    width: 150px;
-    max-height: 60px;
+    width: 170px;
+    max-height: 75px;
   }
 }
