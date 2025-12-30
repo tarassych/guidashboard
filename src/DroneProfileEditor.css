@@ -1527,6 +1527,18 @@ section h2 {
   cursor: not-allowed;
 }
 
+.camera-scanner-footer .save-btn .spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 26, 10, 0.3);
+  border-top-color: #001a0a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
 /* Set Camera Button in Profile Card */
 .set-camera-btn {
   padding: 0.2rem 0.6rem;

@@ -75,6 +75,7 @@ const defaultProfile = {
 // Camera Scanner Modal Component
 function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   const [isScanning, setIsScanning] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [scanError, setScanError] = useState(null)
   const [cameras, setCameras] = useState([])
   const [selectedFront, setSelectedFront] = useState(null)
@@ -156,7 +157,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     setSelectedRear(camera)
   }
   
-  const handleSaveAssignments = () => {
+  const handleSaveAssignments = async () => {
     // Generate HLS URL: http://{camera_ip}:8888/cam{serial_number}/index.m3u8
     const generateHlsUrl = (camera) => {
       const serialNumber = camera.onvif?.serial_number || camera.ip.replace(/\./g, '')
@@ -189,7 +190,12 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       model: selectedRear.onvif?.model || ''
     } : null
     
-    onSave(frontCamera, rearCamera)
+    setIsSaving(true)
+    try {
+      await onSave(frontCamera, rearCamera)
+    } finally {
+      setIsSaving(false)
+    }
   }
   
   const getCameraAssignment = (camera) => {
@@ -327,15 +333,22 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       </div>
       
       <div className="camera-scanner-footer">
-        <button className="cancel-btn" onClick={onClose}>
+        <button className="cancel-btn" onClick={onClose} disabled={isSaving}>
           Cancel
         </button>
         <button 
           className="save-btn"
           onClick={handleSaveAssignments}
-          disabled={!selectedFront && !selectedRear}
+          disabled={isSaving || (!selectedFront && !selectedRear)}
         >
-          Save Camera Settings
+          {isSaving ? (
+            <>
+              <span className="spinner"></span>
+              Saving & Configuring...
+            </>
+          ) : (
+            'Save Camera Settings'
+          )}
         </button>
       </div>
     </div>
