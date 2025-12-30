@@ -1602,3 +1602,378 @@ section h2 {
 .profile-actions {
   gap: 0.5rem;
 }
+
+/* ==================== MEDIAMTX PANEL ==================== */
+.cameras-section {
+  padding: 0;
+}
+
+.mediamtx-panel {
+  background: rgba(0, 20, 40, 0.6);
+  border: 1px solid rgba(0, 150, 255, 0.2);
+  border-radius: 4px;
+}
+
+.mediamtx-panel.loading {
+  padding: 3rem;
+  text-align: center;
+  color: #6a8a9a;
+}
+
+.mediamtx-panel .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 200, 255, 0.2);
+  border-top-color: #00c8ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+/* Status Header */
+.mmtx-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 40, 80, 0.4);
+  border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.mmtx-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse-status 2s ease-in-out infinite;
+}
+
+.status-dot.running {
+  background: #00ff88;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.status-dot.stopped {
+  background: #ff4444;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+  animation: none;
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.status-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e0e8f0;
+}
+
+.status-text .pid,
+.status-text .uptime {
+  margin-left: 1rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #6a8a9a;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.mmtx-restart-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 150, 0, 0.2);
+  border: 1px solid rgba(255, 150, 0, 0.5);
+  color: #ffaa44;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mmtx-restart-btn:hover:not(:disabled) {
+  background: rgba(255, 150, 0, 0.3);
+  border-color: #ffaa44;
+}
+
+.mmtx-restart-btn.restarting {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Error Message */
+.mmtx-error {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 50, 50, 0.1);
+  border-bottom: 1px solid rgba(255, 50, 50, 0.3);
+  color: #ff6666;
+  font-size: 0.85rem;
+}
+
+/* Stats Grid */
+.mmtx-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  background: rgba(0, 150, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.stat-card {
+  background: rgba(0, 20, 40, 0.8);
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00c8ff;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-value.active {
+  color: #00ff88;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #6a8a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
+}
+
+.stat-card.bytes .stat-value {
+  font-size: 1.1rem;
+  color: #8899aa;
+}
+
+/* Streams Table */
+.mmtx-streams-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.mmtx-streams-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #00c8ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mmtx-streams-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.mmtx-streams-table th {
+  text-align: left;
+  padding: 0.75rem;
+  background: rgba(0, 40, 80, 0.5);
+  color: #8899aa;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.mmtx-streams-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.1);
+  color: #c0d0e0;
+}
+
+.mmtx-streams-table tr.ready {
+  background: rgba(0, 255, 136, 0.03);
+}
+
+.mmtx-streams-table tr.not-ready {
+  opacity: 0.6;
+}
+
+.stream-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #e0e8f0;
+}
+
+.stream-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stream-status.active {
+  color: #00ff88;
+}
+
+.stream-status.inactive {
+  color: #6a8a9a;
+}
+
+.source-type {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #8899aa;
+}
+
+.hls-url code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #00aaff;
+  background: rgba(0, 170, 255, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+
+.no-streams {
+  color: #6a8a9a;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Config Section */
+.mmtx-config-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.mmtx-config-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #00c8ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.config-preview {
+  background: rgba(0, 10, 20, 0.8);
+  border: 1px solid rgba(0, 150, 255, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #8899aa;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre;
+  margin: 0;
+}
+
+/* Logs Section */
+.mmtx-logs-section {
+  padding: 1.5rem;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.logs-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #00c8ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.refresh-logs-btn {
+  padding: 0.3rem 0.8rem;
+  background: transparent;
+  border: 1px solid rgba(0, 150, 255, 0.3);
+  color: #6a8a9a;
+  font-family: inherit;
+  font-size: 0.75rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-logs-btn:hover {
+  border-color: #00c8ff;
+  color: #00c8ff;
+}
+
+.logs-container {
+  background: rgba(0, 5, 10, 0.9);
+  border: 1px solid rgba(0, 150, 255, 0.2);
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.log-line {
+  padding: 0.2rem 0.5rem;
+  color: #6a8a9a;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.05);
+}
+
+.log-line:last-child {
+  border-bottom: none;
+}
+
+.log-line.error {
+  color: #ff6666;
+  background: rgba(255, 50, 50, 0.1);
+}
+
+.log-line.warn {
+  color: #ffaa44;
+  background: rgba(255, 150, 0, 0.05);
+}
+
+.no-logs {
+  color: #4a5a6a;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .mmtx-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .mmtx-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .mmtx-status-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .mmtx-streams-table {
+    font-size: 0.75rem;
+  }
+  
+  .mmtx-streams-table th,
+  .mmtx-streams-table td {
+    padding: 0.5rem;
+  }
+}

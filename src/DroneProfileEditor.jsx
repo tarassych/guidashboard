@@ -534,6 +534,243 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
   )
 }
 
+// MediaMTX Status Panel Component
+function MediaMTXPanel() {
+  const [status, setStatus] = useState(null)
+  const [config, setConfig] = useState(null)
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [restarting, setRestarting] = useState(false)
+  const logsRef = useRef(null)
+  
+  // Fetch status data
+  const fetchStatus = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mediamtx/status`)
+      const data = await response.json()
+      if (data.success) {
+        setStatus(data)
+        setError(null)
+      } else {
+        setError(data.error || 'Failed to fetch status')
+      }
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+  
+  // Fetch config
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mediamtx/config`)
+      const data = await response.json()
+      if (data.success) {
+        setConfig(data)
+      }
+    } catch (err) {
+      console.error('Config fetch error:', err)
+    }
+  }
+  
+  // Fetch logs
+  const fetchLogs = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mediamtx/logs?lines=50`)
+      const data = await response.json()
+      if (data.success) {
+        setLogs(data.lines || [])
+      }
+    } catch (err) {
+      console.error('Logs fetch error:', err)
+    }
+  }
+  
+  // Initial load
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true)
+      await Promise.all([fetchStatus(), fetchConfig(), fetchLogs()])
+      setLoading(false)
+    }
+    loadAll()
+    
+    // Auto-refresh every 5 seconds
+    const interval = setInterval(fetchStatus, 5000)
+    return () => clearInterval(interval)
+  }, [])
+  
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsRef.current) {
+      logsRef.current.scrollTop = logsRef.current.scrollHeight
+    }
+  }, [logs])
+  
+  // Restart MediaMTX
+  const handleRestart = async () => {
+    if (restarting) return
+    setRestarting(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mediamtx/restart`, { method: 'POST' })
+      const data = await response.json()
+      if (data.success) {
+        await fetchStatus()
+        await fetchLogs()
+      } else {
+        setError(data.error || 'Restart failed')
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRestarting(false)
+    }
+  }
+  
+  // Format bytes
+  const formatBytes = (bytes) => {
+    if (!bytes) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+  
+  if (loading) {
+    return (
+      <div className="mediamtx-panel loading">
+        <div className="loading-spinner"></div>
+        <p>Loading MediaMTX status...</p>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="mediamtx-panel">
+      {/* Status Header */}
+      <div className="mmtx-status-header">
+        <div className="mmtx-status-indicator">
+          <span className={`status-dot ${status?.status?.running ? 'running' : 'stopped'}`}></span>
+          <span className="status-text">
+            {status?.status?.running ? 'Running' : 'Stopped'}
+            {status?.status?.pid && <span className="pid">PID: {status.status.pid}</span>}
+            {status?.status?.uptime && <span className="uptime">Uptime: {status.status.uptime}</span>}
+          </span>
+        </div>
+        <button 
+          className={`mmtx-restart-btn ${restarting ? 'restarting' : ''}`}
+          onClick={handleRestart}
+          disabled={restarting}
+        >
+          {restarting ? 'Restarting...' : 'Restart MediaMTX'}
+        </button>
+      </div>
+      
+      {error && (
+        <div className="mmtx-error">
+          ⚠ {error}
+        </div>
+      )}
+      
+      {/* Stats Grid */}
+      <div className="mmtx-stats-grid">
+        <div className="stat-card">
+          <span className="stat-value">{status?.stats?.totalPaths || 0}</span>
+          <span className="stat-label">Configured Streams</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value active">{status?.stats?.activePaths || 0}</span>
+          <span className="stat-label">Active Streams</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value">{status?.stats?.totalReaders || 0}</span>
+          <span className="stat-label">Connected Viewers</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value">{status?.stats?.hlsMuxers || 0}</span>
+          <span className="stat-label">HLS Muxers</span>
+        </div>
+        <div className="stat-card bytes">
+          <span className="stat-value">{formatBytes(status?.stats?.bytesReceived)}</span>
+          <span className="stat-label">Data Received</span>
+        </div>
+        <div className="stat-card bytes">
+          <span className="stat-value">{formatBytes(status?.stats?.bytesSent)}</span>
+          <span className="stat-label">Data Sent</span>
+        </div>
+      </div>
+      
+      {/* Streams Table */}
+      <div className="mmtx-streams-section">
+        <h3>Camera Streams</h3>
+        {status?.paths?.length > 0 ? (
+          <table className="mmtx-streams-table">
+            <thead>
+              <tr>
+                <th>Stream Name</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Tracks</th>
+                <th>Viewers</th>
+                <th>HLS URL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {status.paths.map(path => (
+                <tr key={path.name} className={path.ready ? 'ready' : 'not-ready'}>
+                  <td className="stream-name">{path.name}</td>
+                  <td>
+                    <span className={`stream-status ${path.ready ? 'active' : 'inactive'}`}>
+                      {path.ready ? '● Active' : '○ Inactive'}
+                    </span>
+                  </td>
+                  <td className="source-type">{path.sourceType}</td>
+                  <td>{path.tracks}</td>
+                  <td>{path.readers}</td>
+                  <td className="hls-url">
+                    <code>:8888/{path.name}/index.m3u8</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="no-streams">No streams configured</p>
+        )}
+      </div>
+      
+      {/* Config Section */}
+      <div className="mmtx-config-section">
+        <h3>Configuration (paths.yml)</h3>
+        <pre className="config-preview">
+          {config?.raw || 'No configuration loaded'}
+        </pre>
+      </div>
+      
+      {/* Logs Section */}
+      <div className="mmtx-logs-section">
+        <div className="logs-header">
+          <h3>Recent Logs</h3>
+          <button className="refresh-logs-btn" onClick={fetchLogs}>
+            Refresh
+          </button>
+        </div>
+        <div className="logs-container" ref={logsRef}>
+          {logs.length > 0 ? (
+            logs.map((line, i) => (
+              <div key={i} className={`log-line ${line.includes('ERR') ? 'error' : line.includes('WAR') ? 'warn' : ''}`}>
+                {line}
+              </div>
+            ))
+          ) : (
+            <p className="no-logs">No logs available</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DroneProfileEditor() {
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
@@ -954,6 +1191,12 @@ function DroneProfileEditor() {
         >
           Discover & Pair
           {isPairingAny && <span className="tab-badge pairing">●</span>}
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'cameras' ? 'active' : ''}`}
+          onClick={() => setActiveTab('cameras')}
+        >
+          Cameras
         </button>
       </nav>
       
@@ -1391,6 +1634,15 @@ function DroneProfileEditor() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* TAB: Cameras (MediaMTX) */}
+      {activeTab === 'cameras' && (
+        <div className="tab-content">
+          <section className="cameras-section">
+            <MediaMTXPanel />
+          </section>
         </div>
       )}
       
