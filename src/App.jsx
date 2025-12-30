@@ -722,12 +722,96 @@ function TelemetryStrip({ telemetry }) {
   )
 }
 
+// Animated Cardiogram Component
+function AnimatedCardiogram({ heartbeats }) {
+  const canvasRef = useRef(null)
+  const animationRef = useRef(null)
+  const offsetRef = useRef(0)
+  
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const ctx = canvas.getContext('2d')
+    const width = canvas.width
+    const height = canvas.height
+    const centerY = height / 2
+    const scrollSpeed = 0.5 // pixels per frame
+    
+    const animate = () => {
+      offsetRef.current += scrollSpeed
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height)
+      
+      // Draw baseline
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.3)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(0, centerY)
+      ctx.lineTo(width, centerY)
+      ctx.stroke()
+      
+      // Draw heartbeats
+      const now = Date.now()
+      heartbeats.forEach(hb => {
+        const age = now - hb.time
+        const maxAge = 5000 // 5 seconds to cross the screen
+        if (age > maxAge) return
+        
+        // Position: starts at right (width), moves to left (0)
+        const progress = age / maxAge
+        const x = width * (1 - progress)
+        
+        // Amplitude decreases as it moves left
+        const amplitude = (1 - progress * 0.8) * 15
+        
+        // Draw heartbeat spike
+        ctx.strokeStyle = `rgba(0, 255, 136, ${1 - progress * 0.7})`
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        
+        // ECG-like waveform
+        const spikeWidth = 25
+        ctx.moveTo(x - spikeWidth, centerY)
+        ctx.lineTo(x - spikeWidth + 5, centerY)
+        ctx.lineTo(x - spikeWidth + 8, centerY - amplitude * 0.3)
+        ctx.lineTo(x - spikeWidth + 11, centerY + amplitude * 0.5)
+        ctx.lineTo(x - spikeWidth + 14, centerY - amplitude)
+        ctx.lineTo(x - spikeWidth + 17, centerY + amplitude * 0.8)
+        ctx.lineTo(x - spikeWidth + 20, centerY)
+        ctx.lineTo(x, centerY)
+        ctx.stroke()
+      })
+      
+      animationRef.current = requestAnimationFrame(animate)
+    }
+    
+    animate()
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [heartbeats])
+  
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="tlog-cardiogram-canvas"
+      width={200}
+      height={40}
+    />
+  )
+}
+
 // Telemetry Log Component - Real-time database telemetry
 function TelemetryLog({ droneId, onTelemetryUpdate }) {
   const [records, setRecords] = useState([])
   const [connectionStatus, setConnectionStatus] = useState('connecting')
   const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
-  const [heartbeat, setHeartbeat] = useState(false) // Heartbeat animation trigger
+  const [heartbeats, setHeartbeats] = useState([]) // Track heartbeat events with timestamps
   const lastIdRef = useRef(0)
 
   const formatTimestamp = useCallback((timestamp) => {
@@ -773,10 +857,14 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
     return fields.join(' ')
   }, [])
 
-  // Trigger heartbeat animation
+  // Add a new heartbeat event
   const triggerHeartbeat = useCallback(() => {
-    setHeartbeat(true)
-    setTimeout(() => setHeartbeat(false), 300)
+    const now = Date.now()
+    setHeartbeats(prev => {
+      // Keep only heartbeats from last 5 seconds
+      const recent = prev.filter(hb => now - hb.time < 5000)
+      return [...recent, { time: now, id: now }]
+    })
   }, [])
 
   useEffect(() => {
@@ -852,14 +940,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
       
       {isCollapsed ? (
         <div className="tlog-heartbeat-container">
-          <svg className="tlog-cardiogram" viewBox="0 0 200 40" preserveAspectRatio="none">
-            <path 
-              className={`cardiogram-line ${heartbeat ? 'pulse' : ''}`}
-              d="M0,20 L30,20 L35,20 L40,8 L45,32 L50,5 L55,35 L60,20 L65,20 L100,20 L105,20 L110,8 L115,32 L120,5 L125,35 L130,20 L135,20 L170,20 L175,20 L180,8 L185,32 L190,5 L195,35 L200,20"
-              fill="none"
-              strokeWidth="2"
-            />
-          </svg>
+          <AnimatedCardiogram heartbeats={heartbeats} />
         </div>
       ) : (
         <div className="tlog-console">

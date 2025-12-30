@@ -1179,27 +1179,14 @@ body {
 
 /* Heartbeat Cardiogram */
 .tlog-heartbeat-container {
-  padding: 8px 12px;
+  padding: 4px 8px;
   height: 40px;
 }
 
-.tlog-cardiogram {
+.tlog-cardiogram-canvas {
   width: 100%;
   height: 100%;
-}
-
-.cardiogram-line {
-  stroke: var(--theme-accent-primary, #00ff88);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.6;
-  transition: all 0.15s ease;
-}
-
-.cardiogram-line.pulse {
-  opacity: 1;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 4px var(--theme-accent-primary, #00ff88));
+  display: block;
 }
 
 .tlog-status {
