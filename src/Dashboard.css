@@ -196,6 +196,11 @@
   letter-spacing: 0.03em;
 }
 
+.drone-title .drone-name {
+  color: #00ff88;
+  margin-right: 0.5rem;
+}
+
 .drone-status {
   font-size: 0.7rem;
   letter-spacing: 0.05em;

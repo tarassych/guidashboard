@@ -883,6 +883,12 @@ section h2 {
   background: rgba(0, 150, 255, 0.2);
 }
 
+.discovered-drone-header .drone-name {
+  color: #00ff88;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
 .drone-method {
   font-size: 0.7rem;
   padding: 0.2rem 0.5rem;
@@ -1860,6 +1866,12 @@ section h2 {
   color: #00c8ff;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
+}
+
+.usage-badge .drone-name {
+  color: #00ff88;
+  font-weight: 500;
+  margin-right: 0.25rem;
 }
 
 .usage-badge .camera-type {

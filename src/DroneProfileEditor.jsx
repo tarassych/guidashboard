@@ -550,11 +550,11 @@ function MediaMTXPanel({ profiles = {} }) {
     Object.entries(profiles).forEach(([droneId, profile]) => {
       // Check front camera
       if (profile.frontCamera?.hlsUrl?.includes(streamName)) {
-        usage.push({ droneId, camera: 'Front' })
+        usage.push({ droneId, name: profile.name, camera: 'Front' })
       }
       // Check rear camera
       if (profile.rearCamera?.hlsUrl?.includes(streamName)) {
-        usage.push({ droneId, camera: 'Rear' })
+        usage.push({ droneId, name: profile.name, camera: 'Rear' })
       }
     })
     return usage
@@ -747,6 +747,7 @@ function MediaMTXPanel({ profiles = {} }) {
                       {droneUsage.length > 0 ? (
                         droneUsage.map((u, i) => (
                           <span key={i} className="usage-badge">
+                            {u.name && <span className="drone-name">{u.name}</span>}
                             <span className="drone-id">#{u.droneId}</span>
                             <span className={`camera-type ${u.camera.toLowerCase()}`}>{u.camera}</span>
                           </span>
@@ -1276,8 +1277,8 @@ function DroneProfileEditor() {
                       style={{ '--accent-color': profile.color }}
                     >
                       <div className="profile-card-header">
+                        {profile.name && <span className="profile-name">{profile.name}</span>}
                         <span className="profile-id">#{droneId}</span>
-                        <span className="profile-name">{profile.ipAddress || profile.name || `Drone ${droneId}`}</span>
                         <button 
                           className="edit-btn"
                           onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
@@ -1488,10 +1489,14 @@ function DroneProfileEditor() {
                           }
                         }
                         
+                        // Get profile name if drone is already paired
+                        const existingProfile = profiles[String(drone.drone_id)]
+                        const droneName = existingProfile?.name
+                        
                         return (
                           <div key={drone.ip} className={`discovered-drone-card ${status?.status || ''} ${alreadyHasTelemetry ? 'already-paired' : ''}`}>
                             <div className="discovered-drone-header">
-                              <span className="drone-id-badge">ID: {drone.drone_id}</span>
+                              <span className="drone-id-badge">{droneName && <span className="drone-name">{droneName}</span>} ID: {drone.drone_id}</span>
                               <span className="drone-method">{drone.method.toUpperCase()}</span>
                             </div>
                             

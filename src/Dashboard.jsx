@@ -11,8 +11,8 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
   const isOnline = telemetry?.connected
   // Use front camera for dashboard preview
   const previewCameraUrl = profile?.frontCameraUrl
-  // Display IP address if available, otherwise fall back to drone name or generic label
-  const displayLabel = profile?.ipAddress || profile?.name || `Drone ${droneId}`
+  // Display name if available, otherwise fall back to generic label (no IP in title)
+  const displayName = profile?.name || ''
   
   return (
     <div 
@@ -21,7 +21,7 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
     >
       {/* Title bar */}
       <div className="drone-card-header">
-        <span className="drone-title">#{droneId} {displayLabel}</span>
+        <span className="drone-title">{displayName && <span className="drone-name">{displayName}</span>} #{droneId}</span>
         <span className={`drone-status ${isOnline ? 'online' : 'offline'}`}>
           {isOnline ? '● ONLINE' : '○ OFFLINE'}
         </span>
