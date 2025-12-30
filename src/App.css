@@ -1370,6 +1370,12 @@ body {
   }
   
   .hud-telemetry-log-container {
-    display: none;
+    left: 5px;
+    bottom: 55px;
+  }
+  
+  .telemetry-log.collapsed {
+    width: 150px;
+    max-height: 60px;
   }
 }
