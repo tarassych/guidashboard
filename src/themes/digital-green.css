@@ -449,13 +449,7 @@ body {
 
 /* Map theme overlay - green tint */
 .map-theme-overlay {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 255, 136, 0.08) 0%,
-    rgba(0, 255, 136, 0.03) 50%,
-    rgba(0, 255, 136, 0.08) 100%
-  );
-  box-shadow: inset 0 0 60px rgba(0, 255, 136, 0.1);
+  background: rgba(0, 255, 136, 0.15);
 }
 
 

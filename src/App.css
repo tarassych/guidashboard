@@ -879,35 +879,13 @@ body {
   pointer-events: none;
   z-index: 4;
   border-radius: 4px;
-  mix-blend-mode: overlay;
+  background: rgba(0, 255, 136, 0.15);
+  mix-blend-mode: multiply;
 }
 
 /* Make Google Map semi-transparent */
 .map-body > div:first-of-type {
   opacity: 0.85;
-}
-
-/* Map HUD overlay */
-.map-hud-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.map-compass-n {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  opacity: 0.6;
 }
 
 /* Map Zoom Controls */

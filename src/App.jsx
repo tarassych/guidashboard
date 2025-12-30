@@ -583,11 +583,6 @@ function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
         
         {/* Theme color overlay on map */}
         <div className="map-theme-overlay"></div>
-        
-        {/* HUD Overlay on map */}
-        <div className="map-hud-overlay">
-          <span className="map-compass-n">N</span>
-        </div>
       </div>
     </div>
   )
