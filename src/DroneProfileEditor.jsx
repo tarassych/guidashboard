@@ -158,10 +158,22 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   }
   
   const handleSaveAssignments = async () => {
-    // Generate HLS URL: http://{camera_ip}:8888/cam{serial_number}/index.m3u8
+    // Generate HLS URL: http://{mediamtx_server}:8888/cam{serial_number}/index.m3u8
+    // MediaMTX runs on Orange Pi (same as API server), so use that host
+    const getMediamtxHost = () => {
+      // Extract host from API_BASE_URL or use current window location
+      try {
+        const apiUrl = new URL(API_BASE_URL)
+        return apiUrl.hostname
+      } catch {
+        return window.location.hostname
+      }
+    }
+    
     const generateHlsUrl = (camera) => {
       const serialNumber = camera.onvif?.serial_number || camera.ip.replace(/\./g, '')
-      return `http://${camera.ip}:8888/cam${serialNumber}/index.m3u8`
+      const mmtxHost = getMediamtxHost()
+      return `http://${mmtxHost}:8888/cam${serialNumber}/index.m3u8`
     }
     
     const frontCamera = selectedFront ? {
@@ -226,16 +238,12 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       }))
       
       if (mmtxData.success) {
-        // Show success message
+        // Show success message - don't auto-close, let user see and close manually
         setScanLog(prev => ({
           ...prev,
-          stdout: prev.stdout + '\n✓ MMTX CONFIG SAVED\n',
+          stdout: prev.stdout + '\n✓ MMTX CONFIG SAVED - You can now close this window\n',
           status: 'success'
         }))
-        
-        // Wait a moment to show success, then close
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        onClose()
       }
     } catch (error) {
       console.error('Save error:', error)
@@ -385,7 +393,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       
       <div className="camera-scanner-footer">
         <button className="cancel-btn" onClick={onClose} disabled={isSaving}>
-          Cancel
+          Close
         </button>
         <button 
           className="save-btn"

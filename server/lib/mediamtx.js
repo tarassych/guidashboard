@@ -168,6 +168,56 @@ async function rebuildConfig() {
 }
 
 /**
+ * Start MediaMTX as a background daemon that persists
+ * Uses setsid to create new session and fully detach from parent
+ * @returns {Promise<Object>} Result with stdout/stderr
+ */
+async function startMediamtx() {
+  const result = { stdout: '', stderr: '', success: true };
+  const logFile = path.join(config.mediamtxPath, 'mediamtx.log');
+  
+  try {
+    // Use setsid to create new session, redirect output to log file
+    // The shell will exit immediately but mediamtx keeps running
+    await execAsync(
+      `cd ${config.mediamtxPath} && setsid ./mediamtx > ${logFile} 2>&1 &`,
+      { timeout: 5000, shell: '/bin/bash' }
+    );
+    
+    // Wait a moment for process to start
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Verify it started
+    const { stdout: verifyOut } = await execAsync(
+      `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
+      { timeout: 5000 }
+    );
+    
+    if (verifyOut.trim()) {
+      result.stdout += `[SUCCESS] MediaMTX started (PID: ${verifyOut.trim().split(' ')[0]})\n`;
+      result.stdout += `[LOG] Output: ${logFile}\n`;
+    } else {
+      // Check log for errors
+      try {
+        const { stdout: logContent } = await execAsync(
+          `tail -5 ${logFile} 2>/dev/null || echo "No log"`,
+          { timeout: 2000 }
+        );
+        result.stderr += `[WARNING] MediaMTX may not have started. Log:\n${logContent}\n`;
+      } catch {
+        result.stderr += '[WARNING] MediaMTX may not have started properly\n';
+      }
+      result.success = false;
+    }
+  } catch (error) {
+    result.stderr += `[ERROR] Failed to start MediaMTX: ${error.message}\n`;
+    result.success = false;
+  }
+  
+  return result;
+}
+
+/**
  * Check MediaMTX process status and restart/reload as needed
  * @returns {Promise<Object>} Result with stdout/stderr
  */
@@ -200,11 +250,11 @@ async function manageMediamtxProcess() {
         try {
           await execAsync(`kill ${mediamtxPid}`, { timeout: 5000 });
           await new Promise(r => setTimeout(r, 1000));
-          await execAsync(
-            `cd ${config.mediamtxPath} && nohup ./mediamtx > /dev/null 2>&1 &`,
-            { timeout: 5000 }
-          );
-          result.stdout += '[SUCCESS] MediaMTX restarted\n';
+          
+          const startResult = await startMediamtx();
+          result.stdout += startResult.stdout;
+          result.stderr += startResult.stderr;
+          if (!startResult.success) result.success = false;
         } catch (restartErr) {
           result.stderr += `[ERROR] Restart failed: ${restartErr.message}\n`;
           result.success = false;
@@ -214,27 +264,10 @@ async function manageMediamtxProcess() {
       result.stdout += '[STATUS] MediaMTX not running\n';
       result.stdout += '[START] Starting MediaMTX...\n';
       
-      try {
-        await execAsync(
-          `cd ${config.mediamtxPath} && nohup ./mediamtx > /dev/null 2>&1 &`,
-          { timeout: 5000 }
-        );
-        await new Promise(r => setTimeout(r, 1000));
-        
-        // Verify it started
-        const { stdout: verifyOut } = await execAsync(
-          `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
-          { timeout: 5000 }
-        );
-        if (verifyOut.trim()) {
-          result.stdout += `[SUCCESS] MediaMTX started (PID: ${verifyOut.trim().split(' ')[0]})\n`;
-        } else {
-          result.stderr += '[WARNING] MediaMTX may not have started properly\n';
-        }
-      } catch (startErr) {
-        result.stderr += `[ERROR] Failed to start MediaMTX: ${startErr.message}\n`;
-        result.success = false;
-      }
+      const startResult = await startMediamtx();
+      result.stdout += startResult.stdout;
+      result.stderr += startResult.stderr;
+      if (!startResult.success) result.success = false;
     }
   } catch (error) {
     result.stderr += `[ERROR] Status check failed: ${error.message}\n`;
