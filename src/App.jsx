@@ -154,7 +154,7 @@ function App() {
             <Link to="/" className="back-to-dashboard" title="Back to Dashboard">←</Link>
             <span className="logo-icon">◈</span>
             <span className="logo-text">{droneName.toUpperCase()} OSD</span>
-            <span className="logo-version">v1.0</span>
+            <span className="logo-version">v2.5</span>
           </div>
           
           <div className="hud-status-center">
