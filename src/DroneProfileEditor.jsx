@@ -535,7 +535,7 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
 }
 
 // MediaMTX Status Panel Component
-function MediaMTXPanel() {
+function MediaMTXPanel({ profiles = {} }) {
   const [status, setStatus] = useState(null)
   const [config, setConfig] = useState(null)
   const [logs, setLogs] = useState([])
@@ -543,6 +543,22 @@ function MediaMTXPanel() {
   const [error, setError] = useState(null)
   const [restarting, setRestarting] = useState(false)
   const logsRef = useRef(null)
+  
+  // Build a map of stream name -> drone usage info
+  const getStreamDroneUsage = (streamName) => {
+    const usage = []
+    Object.entries(profiles).forEach(([droneId, profile]) => {
+      // Check front camera
+      if (profile.frontCamera?.hlsUrl?.includes(streamName)) {
+        usage.push({ droneId, camera: 'Front' })
+      }
+      // Check rear camera
+      if (profile.rearCamera?.hlsUrl?.includes(streamName)) {
+        usage.push({ droneId, camera: 'Rear' })
+      }
+    })
+    return usage
+  }
   
   // Fetch status data
   const fetchStatus = async () => {
@@ -709,6 +725,7 @@ function MediaMTXPanel() {
               <tr>
                 <th>Stream Name</th>
                 <th>Status</th>
+                <th>Used By</th>
                 <th>Source</th>
                 <th>Tracks</th>
                 <th>Viewers</th>
@@ -716,22 +733,37 @@ function MediaMTXPanel() {
               </tr>
             </thead>
             <tbody>
-              {status.paths.map(path => (
-                <tr key={path.name} className={path.ready ? 'ready' : 'not-ready'}>
-                  <td className="stream-name">{path.name}</td>
-                  <td>
-                    <span className={`stream-status ${path.ready ? 'active' : 'inactive'}`}>
-                      {path.ready ? '● Active' : '○ Inactive'}
-                    </span>
-                  </td>
-                  <td className="source-type">{path.sourceType}</td>
-                  <td>{path.tracks}</td>
-                  <td>{path.readers}</td>
-                  <td className="hls-url">
-                    <code>:8888/{path.name}/index.m3u8</code>
-                  </td>
-                </tr>
-              ))}
+              {status.paths.map(path => {
+                const droneUsage = getStreamDroneUsage(path.name)
+                return (
+                  <tr key={path.name} className={path.ready ? 'ready' : 'not-ready'}>
+                    <td className="stream-name">{path.name}</td>
+                    <td>
+                      <span className={`stream-status ${path.ready ? 'active' : 'inactive'}`}>
+                        {path.ready ? '● Active' : '○ Inactive'}
+                      </span>
+                    </td>
+                    <td className="stream-usage">
+                      {droneUsage.length > 0 ? (
+                        droneUsage.map((u, i) => (
+                          <span key={i} className="usage-badge">
+                            <span className="drone-id">#{u.droneId}</span>
+                            <span className={`camera-type ${u.camera.toLowerCase()}`}>{u.camera}</span>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="not-assigned">—</span>
+                      )}
+                    </td>
+                    <td className="source-type">{path.sourceType}</td>
+                    <td>{path.tracks}</td>
+                    <td>{path.readers}</td>
+                    <td className="hls-url">
+                      <code>:8888/{path.name}/index.m3u8</code>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         ) : (
@@ -741,7 +773,14 @@ function MediaMTXPanel() {
       
       {/* Config Section */}
       <div className="mmtx-config-section">
-        <h3>Configuration (paths.yml)</h3>
+        <div className="config-header">
+          <h3>Configuration (paths.yml)</h3>
+          {config?.lastModified && (
+            <span className="config-modified">
+              Last updated: {new Date(config.lastModified).toLocaleString()}
+            </span>
+          )}
+        </div>
         <pre className="config-preview">
           {config?.raw || 'No configuration loaded'}
         </pre>
@@ -1196,7 +1235,7 @@ function DroneProfileEditor() {
           className={`tab-btn ${activeTab === 'cameras' ? 'active' : ''}`}
           onClick={() => setActiveTab('cameras')}
         >
-          Cameras
+          MMTX Cameras
         </button>
       </nav>
       
@@ -1641,7 +1680,7 @@ function DroneProfileEditor() {
       {activeTab === 'cameras' && (
         <div className="tab-content">
           <section className="cameras-section">
-            <MediaMTXPanel />
+            <MediaMTXPanel profiles={profiles} />
           </section>
         </div>
       )}

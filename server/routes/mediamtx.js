@@ -132,8 +132,13 @@ router.get('/mediamtx/paths', async (req, res) => {
 router.get('/mediamtx/config', async (req, res) => {
   try {
     let pathsYml = '';
+    let lastModified = null;
+    
     if (fs.existsSync(pathsYmlPath)) {
       pathsYml = fs.readFileSync(pathsYmlPath, 'utf-8');
+      // Get file modification time
+      const stats = fs.statSync(pathsYmlPath);
+      lastModified = stats.mtime.toISOString();
     }
     
     // Parse paths from yml
@@ -165,6 +170,7 @@ router.get('/mediamtx/config', async (req, res) => {
     res.json({
       success: true,
       configPath: pathsYmlPath,
+      lastModified,
       raw: pathsYml,
       paths
     });

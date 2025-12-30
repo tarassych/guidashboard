@@ -1838,6 +1838,48 @@ section h2 {
   border-radius: 3px;
 }
 
+/* Stream usage column */
+.stream-usage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.usage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(0, 40, 80, 0.6);
+  border: 1px solid rgba(0, 150, 255, 0.3);
+  border-radius: 3px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+}
+
+.usage-badge .drone-id {
+  color: #00c8ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.usage-badge .camera-type {
+  color: #8899aa;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+
+.usage-badge .camera-type.front {
+  color: #00ff88;
+}
+
+.usage-badge .camera-type.rear {
+  color: #ffaa44;
+}
+
+.stream-usage .not-assigned {
+  color: #4a5a6a;
+}
+
 .no-streams {
   color: #6a8a9a;
   font-style: italic;
@@ -1851,13 +1893,26 @@ section h2 {
   border-bottom: 1px solid rgba(0, 150, 255, 0.2);
 }
 
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+
 .mmtx-config-section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
   color: #00c8ff;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.config-modified {
+  font-size: 0.7rem;
+  color: #6a8a9a;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .config-preview {
