@@ -726,6 +726,8 @@ function TelemetryStrip({ telemetry }) {
 function TelemetryLog({ droneId, onTelemetryUpdate }) {
   const [records, setRecords] = useState([])
   const [connectionStatus, setConnectionStatus] = useState('connecting')
+  const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
+  const [heartbeat, setHeartbeat] = useState(false) // Heartbeat animation trigger
   const lastIdRef = useRef(0)
 
   const formatTimestamp = useCallback((timestamp) => {
@@ -771,6 +773,12 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
     return fields.join(' ')
   }, [])
 
+  // Trigger heartbeat animation
+  const triggerHeartbeat = useCallback(() => {
+    setHeartbeat(true)
+    setTimeout(() => setHeartbeat(false), 300)
+  }, [])
+
   useEffect(() => {
     let isMounted = true
     let pollInterval = null
@@ -802,6 +810,9 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
             // Stack behavior: new on top, limit to 20
             setRecords(prev => [...data.records, ...prev].slice(0, 20))
             
+            // Trigger heartbeat animation when new data arrives
+            triggerHeartbeat()
+            
             // Process ALL records (oldest to newest) so each type updates its fields
             // This ensures batt, gps, and state records all get merged into app state
             if (onTelemetryUpdate) {
@@ -828,28 +839,42 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
       controller.abort()
       if (pollInterval) clearInterval(pollInterval)
     }
-  }, [droneId, onTelemetryUpdate])
+  }, [droneId, onTelemetryUpdate, triggerHeartbeat])
 
   return (
-    <div className="telemetry-log">
-      <div className="tlog-header">
-        <span className="tlog-title">TELEMETRY LOG</span>
+    <div className={`telemetry-log ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="tlog-header" onClick={() => setIsCollapsed(!isCollapsed)}>
+        <span className="tlog-title">{isCollapsed ? '▶' : '▼'} TELEMETRY LOG</span>
         <span className={`tlog-status ${connectionStatus}`}>
           {connectionStatus === 'connected' ? '● LIVE' : connectionStatus === 'connecting' ? '○ ...' : '○ OFF'}
         </span>
       </div>
-      <div className="tlog-console">
-        {records.length === 0 ? (
-          <div className="tlog-empty">Waiting...</div>
-        ) : (
-          records.map(record => (
-            <div key={record.id} className="tlog-entry">
-              <span className="tlog-time">{formatTimestamp(record.timestamp)}</span>
-              <span className="tlog-data">{formatTelemetryData(record.data)}</span>
-            </div>
-          ))
-        )}
-      </div>
+      
+      {isCollapsed ? (
+        <div className="tlog-heartbeat-container">
+          <svg className="tlog-cardiogram" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <path 
+              className={`cardiogram-line ${heartbeat ? 'pulse' : ''}`}
+              d="M0,20 L30,20 L35,20 L40,8 L45,32 L50,5 L55,35 L60,20 L65,20 L100,20 L105,20 L110,8 L115,32 L120,5 L125,35 L130,20 L135,20 L170,20 L175,20 L180,8 L185,32 L190,5 L195,35 L200,20"
+              fill="none"
+              strokeWidth="2"
+            />
+          </svg>
+        </div>
+      ) : (
+        <div className="tlog-console">
+          {records.length === 0 ? (
+            <div className="tlog-empty">Waiting...</div>
+          ) : (
+            records.map(record => (
+              <div key={record.id} className="tlog-entry">
+                <span className="tlog-time">{formatTimestamp(record.timestamp)}</span>
+                <span className="tlog-data">{formatTelemetryData(record.data)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }
