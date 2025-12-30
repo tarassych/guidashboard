@@ -227,12 +227,12 @@ async function updateProfileCamerasInPathsAsync(profile) {
   const mediamtxBinary = path.join(config.mediamtxPath, 'mediamtx');
   
   try {
-    // Check if mediamtx is running
+    // Check if mediamtx is running (use pidof for exact binary match)
     const { stdout: psOut } = await execAsync(
-      `pgrep -f "${mediamtxBinary}" || echo ""`,
+      `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
       { timeout: 5000 }
     );
-    const mediamtxPid = psOut.trim().split('\n')[0];
+    const mediamtxPid = psOut.trim().split(' ')[0];
     
     if (mediamtxPid) {
       output.stdout += `[STATUS] MediaMTX running (PID: ${mediamtxPid})\n`;
@@ -272,11 +272,11 @@ async function updateProfileCamerasInPathsAsync(profile) {
         
         // Verify it started
         const { stdout: verifyOut } = await execAsync(
-          `pgrep -f "${mediamtxBinary}" || echo ""`,
+          `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
           { timeout: 5000 }
         );
         if (verifyOut.trim()) {
-          output.stdout += `[SUCCESS] MediaMTX started (PID: ${verifyOut.trim().split('\n')[0]})\n`;
+          output.stdout += `[SUCCESS] MediaMTX started (PID: ${verifyOut.trim().split(' ')[0]})\n`;
         } else {
           output.stderr += '[WARNING] MediaMTX may not have started properly\n';
         }
