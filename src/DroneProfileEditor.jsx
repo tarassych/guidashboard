@@ -191,8 +191,59 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     } : null
     
     setIsSaving(true)
+    
+    // Initialize terminal log for save operation
+    setScanLog({
+      command: 'Saving camera settings...',
+      stdout: '[SAVE] Saving drone profile...\n',
+      stderr: '',
+      status: 'running'
+    })
+    
     try {
+      // Step 1: Save profile
       await onSave(frontCamera, rearCamera)
+      
+      setScanLog(prev => ({
+        ...prev,
+        stdout: prev.stdout + '[SUCCESS] Profile saved\n\n[MMTX] Updating MediaMTX configuration...\n'
+      }))
+      
+      // Step 2: Update MediaMTX config
+      const mmtxResponse = await fetch(`${API_BASE_URL}/api/update-mediamtx`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frontCamera, rearCamera })
+      })
+      
+      const mmtxData = await mmtxResponse.json()
+      
+      setScanLog(prev => ({
+        ...prev,
+        stdout: prev.stdout + (mmtxData.stdout || '') + '\n',
+        stderr: prev.stderr + (mmtxData.stderr || ''),
+        status: mmtxData.success ? 'success' : 'error'
+      }))
+      
+      if (mmtxData.success) {
+        // Show success message
+        setScanLog(prev => ({
+          ...prev,
+          stdout: prev.stdout + '\n✓ MMTX CONFIG SAVED\n',
+          status: 'success'
+        }))
+        
+        // Wait a moment to show success, then close
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        onClose()
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      setScanLog(prev => ({
+        ...prev,
+        stderr: prev.stderr + `[ERROR] ${error.message}\n`,
+        status: 'error'
+      }))
     } finally {
       setIsSaving(false)
     }
@@ -230,14 +281,14 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
               {scanLog.stderr && (
                 <pre className="terminal-stderr">{scanLog.stderr}</pre>
               )}
-              {scanLog.status === 'success' && (
+              {scanLog.status === 'success' && scanLog.camerasFound !== undefined && (
                 <div className="terminal-result success">
                   ✓ Found {scanLog.camerasFound} camera{scanLog.camerasFound !== 1 ? 's' : ''}
                 </div>
               )}
               {scanLog.status === 'error' && (
                 <div className="terminal-result error">
-                  ✗ Scan failed
+                  ✗ Operation failed
                 </div>
               )}
             </div>

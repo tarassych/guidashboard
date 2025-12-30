@@ -129,11 +129,13 @@ function generatePathsYml(paths) {
   return content;
 }
 
-// Update camera config in paths.yml
+// Update camera config in paths.yml (returns log messages)
 function updateCameraInPaths(camera, serialNumber) {
+  const logs = [];
+  
   if (!camera || !serialNumber) {
-    console.log('updateCameraInPaths: missing camera or serialNumber');
-    return false;
+    logs.push('[SKIP] Missing camera or serialNumber');
+    return { success: false, logs };
   }
   
   try {
@@ -146,56 +148,81 @@ function updateCameraInPaths(camera, serialNumber) {
     const login = camera.login || 'admin';
     const password = camera.password || '';
     
-    // Build RTSP URL
+    // Build RTSP URL (mask password in logs)
     const rtspUrl = `rtsp://${login}:${password}@${camera.ip}:${rtspPort}${rtspPath}`;
+    const rtspUrlMasked = `rtsp://${login}:***@${camera.ip}:${rtspPort}${rtspPath}`;
     
+    const isNew = !paths[pathName];
     paths[pathName] = {
       source: rtspUrl,
       sourceOnDemand: 'yes',
       sourceProtocol: 'tcp'
     };
     
-    console.log(`Updating paths.yml: ${pathName} -> ${rtspUrl}`);
+    logs.push(`[${isNew ? 'ADD' : 'UPDATE'}] ${pathName}: ${rtspUrlMasked}`);
     
     const newContent = generatePathsYml(paths);
     fs.writeFileSync(pathsYmlPath, newContent);
+    logs.push(`[WRITE] paths.yml updated`);
     
-    // Rebuild mediamtx.yml by running the rebuild script
-    const rebuildScript = path.join(config.mediamtxPath, 'rebuild-config.sh');
-    if (fs.existsSync(rebuildScript)) {
-      exec(`cd ${config.mediamtxPath} && ./rebuild-config.sh`, (error, stdout, stderr) => {
-        if (error) {
-          console.error('Failed to rebuild mediamtx config:', error.message);
-        } else {
-          console.log('MediaMTX config rebuilt:', stdout);
-        }
-      });
-    }
-    
-    return true;
+    return { success: true, logs };
   } catch (error) {
+    logs.push(`[ERROR] ${error.message}`);
     console.error('Failed to update paths.yml:', error.message);
-    return false;
+    return { success: false, logs };
   }
 }
 
-// Update all cameras from a profile in paths.yml
-function updateProfileCamerasInPaths(profile) {
-  let updated = false;
+// Update all cameras from a profile in paths.yml (async, returns terminal output)
+async function updateProfileCamerasInPathsAsync(profile) {
+  const output = {
+    commands: [],
+    stdout: '',
+    stderr: '',
+    success: true
+  };
   
+  // Update front camera
   if (profile.frontCamera && profile.frontCamera.serialNumber) {
-    if (updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber)) {
-      updated = true;
-    }
+    output.commands.push(`Updating front camera: cam${profile.frontCamera.serialNumber}`);
+    const result = updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber);
+    output.stdout += result.logs.join('\n') + '\n';
+    if (!result.success) output.success = false;
   }
   
+  // Update rear camera
   if (profile.rearCamera && profile.rearCamera.serialNumber) {
-    if (updateCameraInPaths(profile.rearCamera, profile.rearCamera.serialNumber)) {
-      updated = true;
-    }
+    output.commands.push(`Updating rear camera: cam${profile.rearCamera.serialNumber}`);
+    const result = updateCameraInPaths(profile.rearCamera, profile.rearCamera.serialNumber);
+    output.stdout += result.logs.join('\n') + '\n';
+    if (!result.success) output.success = false;
   }
   
-  return updated;
+  // Rebuild mediamtx.yml
+  const rebuildScript = path.join(config.mediamtxPath, 'rebuild-config.sh');
+  if (fs.existsSync(rebuildScript)) {
+    output.commands.push(`Running: ./rebuild-config.sh`);
+    output.stdout += '\n[REBUILD] Running rebuild-config.sh...\n';
+    
+    try {
+      const { stdout, stderr } = await execAsync(
+        `cd ${config.mediamtxPath} && ./rebuild-config.sh`,
+        { timeout: 10000 }
+      );
+      output.stdout += stdout || '';
+      if (stderr) {
+        output.stderr += stderr;
+      }
+      output.stdout += '[SUCCESS] MediaMTX config rebuilt\n';
+    } catch (error) {
+      output.stderr += `[ERROR] rebuild-config.sh failed: ${error.message}\n`;
+      output.success = false;
+    }
+  } else {
+    output.stderr += `[WARNING] rebuild-config.sh not found at ${rebuildScript}\n`;
+  }
+  
+  return output;
 }
 
 // Get recently active drones from database (GPS telemetry within last 10 minutes)
@@ -307,13 +334,6 @@ app.post('/api/profiles/:droneId', (req, res) => {
   console.log(`Final profile for drone ${droneId}:`, JSON.stringify(profiles.drones[droneId]));
 
   if (saveProfiles(profiles)) {
-    // Update mediamtx paths.yml if cameras are configured
-    const savedProfile = profiles.drones[droneId];
-    if (savedProfile.frontCamera || savedProfile.rearCamera) {
-      const pathsUpdated = updateProfileCamerasInPaths(savedProfile);
-      console.log(`MediaMTX paths.yml updated: ${pathsUpdated}`);
-    }
-    
     res.json({
       success: true,
       profile: profiles.drones[droneId]
@@ -655,6 +675,40 @@ app.get('/api/drone/:droneId/has-telemetry', (req, res) => {
   } catch (error) {
     console.error('Query error:', error.message);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Update MediaMTX config for cameras
+app.post('/api/update-mediamtx', async (req, res) => {
+  const { frontCamera, rearCamera } = req.body;
+  
+  if (!frontCamera && !rearCamera) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'At least one camera is required',
+      stdout: '',
+      stderr: ''
+    });
+  }
+  
+  try {
+    const profile = { frontCamera, rearCamera };
+    const result = await updateProfileCamerasInPathsAsync(profile);
+    
+    res.json({
+      success: result.success,
+      commands: result.commands,
+      stdout: result.stdout,
+      stderr: result.stderr
+    });
+  } catch (error) {
+    console.error('MediaMTX update error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stdout: '',
+      stderr: error.message
+    });
   }
 });
 
