@@ -174,6 +174,53 @@ run_boxed() {
     return $result
 }
 
+# Download file with progress indicator
+download_with_progress() {
+    local url="$1"
+    local output="$2"
+    local desc="${3:-file}"
+    
+    local dl_start=$(date +%s)
+    local logfile="/tmp/wget-$$.log"
+    
+    # Start download in background
+    wget --progress=dot:giga "$url" -O "$output" > "$logfile" 2>&1 &
+    local dl_pid=$!
+    
+    echo -ne "  ${CYAN}>${NC} Downloading $desc"
+    
+    while kill -0 $dl_pid 2>/dev/null; do
+        sleep 1
+        local elapsed=$(( $(date +%s) - dl_start ))
+        printf "\r  ${CYAN}>${NC} Downloading $desc... [%02ds] " "$elapsed"
+        
+        # Try to get progress percentage
+        local progress=$(grep -oE '[0-9]+%' "$logfile" 2>/dev/null | tail -1)
+        if [ -n "$progress" ]; then
+            echo -ne "${GREEN}$progress${NC} "
+        fi
+    done
+    
+    wait $dl_pid
+    local dl_exit=$?
+    
+    local dl_duration=$(( $(date +%s) - dl_start ))
+    echo ""
+    
+    if [ $dl_exit -eq 0 ]; then
+        local filesize=$(ls -lh "$output" 2>/dev/null | awk '{print $5}')
+        print_success "Downloaded $desc ($filesize in ${dl_duration}s)"
+    else
+        print_error "Download failed"
+        tail -5 "$logfile" | while IFS= read -r line; do
+            echo -e "    ${GRAY}|${NC} $line"
+        done
+    fi
+    
+    rm -f "$logfile"
+    return $dl_exit
+}
+
 # Check if a command exists
 cmd_exists() {
     command -v "$1" &>/dev/null
@@ -370,14 +417,48 @@ install_system_packages() {
     # Install missing packages via apt
     if [ ${#packages_to_install[@]} -gt 0 ]; then
         print_info "Installing: ${packages_to_install[*]}"
+        print_info "This may take 1-2 minutes..."
         echo ""
-        echo -e "  ${CYAN}>${NC} Running apt install..."
         
-        if ! run_boxed "apt install -y ${packages_to_install[*]} 2>&1 | grep -E '(Unpacking|Setting up|is already|Installing)'"; then
+        local apt_start=$(date +%s)
+        local logfile="/tmp/apt-install-$$.log"
+        
+        # Start apt in background
+        apt install -y ${packages_to_install[*]} > "$logfile" 2>&1 &
+        local apt_pid=$!
+        
+        echo -ne "  ${CYAN}>${NC} apt install running"
+        
+        while kill -0 $apt_pid 2>/dev/null; do
+            sleep 2
+            local elapsed=$(( $(date +%s) - apt_start ))
+            printf "\r  ${CYAN}>${NC} apt install running... [%02ds] " "$elapsed"
+            
+            # Show what's being processed
+            local current=$(tail -1 "$logfile" 2>/dev/null | grep -oE '(Unpacking|Setting up|Processing) [^ ]+' | head -1)
+            if [ -n "$current" ]; then
+                printf "${DIM}%-30s${NC}" "$current"
+            fi
+        done
+        
+        wait $apt_pid
+        local apt_exit=$?
+        
+        local apt_duration=$(( $(date +%s) - apt_start ))
+        echo ""
+        
+        if [ $apt_exit -eq 0 ]; then
+            print_success "Packages installed (${apt_duration}s)"
+        else
+            echo -e "  ${RED}apt install failed:${NC}"
+            tail -15 "$logfile" | while IFS= read -r line; do
+                echo -e "    ${GRAY}|${NC} $line"
+            done
+            rm -f "$logfile"
             fail "Failed to install packages"
         fi
         
-        print_success "Packages installed"
+        rm -f "$logfile"
     else
         print_success "All apt packages already installed"
     fi
@@ -385,19 +466,28 @@ install_system_packages() {
     # Handle Node.js upgrade if needed
     if [ "$need_node" = true ]; then
         echo ""
-        print_info "Setting up Node.js v20.x..."
+        print_info "Setting up Node.js v20.x from NodeSource..."
+        print_info "This requires downloading and running setup script..."
         echo ""
-        echo -e "  ${CYAN}>${NC} Adding NodeSource repository..."
         
-        if ! run_boxed "curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>&1 | grep -E '(Installing|configured|Node.js|Adding)'"; then
-            fail "Failed to setup Node.js repository"
+        start_spinner "Adding NodeSource repository"
+        if ! curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /tmp/nodesource.log 2>&1; then
+            stop_spinner
+            print_error "Failed to setup NodeSource repository"
+            tail -10 /tmp/nodesource.log
+            fail "NodeSource setup failed"
         fi
+        stop_spinner
+        print_success "NodeSource repository added"
         
-        echo -e "  ${CYAN}>${NC} Installing Node.js..."
-        
-        if ! run_boxed "apt install -y nodejs 2>&1 | grep -E '(Unpacking|Setting up)'"; then
-            fail "Failed to install Node.js"
+        start_spinner "Installing Node.js (may take a minute)"
+        if ! apt install -y nodejs > /tmp/nodejs-install.log 2>&1; then
+            stop_spinner
+            print_error "Failed to install Node.js"
+            tail -10 /tmp/nodejs-install.log
+            fail "Node.js installation failed"
         fi
+        stop_spinner
         
         local new_ver=$(node --version)
         print_success "Node.js $new_ver installed"
@@ -508,15 +598,49 @@ clone_repository() {
     fi
     
     print_info "Cloning from: $REPO_URL"
+    print_info "This may take a minute depending on network speed..."
     echo ""
-    echo -e "  ${CYAN}>${NC} Cloning repository..."
     
-    if ! run_boxed "sudo -u orangepi git clone --progress $REPO_URL $REPO_DIR 2>&1"; then
+    local clone_start=$(date +%s)
+    local logfile="/tmp/git-clone-$$.log"
+    
+    # Start clone in background
+    sudo -u orangepi git clone --progress "$REPO_URL" "$REPO_DIR" > "$logfile" 2>&1 &
+    local clone_pid=$!
+    
+    echo -ne "  ${CYAN}>${NC} Cloning repository"
+    
+    while kill -0 $clone_pid 2>/dev/null; do
+        sleep 1
+        local elapsed=$(( $(date +%s) - clone_start ))
+        printf "\r  ${CYAN}>${NC} Cloning repository... [%02ds] " "$elapsed"
+        
+        # Show last line of progress
+        local progress=$(tail -1 "$logfile" 2>/dev/null | grep -oE '[0-9]+%' | tail -1)
+        if [ -n "$progress" ]; then
+            echo -ne "${GREEN}$progress${NC} "
+        fi
+    done
+    
+    wait $clone_pid
+    local clone_exit=$?
+    
+    echo ""
+    
+    if [ $clone_exit -eq 0 ]; then
+        local clone_duration=$(( $(date +%s) - clone_start ))
+        add_rollback "rm -rf '$REPO_DIR'"
+        print_success "Repository cloned (${clone_duration}s)"
+    else
+        echo -e "  ${RED}Git clone failed:${NC}"
+        tail -10 "$logfile" | while IFS= read -r line; do
+            echo -e "    ${GRAY}|${NC} $line"
+        done
+        rm -f "$logfile"
         fail "Failed to clone repository"
     fi
     
-    add_rollback "rm -rf '$REPO_DIR'"
-    print_success "Repository cloned"
+    rm -f "$logfile"
 }
 
 setup_backend() {
@@ -550,39 +674,98 @@ setup_backend() {
         print_success "Created drone-profiles.json"
     fi
     
-    # Install npm dependencies
-    print_info "Installing npm dependencies..."
-    print_info "NOTE: Compiling better-sqlite3 can take 3-5 minutes on ARM"
+    # Install npm dependencies with progress indicator
     echo ""
-    echo -e "  ${CYAN}>${NC} Running: npm install"
-    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    echo -e "  ${YELLOW}!!${NC} ${WHITE}Installing npm dependencies${NC}"
+    echo -e "  ${YELLOW}!!${NC} ${DIM}This step compiles native modules and may take 3-5 minutes${NC}"
+    echo -e "  ${YELLOW}!!${NC} ${DIM}Please wait - progress updates will appear below${NC}"
+    echo ""
     
-    # Run npm install with full output
     cd "$SERVER_DIR"
     local npm_start=$(date +%s)
-    local npm_exit=0
+    local logfile="/tmp/npm-install-$$.log"
     
-    sudo -u orangepi npm install 2>&1 | while IFS= read -r line; do
-        # Show all lines but prefix them
-        echo -e "    ${GRAY}|${NC} $line"
+    # Start npm install in background
+    sudo -u orangepi npm install > "$logfile" 2>&1 &
+    local npm_pid=$!
+    
+    # Monitor progress
+    local last_line=""
+    local dots=0
+    local check_interval=2
+    
+    echo -ne "  ${CYAN}>${NC} npm install running"
+    
+    while kill -0 $npm_pid 2>/dev/null; do
+        sleep $check_interval
+        
+        local elapsed=$(( $(date +%s) - npm_start ))
+        local mins=$((elapsed / 60))
+        local secs=$((elapsed % 60))
+        
+        # Get last meaningful line from log
+        local current_line=$(tail -1 "$logfile" 2>/dev/null | head -c 60)
+        
+        # Update progress display
+        printf "\r  ${CYAN}>${NC} npm install running... [%02d:%02d] " "$mins" "$secs"
+        
+        # Show activity indicator
+        dots=$(( (dots + 1) % 4 ))
+        case $dots in
+            0) echo -ne "${CYAN}|${NC}" ;;
+            1) echo -ne "${CYAN}/${NC}" ;;
+            2) echo -ne "${CYAN}-${NC}" ;;
+            3) echo -ne "${CYAN}\\\\${NC}" ;;
+        esac
+        
+        # Every 30 seconds, show a status update
+        if [ $((elapsed % 30)) -lt $check_interval ] && [ $elapsed -gt 5 ]; then
+            echo ""
+            if [ -n "$current_line" ]; then
+                echo -e "    ${GRAY}Status: ${current_line}${NC}"
+            fi
+            echo -ne "  ${CYAN}>${NC} npm install running... [%02d:%02d] " "$mins" "$secs"
+        fi
     done
-    npm_exit=${PIPESTATUS[0]}
     
-    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    # Get exit code
+    wait $npm_pid
+    local npm_exit=$?
     
     local npm_end=$(date +%s)
     local npm_duration=$((npm_end - npm_start))
+    local dur_mins=$((npm_duration / 60))
+    local dur_secs=$((npm_duration % 60))
+    
+    echo ""  # New line after progress
     
     if [ $npm_exit -eq 0 ]; then
-        print_success "Dependencies installed (took ${npm_duration}s)"
+        print_success "Dependencies installed (${dur_mins}m ${dur_secs}s)"
+        
+        # Show summary from npm output
+        local summary=$(grep -E "(added|packages)" "$logfile" | tail -1)
+        if [ -n "$summary" ]; then
+            print_detail "$summary"
+        fi
     else
-        # Check if node_modules was created anyway
+        echo ""
+        echo -e "  ${RED}[!] npm install failed. Last 20 lines of output:${NC}"
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+        tail -20 "$logfile" | while IFS= read -r line; do
+            echo -e "    ${GRAY}|${NC} ${DIM}$line${NC}"
+        done
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+        
+        # Check if node_modules was created anyway (sometimes npm reports errors but works)
         if [ -d "$SERVER_DIR/node_modules" ] && [ -d "$SERVER_DIR/node_modules/express" ]; then
-            print_warning "npm had warnings but dependencies appear installed (took ${npm_duration}s)"
+            print_warning "npm reported errors but dependencies appear installed"
         else
+            rm -f "$logfile"
             fail "Failed to install npm dependencies (exit code: $npm_exit)"
         fi
     fi
+    
+    rm -f "$logfile"
 }
 
 setup_database() {
@@ -661,10 +844,10 @@ setup_mediamtx() {
             # Backup old binary
             mv "$mmtx_binary" "$mmtx_binary.old"
             
-            echo -e "  ${CYAN}>${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
             cd "$MMTX_DIR"
+            download_with_progress "$mmtx_url" "$mmtx_tarball" "MediaMTX $MEDIAMTX_VERSION"
             
-            if ! run_boxed "wget --progress=dot:giga $mmtx_url -O $mmtx_tarball 2>&1"; then
+            if [ ! -f "$mmtx_tarball" ]; then
                 mv "$mmtx_binary.old" "$mmtx_binary"
                 fail "Failed to download MediaMTX"
             fi
@@ -679,12 +862,13 @@ setup_mediamtx() {
         fi
     else
         print_info "MediaMTX not found, installing v$MEDIAMTX_VERSION_NUM..."
+        print_info "Downloading ~15MB binary..."
         echo ""
-        echo -e "  ${CYAN}>${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
         
         cd "$MMTX_DIR"
+        download_with_progress "$mmtx_url" "$mmtx_tarball" "MediaMTX $MEDIAMTX_VERSION"
         
-        if ! run_boxed "wget --progress=dot:giga $mmtx_url -O $mmtx_tarball 2>&1"; then
+        if [ ! -f "$mmtx_tarball" ]; then
             fail "Failed to download MediaMTX"
         fi
         
