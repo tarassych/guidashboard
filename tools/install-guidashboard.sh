@@ -54,8 +54,8 @@ INSTALL_START_TIME=$(date +%s)
 TOTAL_STEPS=11
 CURRENT_STEP=0
 
-# Spinner characters
-SPINNER_CHARS='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+# Spinner characters (ASCII compatible)
+SPINNER_CHARS=('-' '\' '|' '/')
 SPINNER_PID=""
 
 # =============================================================================
@@ -65,14 +65,14 @@ SPINNER_PID=""
 print_banner() {
     clear
     echo ""
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}${BOLD}${WHITE}           GUI Dashboard Installer for Orange Pi              ${NC}${CYAN}║${NC}"
-    echo -e "${CYAN}║${NC}${DIM}                    github.com/tarassych/guidashboard           ${NC}${CYAN}║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${CYAN}+==================================================================+${NC}"
+    echo -e "${CYAN}|${NC}${BOLD}${WHITE}           GUI Dashboard Installer for Orange Pi              ${NC}${CYAN}|${NC}"
+    echo -e "${CYAN}|${NC}${DIM}                    github.com/tarassych/guidashboard           ${NC}${CYAN}|${NC}"
+    echo -e "${CYAN}+==================================================================+${NC}"
     echo ""
 }
 
-# Progress bar
+# Progress bar (ASCII compatible)
 print_progress_bar() {
     local current=$1
     local total=$2
@@ -82,23 +82,24 @@ print_progress_bar() {
     local empty=$((width - filled))
     
     printf "\r  ${GRAY}[${NC}"
-    printf "${GREEN}%${filled}s${NC}" | tr ' ' '█'
-    printf "${GRAY}%${empty}s${NC}" | tr ' ' '░'
+    printf "${GREEN}%${filled}s${NC}" | tr ' ' '#'
+    printf "${GRAY}%${empty}s${NC}" | tr ' ' '-'
     printf "${GRAY}]${NC} ${WHITE}%3d%%${NC} " "$percent"
 }
 
 # Spinner functions
 start_spinner() {
     local msg="$1"
-    printf "\r  ${CYAN}◦${NC} %s " "$msg"
+    printf "\r  ${CYAN}*${NC} %s " "$msg"
     
     # Start spinner in background
     (
+        local chars=('-' '\' '|' '/')
         local i=0
         while true; do
-            printf "\r  ${CYAN}${SPINNER_CHARS:$i:1}${NC} %s " "$msg"
-            i=$(( (i + 1) % ${#SPINNER_CHARS} ))
-            sleep 0.1
+            printf "\r  ${CYAN}%s${NC} %s " "${chars[$i]}" "$msg"
+            i=$(( (i + 1) % 4 ))
+            sleep 0.15
         done
     ) &
     SPINNER_PID=$!
@@ -124,29 +125,29 @@ print_step() {
     echo ""
     print_progress_bar $step_num $TOTAL_STEPS
     echo ""
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}--------------------------------------------------------------------${NC}"
     echo -e "${WHITE}${BOLD}  STEP $step_num/$TOTAL_STEPS:${NC} ${CYAN}$step_name${NC}"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}--------------------------------------------------------------------${NC}"
 }
 
 print_info() {
     stop_spinner
-    echo -e "  ${GRAY}→${NC} $1"
+    echo -e "  ${GRAY}>${NC} $1"
 }
 
 print_success() {
     stop_spinner
-    echo -e "  ${GREEN}✓${NC} $1"
+    echo -e "  ${GREEN}[OK]${NC} $1"
 }
 
 print_warning() {
     stop_spinner
-    echo -e "  ${YELLOW}⚠${NC} $1"
+    echo -e "  ${YELLOW}[!]${NC} $1"
 }
 
 print_error() {
     stop_spinner
-    echo -e "  ${RED}✗${NC} $1"
+    echo -e "  ${RED}[X]${NC} $1"
 }
 
 print_detail() {
@@ -154,22 +155,22 @@ print_detail() {
 }
 
 print_skip() {
-    echo -e "  ${CYAN}○${NC} $1 ${DIM}(skipped)${NC}"
+    echo -e "  ${CYAN}[-]${NC} $1 ${DIM}(skipped)${NC}"
 }
 
 print_installed() {
-    echo -e "  ${GREEN}✓${NC} $1 ${DIM}(already installed)${NC}"
+    echo -e "  ${GREEN}[OK]${NC} $1 ${DIM}(already installed)${NC}"
 }
 
 # Run command with live output in a box
 run_boxed() {
     local cmd="$1"
-    echo -e "    ${GRAY}┌──────────────────────────────────────────────────────────${NC}"
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
     eval "$cmd" 2>&1 | while IFS= read -r line; do
-        echo -e "    ${GRAY}│${NC} ${DIM}$line${NC}"
+        echo -e "    ${GRAY}|${NC} ${DIM}$line${NC}"
     done
     local result=${PIPESTATUS[0]}
-    echo -e "    ${GRAY}└──────────────────────────────────────────────────────────${NC}"
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
     return $result
 }
 
@@ -209,9 +210,9 @@ execute_rollback() {
     
     stop_spinner
     echo ""
-    echo -e "${RED}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║${NC}${BOLD}${WHITE}                    ROLLING BACK CHANGES                       ${NC}${RED}║${NC}"
-    echo -e "${RED}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${RED}+==================================================================+${NC}"
+    echo -e "${RED}|${NC}${BOLD}${WHITE}                    ROLLING BACK CHANGES                       ${NC}${RED}|${NC}"
+    echo -e "${RED}+==================================================================+${NC}"
     echo ""
     
     for ((i=${#ROLLBACK_ACTIONS[@]}-1; i>=0; i--)); do
@@ -370,7 +371,7 @@ install_system_packages() {
     if [ ${#packages_to_install[@]} -gt 0 ]; then
         print_info "Installing: ${packages_to_install[*]}"
         echo ""
-        echo -e "  ${CYAN}◦${NC} Running apt install..."
+        echo -e "  ${CYAN}>${NC} Running apt install..."
         
         if ! run_boxed "apt install -y ${packages_to_install[*]} 2>&1 | grep -E '(Unpacking|Setting up|is already|Installing)'"; then
             fail "Failed to install packages"
@@ -386,13 +387,13 @@ install_system_packages() {
         echo ""
         print_info "Setting up Node.js v20.x..."
         echo ""
-        echo -e "  ${CYAN}◦${NC} Adding NodeSource repository..."
+        echo -e "  ${CYAN}>${NC} Adding NodeSource repository..."
         
         if ! run_boxed "curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>&1 | grep -E '(Installing|configured|Node.js|Adding)'"; then
             fail "Failed to setup Node.js repository"
         fi
         
-        echo -e "  ${CYAN}◦${NC} Installing Node.js..."
+        echo -e "  ${CYAN}>${NC} Installing Node.js..."
         
         if ! run_boxed "apt install -y nodejs 2>&1 | grep -E '(Unpacking|Setting up)'"; then
             fail "Failed to install Node.js"
@@ -416,7 +417,7 @@ install_pm2() {
         stop_spinner
         
         if [ -n "$latest" ] && [ "$ver" != "$latest" ]; then
-            print_info "Update available: v$ver → v$latest"
+            print_info "Update available: v$ver -> v$latest"
             start_spinner "Updating PM2"
             if npm update -g pm2 > /tmp/pm2-update.log 2>&1; then
                 stop_spinner
@@ -431,7 +432,7 @@ install_pm2() {
     else
         print_info "PM2 not found, installing..."
         echo ""
-        echo -e "  ${CYAN}◦${NC} Installing PM2 globally..."
+        echo -e "  ${CYAN}>${NC} Installing PM2 globally..."
         
         if ! run_boxed "npm install -g pm2 2>&1 | tail -5"; then
             fail "Failed to install PM2"
@@ -508,7 +509,7 @@ clone_repository() {
     
     print_info "Cloning from: $REPO_URL"
     echo ""
-    echo -e "  ${CYAN}◦${NC} Cloning repository..."
+    echo -e "  ${CYAN}>${NC} Cloning repository..."
     
     if ! run_boxed "sudo -u orangepi git clone --progress $REPO_URL $REPO_DIR 2>&1"; then
         fail "Failed to clone repository"
@@ -548,7 +549,7 @@ setup_backend() {
         print_installed "node_modules exists"
         print_info "Checking for dependency updates..."
         
-        echo -e "  ${CYAN}◦${NC} Running npm install (update check)..."
+        echo -e "  ${CYAN}>${NC} Running npm install (update check)..."
         if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi npm install 2>&1 | grep -E '(added|updated|removed|packages|up to date)' | tail -5"; then
             print_warning "npm install had issues, but continuing"
         fi
@@ -556,7 +557,7 @@ setup_backend() {
     else
         print_info "Installing npm dependencies..."
         echo ""
-        echo -e "  ${CYAN}◦${NC} Running npm install..."
+        echo -e "  ${CYAN}>${NC} Running npm install..."
         
         if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi npm install 2>&1 | grep -E '(added|packages|npm)' | tail -10"; then
             fail "Failed to install npm dependencies"
@@ -642,7 +643,7 @@ setup_mediamtx() {
             # Backup old binary
             mv "$mmtx_binary" "$mmtx_binary.old"
             
-            echo -e "  ${CYAN}◦${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
+            echo -e "  ${CYAN}>${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
             cd "$MMTX_DIR"
             
             if ! run_boxed "wget --progress=dot:giga $mmtx_url -O $mmtx_tarball 2>&1"; then
@@ -661,7 +662,7 @@ setup_mediamtx() {
     else
         print_info "MediaMTX not found, installing v$MEDIAMTX_VERSION_NUM..."
         echo ""
-        echo -e "  ${CYAN}◦${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
+        echo -e "  ${CYAN}>${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
         
         cd "$MMTX_DIR"
         
@@ -930,7 +931,7 @@ start_backend() {
     
     print_info "Starting backend with PM2..."
     echo ""
-    echo -e "  ${CYAN}◦${NC} Launching Node.js server..."
+    echo -e "  ${CYAN}>${NC} Launching Node.js server..."
     
     if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi pm2 start index.js --name guidashboard-api 2>&1 | tail -10"; then
         fail "Failed to start backend server"
@@ -1051,30 +1052,30 @@ print_summary() {
     print_progress_bar $TOTAL_STEPS $TOTAL_STEPS
     echo ""
     echo ""
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║${NC}${BOLD}${WHITE}              INSTALLATION COMPLETED SUCCESSFULLY              ${NC}${GREEN}║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${GREEN}+==================================================================+${NC}"
+    echo -e "${GREEN}|${NC}${BOLD}${WHITE}              INSTALLATION COMPLETED SUCCESSFULLY              ${NC}${GREEN}|${NC}"
+    echo -e "${GREEN}+==================================================================+${NC}"
     echo ""
     echo -e "  ${WHITE}Duration:${NC} ${minutes}m ${seconds}s"
     echo ""
     echo -e "  ${CYAN}Services:${NC}"
-    echo -e "    ${GREEN}●${NC} Backend API    → http://localhost:3001"
-    echo -e "    ${GREEN}●${NC} Web Interface  → http://localhost"
-    echo -e "    ${GREEN}●${NC} MediaMTX API   → http://localhost:9997"
-    echo -e "    ${GREEN}●${NC} HLS Streams    → http://localhost:8888"
+    echo -e "    ${GREEN}*${NC} Backend API    : http://localhost:3001"
+    echo -e "    ${GREEN}*${NC} Web Interface  : http://localhost"
+    echo -e "    ${GREEN}*${NC} MediaMTX API   : http://localhost:9997"
+    echo -e "    ${GREEN}*${NC} HLS Streams    : http://localhost:8888"
     echo ""
     echo -e "  ${CYAN}Quick Commands:${NC}"
-    echo -e "    ${DIM}pm2 status${NC}                     → Backend status"
-    echo -e "    ${DIM}pm2 logs guidashboard-api${NC}      → Backend logs"
-    echo -e "    ${DIM}sudo systemctl status mediamtx${NC} → MediaMTX status"
+    echo -e "    ${DIM}pm2 status${NC}                     - Backend status"
+    echo -e "    ${DIM}pm2 logs guidashboard-api${NC}      - Backend logs"
+    echo -e "    ${DIM}sudo systemctl status mediamtx${NC} - MediaMTX status"
     echo ""
     
     # Get Orange Pi IP
     local ip=$(hostname -I | awk '{print $1}')
     if [ -n "$ip" ]; then
-        echo -e "  ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "  ${GREEN}------------------------------------------------------------${NC}"
         echo -e "  ${WHITE}${BOLD}Access dashboard at:${NC} ${CYAN}http://$ip${NC}"
-        echo -e "  ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "  ${GREEN}------------------------------------------------------------${NC}"
     fi
     echo ""
 }

@@ -1,0 +1,17 @@
+{
+  "name": "guidashboard-server",
+  "version": "2.5.0",
+  "type": "module",
+  "description": "GUI Dashboard Backend API Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  }
+}
+
