@@ -1140,91 +1140,294 @@ verify_installation() {
     
     local all_ok=true
     local checks_passed=0
-    local total_checks=6
+    local checks_warned=0
+    local total_checks=0
     
-    # Check PM2 process
-    start_spinner "Checking backend API (PM2)"
-    sleep 1
-    if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
-        local status=$(run_as_orangepi "pm2 jlist" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
-        stop_spinner
-        if [ "$status" = "online" ]; then
-            print_success "Backend API: online"
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 1: System Packages ===${NC}"
+    
+    # Check required commands
+    local packages=("nginx" "sqlite3" "node" "npm" "git" "sshpass" "curl" "pm2")
+    for pkg in "${packages[@]}"; do
+        ((total_checks++))
+        if cmd_exists "$pkg"; then
+            local ver=$($pkg --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+[0-9.]*' | head -1)
+            print_success "$pkg v$ver"
             ((checks_passed++))
         else
-            print_error "Backend API: $status"
+            print_error "$pkg: NOT FOUND"
             all_ok=false
         fi
-    else
-        stop_spinner
-        print_error "Backend API: not found"
+    done
+    
+    # Check Node.js version specifically
+    local node_major=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
+    if [ -n "$node_major" ] && [ "$node_major" -lt "$MIN_NODE_VERSION" ]; then
+        print_error "Node.js v$node_major is below required v$MIN_NODE_VERSION"
         all_ok=false
-    fi
-    
-    # Check backend responds
-    start_spinner "Testing API endpoint"
-    sleep 1
-    if curl -s --max-time 5 http://localhost:3001/api/profiles > /dev/null 2>&1; then
-        stop_spinner
-        print_success "API responding at :3001"
-        ((checks_passed++))
-    else
-        stop_spinner
-        print_error "API not responding"
-        all_ok=false
-    fi
-    
-    # Check MediaMTX
-    start_spinner "Checking MediaMTX service"
-    if systemctl is-active --quiet mediamtx; then
-        stop_spinner
-        print_success "MediaMTX: running"
-        ((checks_passed++))
-    else
-        stop_spinner
-        print_error "MediaMTX: not running"
-        all_ok=false
-    fi
-    
-    # Check MediaMTX API
-    start_spinner "Testing MediaMTX API"
-    if curl -s --max-time 5 http://localhost:9997/v3/paths/list > /dev/null 2>&1; then
-        stop_spinner
-        print_success "MediaMTX API responding at :9997"
-        ((checks_passed++))
-    else
-        stop_spinner
-        print_warning "MediaMTX API: starting up..."
-    fi
-    
-    # Check Nginx
-    start_spinner "Checking Nginx"
-    if systemctl is-active --quiet nginx; then
-        stop_spinner
-        print_success "Nginx: running"
-        ((checks_passed++))
-    else
-        stop_spinner
-        print_error "Nginx: not running"
-        all_ok=false
-    fi
-    
-    # Check web interface
-    start_spinner "Testing web interface"
-    if curl -s --max-time 5 http://localhost/ | grep -q "html" > /dev/null 2>&1; then
-        stop_spinner
-        print_success "Web interface: accessible"
-        ((checks_passed++))
-    else
-        stop_spinner
-        print_warning "Web interface: needs frontend deployment"
     fi
     
     echo ""
-    print_info "Checks passed: $checks_passed/$total_checks"
+    echo -e "  ${WHITE}${BOLD}=== STEP 3: Directories ===${NC}"
+    
+    local dirs=("$CODE_DIR" "$MMTX_DIR" "$SERVER_DIR" "$REPO_DIR")
+    for dir in "${dirs[@]}"; do
+        ((total_checks++))
+        if [ -d "$dir" ]; then
+            print_success "$dir"
+            ((checks_passed++))
+        else
+            print_error "$dir: NOT FOUND"
+            all_ok=false
+        fi
+    done
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 4: Repository ===${NC}"
+    
+    ((total_checks++))
+    if [ -d "$REPO_DIR/.git" ]; then
+        local branch=$(cd "$REPO_DIR" && git branch --show-current 2>/dev/null)
+        local commit=$(cd "$REPO_DIR" && git rev-parse --short HEAD 2>/dev/null)
+        print_success "Git repo: $branch @ $commit"
+        ((checks_passed++))
+    else
+        print_error "Git repository not found"
+        all_ok=false
+    fi
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 5: Backend Server ===${NC}"
+    
+    ((total_checks++))
+    if [ -f "$SERVER_DIR/index.js" ]; then
+        print_success "index.js exists"
+        ((checks_passed++))
+    else
+        print_error "index.js: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if [ -f "$SERVER_DIR/package.json" ]; then
+        print_success "package.json exists"
+        ((checks_passed++))
+    else
+        print_error "package.json: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if [ -d "$SERVER_DIR/node_modules" ]; then
+        local pkg_count=$(ls -1 "$SERVER_DIR/node_modules" 2>/dev/null | wc -l)
+        print_success "node_modules: $pkg_count packages"
+        ((checks_passed++))
+    else
+        print_error "node_modules: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
+        if grep -q '"drones"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
+            print_success "drone-profiles.json: correct format"
+            ((checks_passed++))
+        else
+            print_error "drone-profiles.json: wrong format (missing 'drones' key)"
+            all_ok=false
+        fi
+    else
+        print_error "drone-profiles.json: NOT FOUND"
+        all_ok=false
+    fi
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 6: Database ===${NC}"
+    
+    ((total_checks++))
+    if [ -f "$DB_PATH" ]; then
+        local db_size=$(du -h "$DB_PATH" | cut -f1)
+        print_success "Database file: $db_size"
+        ((checks_passed++))
+    else
+        print_error "Database file: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null)
+    if [ -n "$table_exists" ]; then
+        local row_count=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM telemetry;" 2>/dev/null || echo "?")
+        print_success "telemetry table: $row_count rows"
+        ((checks_passed++))
+    else
+        print_error "telemetry table: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    local index_count=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -w)
+    if [ "$index_count" -ge 3 ]; then
+        print_success "Database indexes: $index_count"
+        ((checks_passed++))
+    else
+        print_warning "Database indexes: $index_count (expected 3)"
+        ((checks_warned++))
+    fi
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 7: MediaMTX ===${NC}"
+    
+    ((total_checks++))
+    if [ -f "$MMTX_DIR/mediamtx" ]; then
+        local mmtx_ver=$("$MMTX_DIR/mediamtx" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+        print_success "MediaMTX binary: $mmtx_ver"
+        ((checks_passed++))
+    else
+        print_error "MediaMTX binary: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if [ -f "$MMTX_DIR/mediamtx.yml" ]; then
+        print_success "mediamtx.yml config exists"
+        ((checks_passed++))
+    else
+        print_error "mediamtx.yml: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if systemctl is-active --quiet mediamtx; then
+        print_success "MediaMTX service: running"
+        ((checks_passed++))
+    else
+        print_error "MediaMTX service: NOT RUNNING"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if netstat -tlnp 2>/dev/null | grep -q ":8554 " || ss -tlnp 2>/dev/null | grep -q ":8554 "; then
+        print_success "RTSP port 8554: listening"
+        ((checks_passed++))
+    else
+        print_warning "RTSP port 8554: not listening"
+        ((checks_warned++))
+    fi
+    
+    ((total_checks++))
+    if netstat -tlnp 2>/dev/null | grep -q ":8888 " || ss -tlnp 2>/dev/null | grep -q ":8888 "; then
+        print_success "HLS port 8888: listening"
+        ((checks_passed++))
+    else
+        print_warning "HLS port 8888: not listening"
+        ((checks_warned++))
+    fi
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 8: Frontend ===${NC}"
+    
+    ((total_checks++))
+    if [ -f "$WEB_DIR/index.html" ]; then
+        local file_count=$(find "$WEB_DIR" -type f | wc -l)
+        print_success "Frontend files: $file_count files"
+        ((checks_passed++))
+    else
+        print_warning "Frontend: not deployed (index.html missing)"
+        ((checks_warned++))
+    fi
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 9: Nginx ===${NC}"
+    
+    ((total_checks++))
+    if systemctl is-active --quiet nginx; then
+        print_success "Nginx service: running"
+        ((checks_passed++))
+    else
+        print_error "Nginx service: NOT RUNNING"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    if grep -q "proxy_pass http://127.0.0.1:3001" /etc/nginx/sites-available/default 2>/dev/null; then
+        print_success "Nginx config: API proxy configured"
+        ((checks_passed++))
+    else
+        print_warning "Nginx config: API proxy not found"
+        ((checks_warned++))
+    fi
+    
+    ((total_checks++))
+    if curl -s --max-time 3 http://localhost/ > /dev/null 2>&1; then
+        print_success "Nginx HTTP: responding on port 80"
+        ((checks_passed++))
+    else
+        print_error "Nginx HTTP: not responding"
+        all_ok=false
+    fi
+    
+    echo ""
+    echo -e "  ${WHITE}${BOLD}=== STEP 10: Backend API ===${NC}"
+    
+    ((total_checks++))
+    if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
+        local status=$(run_as_orangepi "pm2 jlist" 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+        if [ "$status" = "online" ]; then
+            print_success "PM2 process: online"
+            ((checks_passed++))
+        else
+            print_error "PM2 process: $status"
+            all_ok=false
+        fi
+    else
+        print_error "PM2 process: NOT FOUND"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    local api_response=$(curl -s --max-time 5 http://localhost:3001/api/profiles 2>/dev/null)
+    if echo "$api_response" | grep -q "success"; then
+        print_success "API /api/profiles: responding"
+        ((checks_passed++))
+    else
+        print_error "API /api/profiles: not responding"
+        all_ok=false
+    fi
+    
+    ((total_checks++))
+    local drones_response=$(curl -s --max-time 5 http://localhost:3001/api/drones 2>/dev/null)
+    if echo "$drones_response" | grep -q "success"; then
+        print_success "API /api/drones: responding"
+        ((checks_passed++))
+    else
+        print_error "API /api/drones: error or not responding"
+        print_detail "Response: $(echo "$drones_response" | head -c 80)"
+        all_ok=false
+    fi
+    
+    # Summary
+    echo ""
+    echo -e "  ${BLUE}------------------------------------------------------------${NC}"
+    echo -e "  ${WHITE}${BOLD}VERIFICATION SUMMARY${NC}"
+    echo -e "  ${BLUE}------------------------------------------------------------${NC}"
+    echo ""
+    echo -e "  ${GREEN}Passed:${NC}  $checks_passed / $total_checks"
+    if [ $checks_warned -gt 0 ]; then
+        echo -e "  ${YELLOW}Warnings:${NC} $checks_warned"
+    fi
+    local checks_failed=$((total_checks - checks_passed - checks_warned))
+    if [ $checks_failed -gt 0 ]; then
+        echo -e "  ${RED}Failed:${NC}  $checks_failed"
+    fi
+    echo ""
     
     if [ "$all_ok" = false ]; then
         fail "Some critical components failed verification"
+    fi
+    
+    if [ $checks_warned -gt 0 ]; then
+        print_warning "Installation completed with warnings"
     fi
 }
 
