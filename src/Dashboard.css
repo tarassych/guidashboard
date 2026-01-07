@@ -449,8 +449,8 @@
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 44px;
-  height: 44px;
+  width: 88px;
+  height: 88px;
   z-index: 15;
   pointer-events: none;
 }
@@ -522,6 +522,41 @@
 
 .joystick-stick-small {
   fill: #00ff88;
+}
+
+/* Left joystick stick animation */
+.joystick-stick-left {
+  fill: #00ff88;
+  animation: stick-move-left 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Right joystick stick animation */
+.joystick-stick-right {
+  fill: #00ff88;
+  animation: stick-move-right 2.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes stick-move-left {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(1.5px, -1px); }
+  30% { transform: translate(-1px, 1.5px); }
+  45% { transform: translate(1px, 1px); }
+  60% { transform: translate(-1.5px, -0.5px); }
+  75% { transform: translate(0.5px, 1.5px); }
+  90% { transform: translate(-1px, -1.5px); }
+}
+
+@keyframes stick-move-right {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-1px, 1px); }
+  25% { transform: translate(1.5px, 0.5px); }
+  38% { transform: translate(-0.5px, -1.5px); }
+  50% { transform: translate(1px, -1px); }
+  62% { transform: translate(-1.5px, 1.5px); }
+  75% { transform: translate(0.5px, -0.5px); }
+  88% { transform: translate(1px, 1.5px); }
 }
 
 /* Center indicator light */

@@ -25,11 +25,11 @@ function JoystickIcon() {
         
         {/* Left joystick */}
         <circle cx="19" cy="23" r="4" className="joystick-base-small" />
-        <circle cx="19" cy="23" r="2" className="joystick-stick-small" />
+        <circle cx="19" cy="23" r="2" className="joystick-stick-left" />
         
         {/* Right joystick */}
         <circle cx="31" cy="23" r="4" className="joystick-base-small" />
-        <circle cx="31" cy="23" r="2" className="joystick-stick-small" />
+        <circle cx="31" cy="23" r="2" className="joystick-stick-right" />
         
         {/* Center indicator */}
         <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />

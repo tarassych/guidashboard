@@ -149,9 +149,6 @@ body {
 }
 
 .status-active {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   padding: 3px 10px;
   border: 1px solid var(--theme-accent-primary, #00ff88);
   border-radius: 3px;
@@ -164,14 +161,24 @@ body {
   animation: active-badge-pulse 1.5s ease-in-out infinite;
 }
 
-.active-joystick-icon {
-  width: 22px;
-  height: 20px;
-  filter: drop-shadow(0 0 3px var(--theme-accent-primary, #00ff88));
+/* Active Control Icon - bottom center of OSD */
+.hud-active-control-icon {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: none;
+}
+
+.active-control-svg {
+  width: 70px;
+  height: 70px;
+  filter: drop-shadow(0 0 8px var(--theme-accent-primary, #00ff88));
 }
 
 /* Signal waves */
-.active-joystick-icon .signal-wave {
+.active-control-svg .signal-wave {
   fill: none;
   stroke: var(--theme-accent-primary, #00ff88);
   stroke-width: 1.5;
@@ -179,68 +186,98 @@ body {
   opacity: 0;
 }
 
-.active-joystick-icon .wave-1 {
-  animation: badge-wave-pulse 1.5s ease-out infinite;
+.active-control-svg .wave-1 {
+  animation: osd-wave-pulse 1.5s ease-out infinite;
 }
 
-.active-joystick-icon .wave-2 {
-  animation: badge-wave-pulse 1.5s ease-out 0.3s infinite;
+.active-control-svg .wave-2 {
+  animation: osd-wave-pulse 1.5s ease-out 0.3s infinite;
 }
 
-.active-joystick-icon .wave-3 {
-  animation: badge-wave-pulse 1.5s ease-out 0.6s infinite;
+.active-control-svg .wave-3 {
+  animation: osd-wave-pulse 1.5s ease-out 0.6s infinite;
 }
 
-@keyframes badge-wave-pulse {
-  0% { opacity: 0; transform: translateY(1px); }
+@keyframes osd-wave-pulse {
+  0% { opacity: 0; transform: translateY(2px); }
   30% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-1px); }
+  100% { opacity: 0; transform: translateY(-2px); }
 }
 
 /* Antenna */
-.active-joystick-icon .antenna {
+.active-control-svg .antenna {
   stroke: var(--theme-accent-primary, #00ff88);
-  stroke-width: 1.5;
+  stroke-width: 2;
 }
 
-.active-joystick-icon .antenna-tip {
+.active-control-svg .antenna-tip {
   fill: var(--theme-accent-primary, #00ff88);
 }
 
 /* Controller body */
-.active-joystick-icon .controller-body {
-  fill: rgba(0, 0, 0, 0.5);
+.active-control-svg .controller-body {
+  fill: rgba(0, 0, 0, 0.6);
+  stroke: var(--theme-accent-primary, #00ff88);
+  stroke-width: 1.5;
+}
+
+/* Joystick bases */
+.active-control-svg .joystick-base-small {
+  fill: rgba(0, 255, 136, 0.2);
   stroke: var(--theme-accent-primary, #00ff88);
   stroke-width: 1;
 }
 
-/* Joysticks */
-.active-joystick-icon .joystick-base-small {
-  fill: rgba(0, 255, 136, 0.15);
-  stroke: var(--theme-accent-primary, #00ff88);
-  stroke-width: 0.8;
+/* Joystick sticks with random movement */
+.active-control-svg .joystick-stick-left {
+  fill: var(--theme-accent-primary, #00ff88);
+  animation: osd-stick-left 3s ease-in-out infinite;
+  transform-origin: center;
 }
 
-.active-joystick-icon .joystick-stick-small {
+.active-control-svg .joystick-stick-right {
   fill: var(--theme-accent-primary, #00ff88);
+  animation: osd-stick-right 2.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes osd-stick-left {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(1.5px, -1px); }
+  30% { transform: translate(-1px, 1.5px); }
+  45% { transform: translate(1px, 1px); }
+  60% { transform: translate(-1.5px, -0.5px); }
+  75% { transform: translate(0.5px, 1.5px); }
+  90% { transform: translate(-1px, -1.5px); }
+}
+
+@keyframes osd-stick-right {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-1px, 1px); }
+  25% { transform: translate(1.5px, 0.5px); }
+  38% { transform: translate(-0.5px, -1.5px); }
+  50% { transform: translate(1px, -1px); }
+  62% { transform: translate(-1.5px, 1.5px); }
+  75% { transform: translate(0.5px, -0.5px); }
+  88% { transform: translate(1px, 1.5px); }
 }
 
 /* Indicator light */
-.active-joystick-icon .controller-indicator {
+.active-control-svg .controller-indicator {
   fill: var(--theme-accent-primary, #00ff88);
-  animation: badge-indicator-blink 1s ease-in-out infinite;
+  animation: osd-indicator-blink 1s ease-in-out infinite;
 }
 
-@keyframes badge-indicator-blink {
+@keyframes osd-indicator-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
 
 /* Hands */
-.active-joystick-icon .hand {
-  fill: rgba(0, 255, 136, 0.2);
+.active-control-svg .hand {
+  fill: rgba(0, 255, 136, 0.25);
   stroke: var(--theme-accent-primary, #00ff88);
-  stroke-width: 0.8;
+  stroke-width: 1;
 }
 
 @keyframes active-badge-pulse {

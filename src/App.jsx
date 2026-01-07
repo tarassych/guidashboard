@@ -196,32 +196,7 @@ function App() {
             <span className={`status-mode ${telemetry.connected ? telemetry.md_str.toLowerCase().replace(/\s+/g, '-') : 'offline'}`}>
               {telemetry.connected ? telemetry.md_str : 'OFFLINE'}
             </span>
-            {isActive && (
-              <span className="status-active">
-                <svg viewBox="0 0 50 45" className="active-joystick-icon">
-                  {/* Signal waves */}
-                  <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
-                  <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
-                  <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
-                  {/* Antenna */}
-                  <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
-                  <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
-                  {/* Controller */}
-                  <rect x="12" y="14" width="26" height="16" rx="3" className="controller-body" />
-                  {/* Joysticks */}
-                  <circle cx="19" cy="22" r="3.5" className="joystick-base-small" />
-                  <circle cx="19" cy="22" r="1.5" className="joystick-stick-small" />
-                  <circle cx="31" cy="22" r="3.5" className="joystick-base-small" />
-                  <circle cx="31" cy="22" r="1.5" className="joystick-stick-small" />
-                  {/* Indicator */}
-                  <rect x="23" y="16" width="4" height="2" rx="1" className="controller-indicator" />
-                  {/* Hands */}
-                  <path className="hand" d="M 6 20 Q 4 22, 6 26 L 8 30 Q 10 32, 12 30 L 12 20 Q 10 18, 6 20" />
-                  <path className="hand" d="M 44 20 Q 46 22, 44 26 L 42 30 Q 40 32, 38 30 L 38 20 Q 40 18, 44 20" />
-                </svg>
-                ACTIVE
-              </span>
-            )}
+            {isActive && <span className="status-active">ACTIVE</span>}
           </div>
 
           <div className="hud-right-indicators">
@@ -287,6 +262,33 @@ function App() {
         <div className="hud-telemetry-log-container">
           <TelemetryLog droneId={droneId} onTelemetryUpdate={handleTelemetryUpdate} />
         </div>
+
+        {/* Active Control Icon - above telemetry strip */}
+        {isActive && (
+          <div className="hud-active-control-icon">
+            <svg viewBox="0 0 50 50" className="active-control-svg">
+              {/* Signal waves */}
+              <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
+              <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
+              <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
+              {/* Antenna */}
+              <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
+              <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
+              {/* Controller */}
+              <rect x="12" y="14" width="26" height="18" rx="3" className="controller-body" />
+              {/* Joysticks */}
+              <circle cx="19" cy="23" r="4" className="joystick-base-small" />
+              <circle cx="19" cy="23" r="2" className="joystick-stick-left" />
+              <circle cx="31" cy="23" r="4" className="joystick-base-small" />
+              <circle cx="31" cy="23" r="2" className="joystick-stick-right" />
+              {/* Indicator */}
+              <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
+              {/* Hands */}
+              <path className="hand" d="M 6 22 Q 4 24, 6 28 L 8 32 Q 10 34, 12 32 L 12 22 Q 10 20, 6 22" />
+              <path className="hand" d="M 44 22 Q 46 24, 44 28 L 42 32 Q 40 34, 38 32 L 38 22 Q 40 20, 44 22" />
+            </svg>
+          </div>
+        )}
 
         {/* Bottom Telemetry Strip */}
         <div className="hud-bottom-strip">
