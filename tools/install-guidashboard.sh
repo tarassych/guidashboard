@@ -528,10 +528,16 @@ setup_backend() {
         cp -r "$REPO_DIR/server/"* "$SERVER_DIR/"
         chown -R orangepi:orangepi "$SERVER_DIR"
         stop_spinner
-        print_success "Server files copied"
+        print_success "Server files copied to $SERVER_DIR"
     else
         fail "Server directory not found in repository"
     fi
+    
+    # Verify package.json exists
+    if [ ! -f "$SERVER_DIR/package.json" ]; then
+        fail "package.json not found in $SERVER_DIR"
+    fi
+    print_success "package.json found"
     
     # Create drone-profiles.json if not exists
     if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
@@ -544,26 +550,38 @@ setup_backend() {
         print_success "Created drone-profiles.json"
     fi
     
-    # Check if node_modules exists and is recent
-    if [ -d "$SERVER_DIR/node_modules" ]; then
-        print_installed "node_modules exists"
-        print_info "Checking for dependency updates..."
-        
-        echo -e "  ${CYAN}>${NC} Running npm install (update check)..."
-        if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi npm install 2>&1 | grep -E '(added|updated|removed|packages|up to date)' | tail -5"; then
-            print_warning "npm install had issues, but continuing"
-        fi
-        print_success "Dependencies up to date"
+    # Install npm dependencies
+    print_info "Installing npm dependencies..."
+    print_info "NOTE: Compiling better-sqlite3 can take 3-5 minutes on ARM"
+    echo ""
+    echo -e "  ${CYAN}>${NC} Running: npm install"
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    
+    # Run npm install with full output
+    cd "$SERVER_DIR"
+    local npm_start=$(date +%s)
+    local npm_exit=0
+    
+    sudo -u orangepi npm install 2>&1 | while IFS= read -r line; do
+        # Show all lines but prefix them
+        echo -e "    ${GRAY}|${NC} $line"
+    done
+    npm_exit=${PIPESTATUS[0]}
+    
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    
+    local npm_end=$(date +%s)
+    local npm_duration=$((npm_end - npm_start))
+    
+    if [ $npm_exit -eq 0 ]; then
+        print_success "Dependencies installed (took ${npm_duration}s)"
     else
-        print_info "Installing npm dependencies..."
-        echo ""
-        echo -e "  ${CYAN}>${NC} Running npm install..."
-        
-        if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi npm install 2>&1 | grep -E '(added|packages|npm)' | tail -10"; then
-            fail "Failed to install npm dependencies"
+        # Check if node_modules was created anyway
+        if [ -d "$SERVER_DIR/node_modules" ] && [ -d "$SERVER_DIR/node_modules/express" ]; then
+            print_warning "npm had warnings but dependencies appear installed (took ${npm_duration}s)"
+        else
+            fail "Failed to install npm dependencies (exit code: $npm_exit)"
         fi
-        
-        print_success "Dependencies installed"
     fi
 }
 
