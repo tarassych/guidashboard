@@ -446,7 +446,7 @@
 /* Animated Remote Control Icon */
 .joystick-icon {
   position: absolute;
-  bottom: 8px;
+  bottom: -10px;
   left: 50%;
   transform: translateX(-50%);
   width: 88px;

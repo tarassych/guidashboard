@@ -164,7 +164,7 @@ body {
 /* Active Control Icon - bottom center of OSD */
 .hud-active-control-icon {
   position: absolute;
-  bottom: 70px;
+  bottom: 65px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
@@ -172,9 +172,9 @@ body {
 }
 
 .active-control-svg {
-  width: 70px;
-  height: 70px;
-  filter: drop-shadow(0 0 8px var(--theme-accent-primary, #00ff88));
+  width: 105px;
+  height: 105px;
+  filter: drop-shadow(0 0 10px var(--theme-accent-primary, #00ff88));
 }
 
 /* Signal waves */
