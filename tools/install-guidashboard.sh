@@ -674,98 +674,32 @@ setup_backend() {
         print_success "Created drone-profiles.json"
     fi
     
-    # Install npm dependencies with progress indicator
+    # Install npm dependencies with live output
     echo ""
-    echo -e "  ${YELLOW}!!${NC} ${WHITE}Installing npm dependencies${NC}"
-    echo -e "  ${YELLOW}!!${NC} ${DIM}This step compiles native modules and may take 3-5 minutes${NC}"
-    echo -e "  ${YELLOW}!!${NC} ${DIM}Please wait - progress updates will appear below${NC}"
-    echo ""
+    echo -e "  ${CYAN}>${NC} Running npm install..."
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
     
     cd "$SERVER_DIR"
-    local npm_start=$(date +%s)
-    local logfile="/tmp/npm-install-$$.log"
+    local npm_exit=0
     
-    # Start npm install in background
-    sudo -u orangepi npm install > "$logfile" 2>&1 &
-    local npm_pid=$!
-    
-    # Monitor progress
-    local last_line=""
-    local dots=0
-    local check_interval=2
-    
-    echo -ne "  ${CYAN}>${NC} npm install running"
-    
-    while kill -0 $npm_pid 2>/dev/null; do
-        sleep $check_interval
-        
-        local elapsed=$(( $(date +%s) - npm_start ))
-        local mins=$((elapsed / 60))
-        local secs=$((elapsed % 60))
-        
-        # Get last meaningful line from log
-        local current_line=$(tail -1 "$logfile" 2>/dev/null | head -c 60)
-        
-        # Update progress display
-        printf "\r  ${CYAN}>${NC} npm install running... [%02d:%02d] " "$mins" "$secs"
-        
-        # Show activity indicator
-        dots=$(( (dots + 1) % 4 ))
-        case $dots in
-            0) echo -ne "${CYAN}|${NC}" ;;
-            1) echo -ne "${CYAN}/${NC}" ;;
-            2) echo -ne "${CYAN}-${NC}" ;;
-            3) echo -ne "${CYAN}\\\\${NC}" ;;
-        esac
-        
-        # Every 30 seconds, show a status update
-        if [ $((elapsed % 30)) -lt $check_interval ] && [ $elapsed -gt 5 ]; then
-            echo ""
-            if [ -n "$current_line" ]; then
-                echo -e "    ${GRAY}Status: ${current_line}${NC}"
-            fi
-            echo -ne "  ${CYAN}>${NC} npm install running... [%02d:%02d] " "$mins" "$secs"
-        fi
+    # Run npm install with live output
+    sudo -u orangepi npm install 2>&1 | while IFS= read -r line; do
+        echo -e "    ${GRAY}|${NC} $line"
     done
+    npm_exit=${PIPESTATUS[0]}
     
-    # Get exit code
-    wait $npm_pid
-    local npm_exit=$?
-    
-    local npm_end=$(date +%s)
-    local npm_duration=$((npm_end - npm_start))
-    local dur_mins=$((npm_duration / 60))
-    local dur_secs=$((npm_duration % 60))
-    
-    echo ""  # New line after progress
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
     
     if [ $npm_exit -eq 0 ]; then
-        print_success "Dependencies installed (${dur_mins}m ${dur_secs}s)"
-        
-        # Show summary from npm output
-        local summary=$(grep -E "(added|packages)" "$logfile" | tail -1)
-        if [ -n "$summary" ]; then
-            print_detail "$summary"
-        fi
+        print_success "Dependencies installed"
     else
-        echo ""
-        echo -e "  ${RED}[!] npm install failed. Last 20 lines of output:${NC}"
-        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
-        tail -20 "$logfile" | while IFS= read -r line; do
-            echo -e "    ${GRAY}|${NC} ${DIM}$line${NC}"
-        done
-        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
-        
         # Check if node_modules was created anyway (sometimes npm reports errors but works)
         if [ -d "$SERVER_DIR/node_modules" ] && [ -d "$SERVER_DIR/node_modules/express" ]; then
-            print_warning "npm reported errors but dependencies appear installed"
+            print_warning "npm reported warnings but dependencies appear installed"
         else
-            rm -f "$logfile"
             fail "Failed to install npm dependencies (exit code: $npm_exit)"
         fi
     fi
-    
-    rm -f "$logfile"
 }
 
 setup_database() {
