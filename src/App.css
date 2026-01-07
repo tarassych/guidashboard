@@ -165,37 +165,82 @@ body {
 }
 
 .active-joystick-icon {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 20px;
   filter: drop-shadow(0 0 3px var(--theme-accent-primary, #00ff88));
 }
 
-.active-joystick-icon .joystick-base {
-  fill: rgba(0, 0, 0, 0.4);
+/* Signal waves */
+.active-joystick-icon .signal-wave {
+  fill: none;
+  stroke: var(--theme-accent-primary, #00ff88);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.active-joystick-icon .wave-1 {
+  animation: badge-wave-pulse 1.5s ease-out infinite;
+}
+
+.active-joystick-icon .wave-2 {
+  animation: badge-wave-pulse 1.5s ease-out 0.3s infinite;
+}
+
+.active-joystick-icon .wave-3 {
+  animation: badge-wave-pulse 1.5s ease-out 0.6s infinite;
+}
+
+@keyframes badge-wave-pulse {
+  0% { opacity: 0; transform: translateY(1px); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-1px); }
+}
+
+/* Antenna */
+.active-joystick-icon .antenna {
   stroke: var(--theme-accent-primary, #00ff88);
   stroke-width: 1.5;
 }
 
-.active-joystick-icon .joystick-cross {
+.active-joystick-icon .antenna-tip {
+  fill: var(--theme-accent-primary, #00ff88);
+}
+
+/* Controller body */
+.active-joystick-icon .controller-body {
+  fill: rgba(0, 0, 0, 0.5);
   stroke: var(--theme-accent-primary, #00ff88);
   stroke-width: 1;
-  opacity: 0.5;
 }
 
-.active-joystick-icon .joystick-stick {
+/* Joysticks */
+.active-joystick-icon .joystick-base-small {
+  fill: rgba(0, 255, 136, 0.15);
+  stroke: var(--theme-accent-primary, #00ff88);
+  stroke-width: 0.8;
+}
+
+.active-joystick-icon .joystick-stick-small {
   fill: var(--theme-accent-primary, #00ff88);
-  animation: joystick-move-small 2s ease-in-out infinite;
 }
 
-@keyframes joystick-move-small {
-  0%, 100% { transform: translate(0, 0); }
-  12.5% { transform: translate(3px, 0); }
-  25% { transform: translate(3px, 3px); }
-  37.5% { transform: translate(0, 3px); }
-  50% { transform: translate(-3px, 3px); }
-  62.5% { transform: translate(-3px, 0); }
-  75% { transform: translate(-3px, -3px); }
-  87.5% { transform: translate(0, -3px); }
+/* Indicator light */
+.active-joystick-icon .controller-indicator {
+  fill: var(--theme-accent-primary, #00ff88);
+  animation: badge-indicator-blink 1s ease-in-out infinite;
+}
+
+@keyframes badge-indicator-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Hands */
+.active-joystick-icon .hand {
+  fill: rgba(0, 255, 136, 0.2);
+  stroke: var(--theme-accent-primary, #00ff88);
+  stroke-width: 0.8;
 }
 
 @keyframes active-badge-pulse {

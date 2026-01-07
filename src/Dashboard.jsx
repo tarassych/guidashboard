@@ -6,18 +6,39 @@ import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
 
-// Animated Joystick Icon for active drone
+// Animated Remote Control Icon for active drone
 function JoystickIcon() {
   return (
     <div className="joystick-icon">
-      <svg viewBox="0 0 40 40" className="joystick-svg">
-        {/* Base circle */}
-        <circle cx="20" cy="20" r="16" className="joystick-base" />
-        {/* Crosshair lines */}
-        <line x1="20" y1="8" x2="20" y2="32" className="joystick-cross" />
-        <line x1="8" y1="20" x2="32" y2="20" className="joystick-cross" />
-        {/* Animated stick */}
-        <circle cx="20" cy="20" r="6" className="joystick-stick" />
+      <svg viewBox="0 0 50 50" className="joystick-svg">
+        {/* Signal waves from antenna */}
+        <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
+        <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
+        <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
+        
+        {/* Antenna */}
+        <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
+        <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
+        
+        {/* Controller body */}
+        <rect x="12" y="14" width="26" height="18" rx="3" className="controller-body" />
+        
+        {/* Left joystick */}
+        <circle cx="19" cy="23" r="4" className="joystick-base-small" />
+        <circle cx="19" cy="23" r="2" className="joystick-stick-small" />
+        
+        {/* Right joystick */}
+        <circle cx="31" cy="23" r="4" className="joystick-base-small" />
+        <circle cx="31" cy="23" r="2" className="joystick-stick-small" />
+        
+        {/* Center indicator */}
+        <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
+        
+        {/* Left hand */}
+        <path className="hand" d="M 6 22 Q 4 24, 6 28 L 8 32 Q 10 34, 12 32 L 12 22 Q 10 20, 6 22" />
+        
+        {/* Right hand */}
+        <path className="hand" d="M 44 22 Q 46 24, 44 28 L 42 32 Q 40 34, 38 32 L 38 22 Q 40 20, 44 22" />
       </svg>
     </div>
   )

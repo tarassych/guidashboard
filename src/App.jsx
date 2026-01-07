@@ -198,11 +198,26 @@ function App() {
             </span>
             {isActive && (
               <span className="status-active">
-                <svg viewBox="0 0 40 40" className="active-joystick-icon">
-                  <circle cx="20" cy="20" r="14" className="joystick-base" />
-                  <line x1="20" y1="9" x2="20" y2="31" className="joystick-cross" />
-                  <line x1="9" y1="20" x2="31" y2="20" className="joystick-cross" />
-                  <circle cx="20" cy="20" r="5" className="joystick-stick" />
+                <svg viewBox="0 0 50 45" className="active-joystick-icon">
+                  {/* Signal waves */}
+                  <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
+                  <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
+                  <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
+                  {/* Antenna */}
+                  <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
+                  <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
+                  {/* Controller */}
+                  <rect x="12" y="14" width="26" height="16" rx="3" className="controller-body" />
+                  {/* Joysticks */}
+                  <circle cx="19" cy="22" r="3.5" className="joystick-base-small" />
+                  <circle cx="19" cy="22" r="1.5" className="joystick-stick-small" />
+                  <circle cx="31" cy="22" r="3.5" className="joystick-base-small" />
+                  <circle cx="31" cy="22" r="1.5" className="joystick-stick-small" />
+                  {/* Indicator */}
+                  <rect x="23" y="16" width="4" height="2" rx="1" className="controller-indicator" />
+                  {/* Hands */}
+                  <path className="hand" d="M 6 20 Q 4 22, 6 26 L 8 30 Q 10 32, 12 30 L 12 20 Q 10 18, 6 20" />
+                  <path className="hand" d="M 44 20 Q 46 22, 44 26 L 42 30 Q 40 32, 38 30 L 38 20 Q 40 18, 44 20" />
                 </svg>
                 ACTIVE
               </span>

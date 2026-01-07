@@ -443,14 +443,14 @@
   opacity: 0.5;
 }
 
-/* Animated Joystick Icon */
+/* Animated Remote Control Icon */
 .joystick-icon {
   position: absolute;
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   z-index: 15;
   pointer-events: none;
 }
@@ -461,46 +461,84 @@
   filter: drop-shadow(0 0 4px rgba(0, 255, 136, 0.8));
 }
 
-.joystick-base {
-  fill: rgba(0, 0, 0, 0.6);
+/* Signal waves */
+.signal-wave {
+  fill: none;
+  stroke: #00ff88;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.wave-1 {
+  animation: wave-pulse 1.5s ease-out infinite;
+}
+
+.wave-2 {
+  animation: wave-pulse 1.5s ease-out 0.3s infinite;
+}
+
+.wave-3 {
+  animation: wave-pulse 1.5s ease-out 0.6s infinite;
+}
+
+@keyframes wave-pulse {
+  0% {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+/* Antenna */
+.antenna {
+  stroke: #00ff88;
+  stroke-width: 2;
+}
+
+.antenna-tip {
+  fill: #00ff88;
+}
+
+/* Controller body */
+.controller-body {
+  fill: rgba(0, 0, 0, 0.7);
   stroke: #00ff88;
   stroke-width: 1.5;
 }
 
-.joystick-cross {
-  stroke: rgba(0, 255, 136, 0.4);
+/* Joysticks on controller */
+.joystick-base-small {
+  fill: rgba(0, 255, 136, 0.2);
+  stroke: #00ff88;
   stroke-width: 1;
 }
 
-.joystick-stick {
+.joystick-stick-small {
   fill: #00ff88;
-  animation: joystick-move 2s ease-in-out infinite;
 }
 
-@keyframes joystick-move {
-  0%, 100% {
-    transform: translate(0, 0);
-  }
-  12.5% {
-    transform: translate(4px, 0);
-  }
-  25% {
-    transform: translate(4px, 4px);
-  }
-  37.5% {
-    transform: translate(0, 4px);
-  }
-  50% {
-    transform: translate(-4px, 4px);
-  }
-  62.5% {
-    transform: translate(-4px, 0);
-  }
-  75% {
-    transform: translate(-4px, -4px);
-  }
-  87.5% {
-    transform: translate(0, -4px);
-  }
+/* Center indicator light */
+.controller-indicator {
+  fill: #00ff88;
+  animation: indicator-blink 1s ease-in-out infinite;
+}
+
+@keyframes indicator-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Hands */
+.hand {
+  fill: rgba(0, 255, 136, 0.3);
+  stroke: #00ff88;
+  stroke-width: 1;
 }
 
