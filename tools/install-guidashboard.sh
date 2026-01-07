@@ -1146,24 +1146,97 @@ verify_installation() {
     echo ""
     echo -e "  ${WHITE}${BOLD}=== STEP 1: System Packages ===${NC}"
     
-    # Check required commands
-    local packages=("nginx" "sqlite3" "node" "npm" "git" "sshpass" "curl" "pm2")
-    for pkg in "${packages[@]}"; do
-        ((total_checks++))
-        if cmd_exists "$pkg"; then
-            local ver=$($pkg --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+[0-9.]*' | head -1)
-            print_success "$pkg v$ver"
-            ((checks_passed++))
-        else
-            print_error "$pkg: NOT FOUND"
+    # Check nginx
+    ((total_checks++))
+    if cmd_exists nginx; then
+        local ver=$(nginx -v 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "?")
+        print_success "nginx v$ver"
+        ((checks_passed++))
+    else
+        print_error "nginx: NOT FOUND"
+        all_ok=false
+    fi
+    
+    # Check sqlite3
+    ((total_checks++))
+    if cmd_exists sqlite3; then
+        local ver=$(sqlite3 --version 2>/dev/null | awk '{print $1}' || echo "?")
+        print_success "sqlite3 v$ver"
+        ((checks_passed++))
+    else
+        print_error "sqlite3: NOT FOUND"
+        all_ok=false
+    fi
+    
+    # Check node
+    ((total_checks++))
+    if cmd_exists node; then
+        local ver=$(node --version 2>/dev/null || echo "?")
+        print_success "node $ver"
+        ((checks_passed++))
+        
+        # Check Node.js version specifically
+        local node_major=$(echo "$ver" | sed 's/v//' | cut -d. -f1)
+        if [ -n "$node_major" ] && [ "$node_major" -lt "$MIN_NODE_VERSION" ] 2>/dev/null; then
+            print_error "Node.js $ver is below required v$MIN_NODE_VERSION"
             all_ok=false
         fi
-    done
+    else
+        print_error "node: NOT FOUND"
+        all_ok=false
+    fi
     
-    # Check Node.js version specifically
-    local node_major=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
-    if [ -n "$node_major" ] && [ "$node_major" -lt "$MIN_NODE_VERSION" ]; then
-        print_error "Node.js v$node_major is below required v$MIN_NODE_VERSION"
+    # Check npm
+    ((total_checks++))
+    if cmd_exists npm; then
+        local ver=$(npm --version 2>/dev/null || echo "?")
+        print_success "npm v$ver"
+        ((checks_passed++))
+    else
+        print_error "npm: NOT FOUND"
+        all_ok=false
+    fi
+    
+    # Check git
+    ((total_checks++))
+    if cmd_exists git; then
+        local ver=$(git --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "?")
+        print_success "git v$ver"
+        ((checks_passed++))
+    else
+        print_error "git: NOT FOUND"
+        all_ok=false
+    fi
+    
+    # Check sshpass
+    ((total_checks++))
+    if cmd_exists sshpass; then
+        print_success "sshpass installed"
+        ((checks_passed++))
+    else
+        print_error "sshpass: NOT FOUND"
+        all_ok=false
+    fi
+    
+    # Check curl
+    ((total_checks++))
+    if cmd_exists curl; then
+        local ver=$(curl --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "?")
+        print_success "curl v$ver"
+        ((checks_passed++))
+    else
+        print_error "curl: NOT FOUND"
+        all_ok=false
+    fi
+    
+    # Check pm2
+    ((total_checks++))
+    if cmd_exists pm2; then
+        local ver=$(pm2 --version 2>/dev/null || echo "?")
+        print_success "pm2 v$ver"
+        ((checks_passed++))
+    else
+        print_error "pm2: NOT FOUND"
         all_ok=false
     fi
     
@@ -1187,8 +1260,8 @@ verify_installation() {
     
     ((total_checks++))
     if [ -d "$REPO_DIR/.git" ]; then
-        local branch=$(cd "$REPO_DIR" && git branch --show-current 2>/dev/null)
-        local commit=$(cd "$REPO_DIR" && git rev-parse --short HEAD 2>/dev/null)
+        local branch=$(cd "$REPO_DIR" && git branch --show-current 2>/dev/null || echo "unknown")
+        local commit=$(cd "$REPO_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
         print_success "Git repo: $branch @ $commit"
         ((checks_passed++))
     else
@@ -1371,23 +1444,21 @@ verify_installation() {
     echo -e "  ${WHITE}${BOLD}=== STEP 10: Backend API ===${NC}"
     
     ((total_checks++))
-    if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
-        local status=$(run_as_orangepi "pm2 jlist" 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
-        if [ "$status" = "online" ]; then
-            print_success "PM2 process: online"
-            ((checks_passed++))
-        else
-            print_error "PM2 process: $status"
-            all_ok=false
-        fi
+    local pm2_status=$(sudo -u orangepi pm2 jlist 2>/dev/null | grep -o '"name":"guidashboard-api"[^}]*' | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || echo "")
+    if [ "$pm2_status" = "online" ]; then
+        print_success "PM2 process: online"
+        ((checks_passed++))
+    elif [ -n "$pm2_status" ]; then
+        print_error "PM2 process: $pm2_status"
+        all_ok=false
     else
         print_error "PM2 process: NOT FOUND"
         all_ok=false
     fi
     
     ((total_checks++))
-    local api_response=$(curl -s --max-time 5 http://localhost:3001/api/profiles 2>/dev/null)
-    if echo "$api_response" | grep -q "success"; then
+    local api_response=$(curl -s --max-time 5 http://localhost:3001/api/profiles 2>/dev/null || echo "")
+    if echo "$api_response" | grep -q "success" 2>/dev/null; then
         print_success "API /api/profiles: responding"
         ((checks_passed++))
     else
@@ -1396,13 +1467,16 @@ verify_installation() {
     fi
     
     ((total_checks++))
-    local drones_response=$(curl -s --max-time 5 http://localhost:3001/api/drones 2>/dev/null)
-    if echo "$drones_response" | grep -q "success"; then
+    local drones_response=$(curl -s --max-time 5 http://localhost:3001/api/drones 2>/dev/null || echo "")
+    if echo "$drones_response" | grep -q "success" 2>/dev/null; then
         print_success "API /api/drones: responding"
         ((checks_passed++))
+    elif echo "$drones_response" | grep -q "error" 2>/dev/null; then
+        print_error "API /api/drones: error"
+        print_detail "$(echo "$drones_response" | head -c 60)"
+        all_ok=false
     else
-        print_error "API /api/drones: error or not responding"
-        print_detail "Response: $(echo "$drones_response" | head -c 80)"
+        print_error "API /api/drones: not responding"
         all_ok=false
     fi
     
