@@ -899,8 +899,10 @@ function DroneProfileEditor() {
         const data = await response.json()
         if (!isMounted) return
         
-        if (data.success) {
-          setMmtxStatus(data.running ? 'running' : 'stopped')
+        if (data.success && data.status?.running) {
+          setMmtxStatus('running')
+        } else if (data.success) {
+          setMmtxStatus('stopped')
         } else {
           setMmtxStatus('stopped')
         }

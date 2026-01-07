@@ -12,6 +12,7 @@ const router = express.Router();
  * GET /api/drones/active
  * Get the current active status for all drones
  * Returns which drones have active=1 in their most recent telemetry
+ * Optimized: Only checks last 1000 records to avoid full table scan
  */
 router.get('/drones/active', (req, res) => {
   const db = getDb();
@@ -21,15 +22,15 @@ router.get('/drones/active', (req, res) => {
 
   try {
     // Get the most recent active status for each drone
-    // Using a subquery to get the latest record per drone
+    // Only look at recent records (last 1000) for performance
     const stmt = db.prepare(`
-      SELECT t1.drone_id, t1.active, t1.timestamp
-      FROM telemetry t1
-      INNER JOIN (
-        SELECT drone_id, MAX(ID) as max_id
-        FROM telemetry
-        GROUP BY drone_id
-      ) t2 ON t1.drone_id = t2.drone_id AND t1.ID = t2.max_id
+      SELECT drone_id, active, timestamp
+      FROM telemetry
+      WHERE ID IN (
+        SELECT MAX(ID) FROM (
+          SELECT ID, drone_id FROM telemetry ORDER BY ID DESC LIMIT 1000
+        ) GROUP BY drone_id
+      )
     `);
     const rows = stmt.all();
 
