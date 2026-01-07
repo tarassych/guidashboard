@@ -645,12 +645,20 @@ setup_backend() {
     fi
     print_success "package.json found"
     
-    # Create drone-profiles.json if not exists
+    # Create drone-profiles.json if not exists (must have "drones" key, not "profiles")
     if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
-        print_installed "drone-profiles.json (preserved)"
+        # Verify it has correct structure
+        if grep -q '"drones"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
+            print_installed "drone-profiles.json (preserved)"
+        else
+            print_warning "drone-profiles.json has wrong format, fixing..."
+            echo '{"drones":{}}' > "$SERVER_DIR/drone-profiles.json"
+            chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
+            print_success "Fixed drone-profiles.json structure"
+        fi
     else
         start_spinner "Creating initial drone-profiles.json"
-        echo '{"profiles":{}}' > "$SERVER_DIR/drone-profiles.json"
+        echo '{"drones":{}}' > "$SERVER_DIR/drone-profiles.json"
         chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
         stop_spinner
         print_success "Created drone-profiles.json"
