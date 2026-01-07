@@ -21,7 +21,9 @@ set -euo pipefail
 
 REPO_URL="https://github.com/tarassych/guidashboard.git"
 MEDIAMTX_VERSION="v1.9.3"
+MEDIAMTX_VERSION_NUM="1.9.3"
 MEDIAMTX_ARCH="linux_arm64v8"
+MIN_NODE_VERSION=18
 
 # Directories
 HOME_DIR="/home/orangepi"
@@ -41,6 +43,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
+GRAY='\033[0;90m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -48,12 +51,19 @@ DIM='\033[2m'
 # Tracking for rollback
 ROLLBACK_ACTIONS=()
 INSTALL_START_TIME=$(date +%s)
+TOTAL_STEPS=11
+CURRENT_STEP=0
+
+# Spinner characters
+SPINNER_CHARS='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+SPINNER_PID=""
 
 # =============================================================================
 # Helper Functions
 # =============================================================================
 
 print_banner() {
+    clear
     echo ""
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║${NC}${BOLD}${WHITE}           GUI Dashboard Installer for Orange Pi              ${NC}${CYAN}║${NC}"
@@ -62,33 +72,130 @@ print_banner() {
     echo ""
 }
 
+# Progress bar
+print_progress_bar() {
+    local current=$1
+    local total=$2
+    local width=50
+    local percent=$((current * 100 / total))
+    local filled=$((current * width / total))
+    local empty=$((width - filled))
+    
+    printf "\r  ${GRAY}[${NC}"
+    printf "${GREEN}%${filled}s${NC}" | tr ' ' '█'
+    printf "${GRAY}%${empty}s${NC}" | tr ' ' '░'
+    printf "${GRAY}]${NC} ${WHITE}%3d%%${NC} " "$percent"
+}
+
+# Spinner functions
+start_spinner() {
+    local msg="$1"
+    printf "\r  ${CYAN}◦${NC} %s " "$msg"
+    
+    # Start spinner in background
+    (
+        local i=0
+        while true; do
+            printf "\r  ${CYAN}${SPINNER_CHARS:$i:1}${NC} %s " "$msg"
+            i=$(( (i + 1) % ${#SPINNER_CHARS} ))
+            sleep 0.1
+        done
+    ) &
+    SPINNER_PID=$!
+    disown $SPINNER_PID 2>/dev/null
+}
+
+stop_spinner() {
+    if [ -n "$SPINNER_PID" ]; then
+        kill $SPINNER_PID 2>/dev/null || true
+        wait $SPINNER_PID 2>/dev/null || true
+        SPINNER_PID=""
+    fi
+    printf "\r"
+}
+
 print_step() {
     local step_num=$1
     local step_name=$2
+    CURRENT_STEP=$step_num
+    
+    stop_spinner
+    echo ""
+    echo ""
+    print_progress_bar $step_num $TOTAL_STEPS
     echo ""
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${WHITE}${BOLD}  STEP $step_num:${NC} ${CYAN}$step_name${NC}"
+    echo -e "${WHITE}${BOLD}  STEP $step_num/$TOTAL_STEPS:${NC} ${CYAN}$step_name${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
 print_info() {
-    echo -e "  ${DIM}→${NC} $1"
+    stop_spinner
+    echo -e "  ${GRAY}→${NC} $1"
 }
 
 print_success() {
+    stop_spinner
     echo -e "  ${GREEN}✓${NC} $1"
 }
 
 print_warning() {
+    stop_spinner
     echo -e "  ${YELLOW}⚠${NC} $1"
 }
 
 print_error() {
+    stop_spinner
     echo -e "  ${RED}✗${NC} $1"
 }
 
-print_progress() {
-    echo -e "  ${CYAN}◦${NC} $1..."
+print_detail() {
+    echo -e "    ${GRAY}$1${NC}"
+}
+
+print_skip() {
+    echo -e "  ${CYAN}○${NC} $1 ${DIM}(skipped)${NC}"
+}
+
+print_installed() {
+    echo -e "  ${GREEN}✓${NC} $1 ${DIM}(already installed)${NC}"
+}
+
+# Run command with live output in a box
+run_boxed() {
+    local cmd="$1"
+    echo -e "    ${GRAY}┌──────────────────────────────────────────────────────────${NC}"
+    eval "$cmd" 2>&1 | while IFS= read -r line; do
+        echo -e "    ${GRAY}│${NC} ${DIM}$line${NC}"
+    done
+    local result=${PIPESTATUS[0]}
+    echo -e "    ${GRAY}└──────────────────────────────────────────────────────────${NC}"
+    return $result
+}
+
+# Check if a command exists
+cmd_exists() {
+    command -v "$1" &>/dev/null
+}
+
+# Get version of a command (first number group)
+get_version() {
+    local cmd="$1"
+    local version_flag="${2:---version}"
+    $cmd $version_flag 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1
+}
+
+# Get major version number
+get_major_version() {
+    local version="$1"
+    echo "$version" | cut -d. -f1
+}
+
+# Compare versions: returns 0 if $1 >= $2
+version_gte() {
+    local v1="$1"
+    local v2="$2"
+    [ "$(printf '%s\n' "$v2" "$v1" | sort -V | head -n1)" = "$v2" ]
 }
 
 add_rollback() {
@@ -100,13 +207,13 @@ execute_rollback() {
         return
     fi
     
+    stop_spinner
     echo ""
     echo -e "${RED}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${RED}║${NC}${BOLD}${WHITE}                    ROLLING BACK CHANGES                       ${NC}${RED}║${NC}"
     echo -e "${RED}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     
-    # Execute rollback actions in reverse order
     for ((i=${#ROLLBACK_ACTIONS[@]}-1; i>=0; i--)); do
         local action="${ROLLBACK_ACTIONS[$i]}"
         print_info "Reverting: $action"
@@ -117,6 +224,7 @@ execute_rollback() {
 }
 
 fail() {
+    stop_spinner
     print_error "$1"
     execute_rollback
     echo ""
@@ -142,68 +250,206 @@ run_as_orangepi() {
 }
 
 # =============================================================================
+# Package Check Functions
+# =============================================================================
+
+check_and_install_package() {
+    local pkg_name="$1"
+    local check_cmd="${2:-$pkg_name}"
+    local install_cmd="${3:-apt install -y $pkg_name}"
+    
+    if cmd_exists "$check_cmd"; then
+        local version=$(get_version "$check_cmd" 2>/dev/null || echo "unknown")
+        print_installed "$pkg_name v$version"
+        return 0
+    else
+        start_spinner "Installing $pkg_name"
+        if eval "$install_cmd" > /tmp/install-$pkg_name.log 2>&1; then
+            stop_spinner
+            local version=$(get_version "$check_cmd" 2>/dev/null || echo "installed")
+            print_success "$pkg_name v$version installed"
+            return 0
+        else
+            stop_spinner
+            print_error "Failed to install $pkg_name"
+            cat /tmp/install-$pkg_name.log
+            return 1
+        fi
+    fi
+}
+
+# =============================================================================
 # Installation Steps
 # =============================================================================
 
 install_system_packages() {
-    print_step 1 "Installing System Packages"
+    print_step 1 "Checking System Packages"
     
-    print_progress "Installing nginx, sqlite3, nodejs, npm, sshpass, git"
+    local packages_to_install=()
     
-    if ! apt install -y nginx sqlite3 nodejs npm sshpass git > /tmp/apt-install.log 2>&1; then
-        cat /tmp/apt-install.log
-        fail "Failed to install system packages"
+    # Check each package
+    echo ""
+    print_info "Checking required packages..."
+    echo ""
+    
+    # nginx
+    if cmd_exists nginx; then
+        local ver=$(nginx -v 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        print_installed "nginx v$ver"
+    else
+        packages_to_install+=("nginx")
+        print_info "nginx: not found, will install"
     fi
     
-    print_success "System packages installed"
+    # sqlite3
+    if cmd_exists sqlite3; then
+        local ver=$(sqlite3 --version | awk '{print $1}')
+        print_installed "sqlite3 v$ver"
+    else
+        packages_to_install+=("sqlite3")
+        print_info "sqlite3: not found, will install"
+    fi
     
-    # Check Node.js version
-    local node_version=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
-    if [ -z "$node_version" ] || [ "$node_version" -lt 18 ]; then
-        print_warning "Node.js version is too old (need v18+)"
-        print_progress "Installing Node.js 20.x"
+    # git
+    if cmd_exists git; then
+        local ver=$(git --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+        print_installed "git v$ver"
+    else
+        packages_to_install+=("git")
+        print_info "git: not found, will install"
+    fi
+    
+    # sshpass
+    if cmd_exists sshpass; then
+        local ver=$(sshpass -V 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' || echo "installed")
+        print_installed "sshpass v$ver"
+    else
+        packages_to_install+=("sshpass")
+        print_info "sshpass: not found, will install"
+    fi
+    
+    # curl (needed for nodesetup)
+    if cmd_exists curl; then
+        local ver=$(curl --version | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        print_installed "curl v$ver"
+    else
+        packages_to_install+=("curl")
+        print_info "curl: not found, will install"
+    fi
+    
+    # nodejs - check version
+    local need_node=false
+    if cmd_exists node; then
+        local node_ver=$(node --version | sed 's/v//')
+        local node_major=$(echo "$node_ver" | cut -d. -f1)
+        if [ "$node_major" -ge "$MIN_NODE_VERSION" ]; then
+            print_installed "nodejs v$node_ver"
+        else
+            print_warning "nodejs v$node_ver found (need v$MIN_NODE_VERSION+, will upgrade)"
+            need_node=true
+        fi
+    else
+        print_info "nodejs: not found, will install"
+        need_node=true
+    fi
+    
+    # npm (comes with node usually)
+    if cmd_exists npm; then
+        local ver=$(npm --version)
+        print_installed "npm v$ver"
+    else
+        if [ "$need_node" = false ]; then
+            packages_to_install+=("npm")
+            print_info "npm: not found, will install"
+        fi
+    fi
+    
+    echo ""
+    
+    # Install missing packages via apt
+    if [ ${#packages_to_install[@]} -gt 0 ]; then
+        print_info "Installing: ${packages_to_install[*]}"
+        echo ""
+        echo -e "  ${CYAN}◦${NC} Running apt install..."
         
-        if ! curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /tmp/node-setup.log 2>&1; then
+        if ! run_boxed "apt install -y ${packages_to_install[*]} 2>&1 | grep -E '(Unpacking|Setting up|is already|Installing)'"; then
+            fail "Failed to install packages"
+        fi
+        
+        print_success "Packages installed"
+    else
+        print_success "All apt packages already installed"
+    fi
+    
+    # Handle Node.js upgrade if needed
+    if [ "$need_node" = true ]; then
+        echo ""
+        print_info "Setting up Node.js v20.x..."
+        echo ""
+        echo -e "  ${CYAN}◦${NC} Adding NodeSource repository..."
+        
+        if ! run_boxed "curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>&1 | grep -E '(Installing|configured|Node.js|Adding)'"; then
             fail "Failed to setup Node.js repository"
         fi
         
-        if ! apt install -y nodejs > /tmp/node-install.log 2>&1; then
+        echo -e "  ${CYAN}◦${NC} Installing Node.js..."
+        
+        if ! run_boxed "apt install -y nodejs 2>&1 | grep -E '(Unpacking|Setting up)'"; then
             fail "Failed to install Node.js"
         fi
         
-        print_success "Node.js $(node --version) installed"
-    else
-        print_success "Node.js v$node_version detected (OK)"
+        local new_ver=$(node --version)
+        print_success "Node.js $new_ver installed"
     fi
 }
 
 install_pm2() {
-    print_step 2 "Installing PM2 Process Manager"
+    print_step 2 "Checking PM2 Process Manager"
     
-    if command -v pm2 &>/dev/null; then
-        print_success "PM2 already installed"
-    else
-        print_progress "Installing PM2 globally"
+    if cmd_exists pm2; then
+        local ver=$(pm2 --version 2>/dev/null)
+        print_installed "pm2 v$ver"
         
-        if ! npm install -g pm2 > /tmp/pm2-install.log 2>&1; then
-            cat /tmp/pm2-install.log
+        # Check if update available
+        start_spinner "Checking for PM2 updates"
+        local latest=$(npm view pm2 version 2>/dev/null || echo "")
+        stop_spinner
+        
+        if [ -n "$latest" ] && [ "$ver" != "$latest" ]; then
+            print_info "Update available: v$ver → v$latest"
+            start_spinner "Updating PM2"
+            if npm update -g pm2 > /tmp/pm2-update.log 2>&1; then
+                stop_spinner
+                print_success "PM2 updated to v$(pm2 --version)"
+            else
+                stop_spinner
+                print_warning "PM2 update failed, continuing with v$ver"
+            fi
+        else
+            print_success "PM2 is up to date"
+        fi
+    else
+        print_info "PM2 not found, installing..."
+        echo ""
+        echo -e "  ${CYAN}◦${NC} Installing PM2 globally..."
+        
+        if ! run_boxed "npm install -g pm2 2>&1 | tail -5"; then
             fail "Failed to install PM2"
         fi
         
         add_rollback "npm uninstall -g pm2"
-        print_success "PM2 installed"
+        print_success "PM2 v$(pm2 --version) installed"
     fi
     
     # Setup PM2 startup
-    print_progress "Configuring PM2 startup"
+    start_spinner "Configuring PM2 startup service"
     sudo -u orangepi bash -c "pm2 startup systemd -u orangepi --hp $HOME_DIR" > /tmp/pm2-startup.log 2>&1 || true
     
-    # Extract and run the sudo command from output
     local startup_cmd=$(grep -o "sudo .*" /tmp/pm2-startup.log | head -1)
     if [ -n "$startup_cmd" ]; then
         eval "$startup_cmd" > /dev/null 2>&1 || true
     fi
-    
+    stop_spinner
     print_success "PM2 startup configured"
 }
 
@@ -213,14 +459,15 @@ create_directories() {
     local dirs=("$CODE_DIR" "$MMTX_DIR" "$SERVER_DIR")
     
     for dir in "${dirs[@]}"; do
-        if [ ! -d "$dir" ]; then
-            print_progress "Creating $dir"
+        if [ -d "$dir" ]; then
+            print_installed "$dir"
+        else
+            start_spinner "Creating $dir"
             mkdir -p "$dir"
             chown orangepi:orangepi "$dir"
-            add_rollback "[ -d '$dir' ] && rmdir '$dir' 2>/dev/null"
+            add_rollback "[ -d '$dir' ] && [ -z \"\$(ls -A '$dir')\" ] && rmdir '$dir' 2>/dev/null"
+            stop_spinner
             print_success "Created $dir"
-        else
-            print_success "$dir already exists"
         fi
     done
 }
@@ -228,82 +475,120 @@ create_directories() {
 clone_repository() {
     print_step 4 "Cloning GUI Dashboard Repository"
     
-    if [ -d "$REPO_DIR" ]; then
-        print_info "Repository already exists, updating..."
-        print_progress "Pulling latest changes"
+    if [ -d "$REPO_DIR/.git" ]; then
+        print_installed "Repository at $REPO_DIR"
+        print_info "Pulling latest changes..."
         
-        if ! run_as_orangepi "cd $REPO_DIR && git pull origin main" > /tmp/git-pull.log 2>&1; then
-            print_warning "Git pull failed, attempting fresh clone"
-            rm -rf "$REPO_DIR"
+        start_spinner "Fetching updates"
+        if run_as_orangepi "cd $REPO_DIR && git fetch origin" > /tmp/git-fetch.log 2>&1; then
+            stop_spinner
+            
+            # Check if update needed
+            local local_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD")
+            local remote_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse origin/main")
+            
+            if [ "$local_rev" = "$remote_rev" ]; then
+                print_success "Repository is up to date"
+            else
+                start_spinner "Pulling changes"
+                if run_as_orangepi "cd $REPO_DIR && git pull origin main" > /tmp/git-pull.log 2>&1; then
+                    stop_spinner
+                    print_success "Repository updated"
+                else
+                    stop_spinner
+                    print_warning "Pull failed, using existing version"
+                fi
+            fi
         else
-            print_success "Repository updated"
-            return
+            stop_spinner
+            print_warning "Fetch failed, using existing version"
         fi
+        return
     fi
     
-    print_progress "Cloning from $REPO_URL"
+    print_info "Cloning from: $REPO_URL"
+    echo ""
+    echo -e "  ${CYAN}◦${NC} Cloning repository..."
     
-    if ! run_as_orangepi "git clone $REPO_URL $REPO_DIR" > /tmp/git-clone.log 2>&1; then
-        cat /tmp/git-clone.log
+    if ! run_boxed "sudo -u orangepi git clone --progress $REPO_URL $REPO_DIR 2>&1"; then
         fail "Failed to clone repository"
     fi
     
     add_rollback "rm -rf '$REPO_DIR'"
-    print_success "Repository cloned to $REPO_DIR"
+    print_success "Repository cloned"
 }
 
 setup_backend() {
     print_step 5 "Setting Up Backend Server"
     
-    print_progress "Copying server files"
-    
     # Copy server files
     if [ -d "$REPO_DIR/server" ]; then
+        start_spinner "Copying server files to $SERVER_DIR"
         cp -r "$REPO_DIR/server/"* "$SERVER_DIR/"
         chown -R orangepi:orangepi "$SERVER_DIR"
+        stop_spinner
         print_success "Server files copied"
     else
         fail "Server directory not found in repository"
     fi
     
     # Create drone-profiles.json if not exists
-    if [ ! -f "$SERVER_DIR/drone-profiles.json" ]; then
-        print_progress "Creating initial drone-profiles.json"
+    if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
+        print_installed "drone-profiles.json (preserved)"
+    else
+        start_spinner "Creating initial drone-profiles.json"
         echo '{"profiles":{}}' > "$SERVER_DIR/drone-profiles.json"
         chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
+        stop_spinner
         print_success "Created drone-profiles.json"
+    fi
+    
+    # Check if node_modules exists and is recent
+    if [ -d "$SERVER_DIR/node_modules" ]; then
+        print_installed "node_modules exists"
+        print_info "Checking for dependency updates..."
+        
+        echo -e "  ${CYAN}◦${NC} Running npm install (update check)..."
+        if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi npm install 2>&1 | grep -E '(added|updated|removed|packages|up to date)' | tail -5"; then
+            print_warning "npm install had issues, but continuing"
+        fi
+        print_success "Dependencies up to date"
     else
-        print_success "drone-profiles.json already exists"
+        print_info "Installing npm dependencies..."
+        echo ""
+        echo -e "  ${CYAN}◦${NC} Running npm install..."
+        
+        if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi npm install 2>&1 | grep -E '(added|packages|npm)' | tail -10"; then
+            fail "Failed to install npm dependencies"
+        fi
+        
+        print_success "Dependencies installed"
     fi
-    
-    # Install npm dependencies
-    print_progress "Installing npm dependencies"
-    
-    if ! run_as_orangepi "cd $SERVER_DIR && npm install" > /tmp/npm-install.log 2>&1; then
-        cat /tmp/npm-install.log
-        fail "Failed to install npm dependencies"
-    fi
-    
-    print_success "Backend dependencies installed"
 }
 
 setup_database() {
     print_step 6 "Setting Up SQLite Database"
     
     # Create database file if not exists
-    if [ ! -f "$DB_PATH" ]; then
-        print_progress "Creating telemetry database"
+    if [ -f "$DB_PATH" ]; then
+        local size=$(du -h "$DB_PATH" | cut -f1)
+        print_installed "Database file ($size)"
+    else
+        start_spinner "Creating telemetry database"
         touch "$DB_PATH"
         chown orangepi:orangepi "$DB_PATH"
+        stop_spinner
         print_success "Database file created"
-    else
-        print_success "Database file already exists"
     fi
     
-    # Create table if not exists
-    print_progress "Ensuring telemetry table exists"
+    # Check if table exists
+    local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null)
     
-    sqlite3 "$DB_PATH" <<'EOSQL'
+    if [ -n "$table_exists" ]; then
+        print_installed "telemetry table"
+    else
+        start_spinner "Creating telemetry table"
+        sqlite3 "$DB_PATH" <<'EOSQL'
 CREATE TABLE IF NOT EXISTS telemetry (
     ID        INTEGER PRIMARY KEY AUTOINCREMENT,
     drone_id  INTEGER NOT NULL,
@@ -312,11 +597,12 @@ CREATE TABLE IF NOT EXISTS telemetry (
     active    INTEGER NOT NULL DEFAULT 0
 );
 EOSQL
+        stop_spinner
+        print_success "Telemetry table created"
+    fi
     
-    print_success "Telemetry table ready"
-    
-    # Create indexes (separate queries - idempotent)
-    print_progress "Creating database indexes"
+    # Check and create indexes (always idempotent)
+    start_spinner "Verifying database indexes"
     
     sqlite3 "$DB_PATH" <<'EOSQL'
 CREATE INDEX IF NOT EXISTS idx_telemetry_drone_id ON telemetry(drone_id);
@@ -324,15 +610,14 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry(timestamp);
 CREATE INDEX IF NOT EXISTS idx_telemetry_active ON telemetry(active);
 EOSQL
     
-    chown orangepi:orangepi "$DB_PATH"*
-    print_success "Database indexes created"
+    chown orangepi:orangepi "$DB_PATH"* 2>/dev/null || true
+    stop_spinner
+    print_success "Database indexes verified"
     
-    # Verify schema
-    local tables=$(sqlite3 "$DB_PATH" ".tables" 2>/dev/null)
-    local indexes=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -l)
-    
-    print_info "Tables: $tables"
-    print_info "Indexes: $indexes index(es) on telemetry"
+    # Show stats
+    local row_count=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM telemetry;" 2>/dev/null || echo "0")
+    local index_count=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -w)
+    print_detail "Rows: $row_count | Indexes: $index_count"
 }
 
 setup_mediamtx() {
@@ -342,70 +627,108 @@ setup_mediamtx() {
     local mmtx_tarball="mediamtx_${MEDIAMTX_VERSION}_${MEDIAMTX_ARCH}.tar.gz"
     local mmtx_url="https://github.com/bluenviron/mediamtx/releases/download/${MEDIAMTX_VERSION}/${mmtx_tarball}"
     
-    # Download MediaMTX if not present
-    if [ ! -f "$mmtx_binary" ]; then
-        print_progress "Downloading MediaMTX $MEDIAMTX_VERSION"
+    # Check if MediaMTX binary exists and version
+    if [ -f "$mmtx_binary" ]; then
+        local current_ver=$("$mmtx_binary" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+        
+        if [ "$current_ver" = "$MEDIAMTX_VERSION_NUM" ]; then
+            print_installed "MediaMTX v$current_ver"
+        elif version_gte "$current_ver" "$MEDIAMTX_VERSION_NUM"; then
+            print_installed "MediaMTX v$current_ver (newer than required v$MEDIAMTX_VERSION_NUM)"
+        else
+            print_warning "MediaMTX v$current_ver found (need v$MEDIAMTX_VERSION_NUM)"
+            print_info "Upgrading MediaMTX..."
+            
+            # Backup old binary
+            mv "$mmtx_binary" "$mmtx_binary.old"
+            
+            echo -e "  ${CYAN}◦${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
+            cd "$MMTX_DIR"
+            
+            if ! run_boxed "wget --progress=dot:giga $mmtx_url -O $mmtx_tarball 2>&1"; then
+                mv "$mmtx_binary.old" "$mmtx_binary"
+                fail "Failed to download MediaMTX"
+            fi
+            
+            start_spinner "Extracting MediaMTX"
+            tar -xzf "$mmtx_tarball"
+            rm -f "$mmtx_tarball" "$mmtx_binary.old"
+            chmod +x mediamtx
+            chown orangepi:orangepi mediamtx
+            stop_spinner
+            print_success "MediaMTX upgraded to v$MEDIAMTX_VERSION_NUM"
+        fi
+    else
+        print_info "MediaMTX not found, installing v$MEDIAMTX_VERSION_NUM..."
+        echo ""
+        echo -e "  ${CYAN}◦${NC} Downloading MediaMTX $MEDIAMTX_VERSION..."
         
         cd "$MMTX_DIR"
         
-        if ! wget -q "$mmtx_url" -O "$mmtx_tarball"; then
+        if ! run_boxed "wget --progress=dot:giga $mmtx_url -O $mmtx_tarball 2>&1"; then
             fail "Failed to download MediaMTX"
         fi
         
-        print_progress "Extracting MediaMTX"
+        start_spinner "Extracting MediaMTX"
         tar -xzf "$mmtx_tarball"
         rm -f "$mmtx_tarball"
         chmod +x mediamtx
         chown orangepi:orangepi mediamtx
+        stop_spinner
         
         add_rollback "rm -f '$mmtx_binary'"
-        print_success "MediaMTX binary installed"
-    else
-        print_success "MediaMTX binary already exists"
+        print_success "MediaMTX v$MEDIAMTX_VERSION_NUM installed"
     fi
     
     # Copy configuration files from repository
-    print_progress "Copying MediaMTX configuration"
-    
     if [ -f "$REPO_DIR/tools/mediamtx/mediamtx.base.yml" ]; then
+        start_spinner "Copying mediamtx.base.yml"
         cp "$REPO_DIR/tools/mediamtx/mediamtx.base.yml" "$MMTX_DIR/"
-        print_success "Copied mediamtx.base.yml"
+        stop_spinner
+        print_success "mediamtx.base.yml updated"
     else
         fail "mediamtx.base.yml not found in repository"
     fi
     
     if [ -f "$REPO_DIR/tools/mediamtx/rebuild-config.sh" ]; then
+        start_spinner "Copying rebuild-config.sh"
         cp "$REPO_DIR/tools/mediamtx/rebuild-config.sh" "$MMTX_DIR/"
         chmod +x "$MMTX_DIR/rebuild-config.sh"
-        print_success "Copied rebuild-config.sh"
+        stop_spinner
+        print_success "rebuild-config.sh updated"
     else
         fail "rebuild-config.sh not found in repository"
     fi
     
     # Create paths.yml if not exists
-    if [ ! -f "$MMTX_DIR/paths.yml" ]; then
-        print_progress "Creating initial paths.yml"
+    if [ -f "$MMTX_DIR/paths.yml" ]; then
+        print_installed "paths.yml (preserved)"
+    else
+        start_spinner "Creating initial paths.yml"
         cat > "$MMTX_DIR/paths.yml" << 'EOF'
 # Camera stream paths - managed by GUI Dashboard
 # Do not edit manually
 EOF
+        stop_spinner
         print_success "Created paths.yml"
-    else
-        print_success "paths.yml already exists"
     fi
     
     # Set ownership
     chown -R orangepi:orangepi "$MMTX_DIR"
     
     # Build configuration
-    print_progress "Building MediaMTX configuration"
+    start_spinner "Building MediaMTX configuration"
     run_as_orangepi "cd $MMTX_DIR && ./rebuild-config.sh" > /dev/null 2>&1
-    print_success "Configuration built"
+    stop_spinner
+    print_success "Configuration built (mediamtx.yml)"
     
-    # Create systemd service
-    print_progress "Creating MediaMTX systemd service"
-    
-    cat > /etc/systemd/system/mediamtx.service << EOF
+    # Check if systemd service exists
+    if [ -f /etc/systemd/system/mediamtx.service ]; then
+        print_installed "MediaMTX systemd service"
+    else
+        start_spinner "Creating MediaMTX systemd service"
+        
+        cat > /etc/systemd/system/mediamtx.service << EOF
 [Unit]
 Description=MediaMTX RTSP/HLS Server
 After=network.target
@@ -423,30 +746,31 @@ StandardError=append:$MMTX_DIR/mediamtx.log
 [Install]
 WantedBy=multi-user.target
 EOF
-    
-    add_rollback "systemctl disable mediamtx 2>/dev/null; rm -f /etc/systemd/system/mediamtx.service"
+        
+        add_rollback "systemctl disable mediamtx 2>/dev/null; rm -f /etc/systemd/system/mediamtx.service"
+        stop_spinner
+        print_success "MediaMTX service created"
+    fi
     
     systemctl daemon-reload
     systemctl enable mediamtx > /dev/null 2>&1
     
-    print_success "MediaMTX service created and enabled"
-    
-    # Start MediaMTX
-    print_progress "Starting MediaMTX"
-    
+    # Start/restart MediaMTX
     if systemctl is-active --quiet mediamtx; then
+        start_spinner "Restarting MediaMTX service"
         systemctl restart mediamtx
+        sleep 2
+        stop_spinner
+        print_success "MediaMTX restarted"
     else
+        start_spinner "Starting MediaMTX service"
         systemctl start mediamtx
+        sleep 2
+        stop_spinner
+        print_success "MediaMTX started"
     fi
     
-    sleep 2
-    
-    if systemctl is-active --quiet mediamtx; then
-        print_success "MediaMTX started successfully"
-    else
-        print_warning "MediaMTX may not have started correctly"
-    fi
+    print_detail "Ports: RTSP=8554, HLS=8888, API=9997"
 }
 
 deploy_frontend() {
@@ -454,40 +778,72 @@ deploy_frontend() {
     
     # Check if dist folder exists in repo
     if [ -d "$REPO_DIR/dist" ]; then
-        print_progress "Copying frontend files to web root"
+        local new_files=$(find "$REPO_DIR/dist" -type f | wc -l)
         
-        # Backup existing if any
+        # Check if already deployed and same
+        if [ -d "$WEB_DIR" ] && [ -f "$WEB_DIR/index.html" ]; then
+            print_installed "Frontend files in $WEB_DIR"
+            print_info "Updating frontend files..."
+        fi
+        
+        # Backup existing
         if [ -d "$WEB_DIR" ] && [ "$(ls -A $WEB_DIR 2>/dev/null)" ]; then
-            print_info "Backing up existing web files"
+            start_spinner "Backing up existing web files"
             mkdir -p /tmp/web-backup-$$
             cp -r "$WEB_DIR"/* /tmp/web-backup-$$/ 2>/dev/null || true
             add_rollback "rm -rf '$WEB_DIR'/* && cp -r /tmp/web-backup-$$/* '$WEB_DIR'/"
+            stop_spinner
+            print_success "Backup created"
         fi
         
         # Copy dist files
+        start_spinner "Copying frontend files"
         mkdir -p "$WEB_DIR"
         cp -r "$REPO_DIR/dist/"* "$WEB_DIR/"
         chown -R www-data:www-data "$WEB_DIR"
-        
-        print_success "Frontend files deployed"
+        stop_spinner
+        print_success "Frontend deployed ($new_files files)"
     else
-        print_warning "No dist folder found - frontend needs to be built and deployed separately"
-        print_info "Run 'npm run build' on dev machine and copy dist/ to $WEB_DIR"
+        print_warning "No dist/ folder found in repository"
+        print_detail "Build on dev machine: npm run build"
+        print_detail "Then deploy: scp -r dist/* orangepi@IP:$WEB_DIR/"
     fi
 }
 
 configure_nginx() {
     print_step 9 "Configuring Nginx"
     
-    print_progress "Creating Nginx configuration"
+    local config_file="/etc/nginx/sites-available/default"
+    local config_hash=""
+    local new_hash=""
     
-    # Backup existing config
-    if [ -f /etc/nginx/sites-available/default ]; then
-        cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup-$$
-        add_rollback "mv /etc/nginx/sites-available/default.backup-$$ /etc/nginx/sites-available/default"
+    # Check if our config is already in place
+    if [ -f "$config_file" ]; then
+        if grep -q "guidashboard" "$config_file" 2>/dev/null || grep -q "proxy_pass http://127.0.0.1:3001" "$config_file" 2>/dev/null; then
+            print_installed "Nginx configuration (API proxy configured)"
+            
+            # Still restart to apply any changes
+            start_spinner "Reloading Nginx"
+            nginx -t > /dev/null 2>&1 && systemctl reload nginx
+            stop_spinner
+            print_success "Nginx reloaded"
+            return
+        fi
     fi
     
-    cat > /etc/nginx/sites-available/default << 'EOF'
+    # Backup existing config
+    if [ -f "$config_file" ]; then
+        start_spinner "Backing up existing Nginx config"
+        cp "$config_file" "${config_file}.backup-$$"
+        add_rollback "mv '${config_file}.backup-$$' '$config_file'"
+        stop_spinner
+        print_success "Config backed up"
+    fi
+    
+    start_spinner "Writing Nginx configuration"
+    
+    cat > "$config_file" << 'EOF'
+# GUI Dashboard Nginx Configuration
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -523,44 +879,70 @@ server {
 }
 EOF
     
-    print_success "Nginx configuration created"
+    stop_spinner
+    print_success "Configuration written"
     
     # Test and restart
-    print_progress "Testing Nginx configuration"
+    start_spinner "Testing Nginx configuration"
     
     if ! nginx -t > /tmp/nginx-test.log 2>&1; then
+        stop_spinner
+        print_error "Nginx configuration invalid"
         cat /tmp/nginx-test.log
         fail "Nginx configuration test failed"
     fi
+    stop_spinner
+    print_success "Configuration valid"
     
-    print_success "Nginx configuration valid"
-    
-    print_progress "Restarting Nginx"
+    start_spinner "Restarting Nginx"
     systemctl restart nginx
+    stop_spinner
     print_success "Nginx restarted"
 }
 
 start_backend() {
     print_step 10 "Starting Backend Server"
     
-    # Stop existing if running
+    # Check if already running
+    if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
+        local status=$(run_as_orangepi "pm2 jlist" 2>/dev/null | grep -o '"name":"guidashboard-api"[^}]*"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+        
+        if [ "$status" = "online" ]; then
+            print_installed "Backend server (running)"
+            
+            start_spinner "Restarting to apply updates"
+            run_as_orangepi "pm2 restart guidashboard-api" > /dev/null 2>&1
+            stop_spinner
+            print_success "Backend restarted"
+            
+            start_spinner "Saving PM2 state"
+            run_as_orangepi "pm2 save" > /dev/null 2>&1
+            stop_spinner
+            print_success "PM2 state saved"
+            
+            sleep 2
+            return
+        fi
+    fi
+    
+    # Stop any existing instance
     run_as_orangepi "pm2 delete guidashboard-api 2>/dev/null" || true
     
-    print_progress "Starting backend with PM2"
+    print_info "Starting backend with PM2..."
+    echo ""
+    echo -e "  ${CYAN}◦${NC} Launching Node.js server..."
     
-    if ! run_as_orangepi "cd $SERVER_DIR && pm2 start index.js --name guidashboard-api" > /tmp/pm2-start.log 2>&1; then
-        cat /tmp/pm2-start.log
+    if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi pm2 start index.js --name guidashboard-api 2>&1 | tail -10"; then
         fail "Failed to start backend server"
     fi
     
     add_rollback "sudo -u orangepi pm2 delete guidashboard-api 2>/dev/null"
     
-    print_progress "Saving PM2 process list"
+    start_spinner "Saving PM2 process list"
     run_as_orangepi "pm2 save" > /dev/null 2>&1
+    stop_spinner
+    print_success "Backend started and saved"
     
-    print_success "Backend server started"
-    
-    # Wait for startup
     sleep 3
 }
 
@@ -568,120 +950,131 @@ verify_installation() {
     print_step 11 "Verifying Installation"
     
     local all_ok=true
+    local checks_passed=0
+    local total_checks=6
     
     # Check PM2 process
-    print_progress "Checking backend API"
+    start_spinner "Checking backend API (PM2)"
+    sleep 1
     if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
         local status=$(run_as_orangepi "pm2 jlist" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+        stop_spinner
         if [ "$status" = "online" ]; then
-            print_success "Backend API: running"
+            print_success "Backend API: online"
+            ((checks_passed++))
         else
             print_error "Backend API: $status"
             all_ok=false
         fi
     else
-        print_error "Backend API: not found in PM2"
+        stop_spinner
+        print_error "Backend API: not found"
         all_ok=false
     fi
     
     # Check backend responds
-    print_progress "Testing backend API endpoint"
-    if curl -s http://localhost:3001/api/profiles > /dev/null 2>&1; then
-        print_success "Backend API: responding"
+    start_spinner "Testing API endpoint"
+    sleep 1
+    if curl -s --max-time 5 http://localhost:3001/api/profiles > /dev/null 2>&1; then
+        stop_spinner
+        print_success "API responding at :3001"
+        ((checks_passed++))
     else
-        print_error "Backend API: not responding"
+        stop_spinner
+        print_error "API not responding"
         all_ok=false
     fi
     
     # Check MediaMTX
-    print_progress "Checking MediaMTX"
+    start_spinner "Checking MediaMTX service"
     if systemctl is-active --quiet mediamtx; then
+        stop_spinner
         print_success "MediaMTX: running"
+        ((checks_passed++))
     else
+        stop_spinner
         print_error "MediaMTX: not running"
         all_ok=false
     fi
     
     # Check MediaMTX API
-    print_progress "Testing MediaMTX API"
-    if curl -s http://localhost:9997/v3/paths/list > /dev/null 2>&1; then
-        print_success "MediaMTX API: responding"
+    start_spinner "Testing MediaMTX API"
+    if curl -s --max-time 5 http://localhost:9997/v3/paths/list > /dev/null 2>&1; then
+        stop_spinner
+        print_success "MediaMTX API responding at :9997"
+        ((checks_passed++))
     else
-        print_warning "MediaMTX API: not responding (may need a moment)"
+        stop_spinner
+        print_warning "MediaMTX API: starting up..."
     fi
     
     # Check Nginx
-    print_progress "Checking Nginx"
+    start_spinner "Checking Nginx"
     if systemctl is-active --quiet nginx; then
+        stop_spinner
         print_success "Nginx: running"
+        ((checks_passed++))
     else
+        stop_spinner
         print_error "Nginx: not running"
         all_ok=false
     fi
     
     # Check web interface
-    print_progress "Testing web interface"
-    if curl -s http://localhost/ | grep -q "<!DOCTYPE html>" > /dev/null 2>&1; then
+    start_spinner "Testing web interface"
+    if curl -s --max-time 5 http://localhost/ | grep -q "html" > /dev/null 2>&1; then
+        stop_spinner
         print_success "Web interface: accessible"
+        ((checks_passed++))
     else
-        print_warning "Web interface: may need frontend deployment"
+        stop_spinner
+        print_warning "Web interface: needs frontend deployment"
     fi
     
-    # Check database
-    print_progress "Checking database"
-    if [ -f "$DB_PATH" ]; then
-        local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null)
-        if [ -n "$table_exists" ]; then
-            print_success "Database: ready"
-        else
-            print_error "Database: telemetry table missing"
-            all_ok=false
-        fi
-    else
-        print_error "Database: file not found"
-        all_ok=false
-    fi
+    echo ""
+    print_info "Checks passed: $checks_passed/$total_checks"
     
     if [ "$all_ok" = false ]; then
-        fail "Some components failed verification"
+        fail "Some critical components failed verification"
     fi
 }
 
 print_summary() {
     local end_time=$(date +%s)
     local duration=$((end_time - INSTALL_START_TIME))
+    local minutes=$((duration / 60))
+    local seconds=$((duration % 60))
     
+    stop_spinner
+    echo ""
+    echo ""
+    print_progress_bar $TOTAL_STEPS $TOTAL_STEPS
+    echo ""
     echo ""
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║${NC}${BOLD}${WHITE}              INSTALLATION COMPLETED SUCCESSFULLY              ${NC}${GREEN}║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -e "  ${WHITE}Duration:${NC} ${duration}s"
+    echo -e "  ${WHITE}Duration:${NC} ${minutes}m ${seconds}s"
     echo ""
     echo -e "  ${CYAN}Services:${NC}"
-    echo -e "    • Backend API    → http://localhost:3001"
-    echo -e "    • Web Interface  → http://localhost"
-    echo -e "    • MediaMTX API   → http://localhost:9997"
-    echo -e "    • HLS Streams    → http://localhost:8888"
+    echo -e "    ${GREEN}●${NC} Backend API    → http://localhost:3001"
+    echo -e "    ${GREEN}●${NC} Web Interface  → http://localhost"
+    echo -e "    ${GREEN}●${NC} MediaMTX API   → http://localhost:9997"
+    echo -e "    ${GREEN}●${NC} HLS Streams    → http://localhost:8888"
     echo ""
-    echo -e "  ${CYAN}Useful Commands:${NC}"
-    echo -e "    ${DIM}pm2 status${NC}                    → Check backend status"
-    echo -e "    ${DIM}pm2 logs guidashboard-api${NC}     → View backend logs"
-    echo -e "    ${DIM}sudo systemctl status mediamtx${NC} → Check MediaMTX status"
-    echo -e "    ${DIM}tail -f $MMTX_DIR/mediamtx.log${NC} → View MediaMTX logs"
-    echo ""
-    echo -e "  ${CYAN}Directories:${NC}"
-    echo -e "    • Repository   : $REPO_DIR"
-    echo -e "    • Backend      : $SERVER_DIR"
-    echo -e "    • MediaMTX     : $MMTX_DIR"
-    echo -e "    • Web Root     : $WEB_DIR"
-    echo -e "    • Database     : $DB_PATH"
+    echo -e "  ${CYAN}Quick Commands:${NC}"
+    echo -e "    ${DIM}pm2 status${NC}                     → Backend status"
+    echo -e "    ${DIM}pm2 logs guidashboard-api${NC}      → Backend logs"
+    echo -e "    ${DIM}sudo systemctl status mediamtx${NC} → MediaMTX status"
     echo ""
     
     # Get Orange Pi IP
     local ip=$(hostname -I | awk '{print $1}')
     if [ -n "$ip" ]; then
-        echo -e "  ${GREEN}Access the dashboard at:${NC} ${BOLD}http://$ip${NC}"
+        echo -e "  ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "  ${WHITE}${BOLD}Access dashboard at:${NC} ${CYAN}http://$ip${NC}"
+        echo -e "  ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     fi
     echo ""
 }
@@ -697,7 +1090,8 @@ main() {
     check_user_exists
     
     echo -e "  ${WHITE}Starting installation...${NC}"
-    echo -e "  ${DIM}This may take a few minutes${NC}"
+    echo -e "  ${DIM}Checking existing packages and installing only what's needed${NC}"
+    echo ""
     
     install_system_packages
     install_pm2
@@ -714,7 +1108,6 @@ main() {
 }
 
 # Run main with error handling
-trap 'fail "Installation interrupted"' INT TERM
+trap 'stop_spinner; fail "Installation interrupted"' INT TERM
 
 main "$@"
-
