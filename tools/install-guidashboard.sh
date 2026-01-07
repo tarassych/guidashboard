@@ -699,6 +699,50 @@ setup_database() {
         print_success "Database file created"
     fi
     
+    # Check if database is locked by another process
+    print_info "Checking database access..."
+    
+    local db_locked=false
+    if ! sqlite3 "$DB_PATH" "SELECT 1;" > /dev/null 2>&1; then
+        db_locked=true
+        print_warning "Database is locked by another process"
+        
+        # Find what's using it
+        local locking_procs=$(lsof "$DB_PATH" 2>/dev/null | tail -n +2 | awk '{print $1, $2}' | sort -u)
+        if [ -n "$locking_procs" ]; then
+            print_info "Processes using database:"
+            echo "$locking_procs" | while read -r proc; do
+                print_detail "$proc"
+            done
+        fi
+        
+        # Try to stop common culprits
+        print_info "Attempting to free database..."
+        
+        # Stop PM2 managed processes
+        if command -v pm2 &>/dev/null; then
+            run_as_orangepi "pm2 stop all" > /dev/null 2>&1 || true
+            print_detail "Stopped PM2 processes"
+        fi
+        
+        # Wait a moment for locks to release
+        sleep 2
+        
+        # Check again
+        if ! sqlite3 "$DB_PATH" "SELECT 1;" > /dev/null 2>&1; then
+            print_warning "Database still locked. Waiting 5 seconds..."
+            sleep 5
+            
+            if ! sqlite3 "$DB_PATH" "SELECT 1;" > /dev/null 2>&1; then
+                print_warning "Database remains locked - skipping schema changes"
+                print_detail "Indexes will be created on next restart when DB is free"
+                return 0
+            fi
+        fi
+        
+        print_success "Database lock released"
+    fi
+    
     # Check if table exists
     local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null)
     
@@ -706,7 +750,7 @@ setup_database() {
         print_installed "telemetry table"
     else
         start_spinner "Creating telemetry table"
-        sqlite3 "$DB_PATH" <<'EOSQL'
+        if sqlite3 "$DB_PATH" <<'EOSQL' 2>/dev/null
 CREATE TABLE IF NOT EXISTS telemetry (
     ID        INTEGER PRIMARY KEY AUTOINCREMENT,
     drone_id  INTEGER NOT NULL,
@@ -715,26 +759,44 @@ CREATE TABLE IF NOT EXISTS telemetry (
     active    INTEGER NOT NULL DEFAULT 0
 );
 EOSQL
-        stop_spinner
-        print_success "Telemetry table created"
+        then
+            stop_spinner
+            print_success "Telemetry table created"
+        else
+            stop_spinner
+            print_warning "Could not create table (database may be locked)"
+        fi
     fi
     
     # Check and create indexes (always idempotent)
-    start_spinner "Verifying database indexes"
+    print_info "Creating/verifying indexes..."
     
-    sqlite3 "$DB_PATH" <<'EOSQL'
-CREATE INDEX IF NOT EXISTS idx_telemetry_drone_id ON telemetry(drone_id);
-CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry(timestamp);
-CREATE INDEX IF NOT EXISTS idx_telemetry_active ON telemetry(active);
-EOSQL
+    local index_errors=0
+    
+    if ! sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_drone_id ON telemetry(drone_id);" 2>/dev/null; then
+        ((index_errors++))
+    fi
+    
+    if ! sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry(timestamp);" 2>/dev/null; then
+        ((index_errors++))
+    fi
+    
+    if ! sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_active ON telemetry(active);" 2>/dev/null; then
+        ((index_errors++))
+    fi
     
     chown orangepi:orangepi "$DB_PATH"* 2>/dev/null || true
-    stop_spinner
-    print_success "Database indexes verified"
+    
+    if [ $index_errors -eq 0 ]; then
+        print_success "Database indexes verified"
+    else
+        print_warning "Some indexes could not be created (database busy)"
+        print_detail "They will be created automatically on next run"
+    fi
     
     # Show stats
-    local row_count=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM telemetry;" 2>/dev/null || echo "0")
-    local index_count=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -w)
+    local row_count=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM telemetry;" 2>/dev/null || echo "?")
+    local index_count=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -w || echo "?")
     print_detail "Rows: $row_count | Indexes: $index_count"
 }
 
