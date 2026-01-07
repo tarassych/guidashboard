@@ -80,9 +80,44 @@ function App() {
   
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
+  const [isActive, setIsActive] = useState(false) // Whether this drone is actively controlled
   
   // Theme management - reacts to telemetry data
   const { currentTheme } = useTheme(latestTelemetryData)
+  
+  // Poll active status for this drone
+  useEffect(() => {
+    let isMounted = true
+    let controller = new AbortController()
+    
+    const fetchActiveStatus = async () => {
+      controller.abort()
+      controller = new AbortController()
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/drones/active`, { signal: controller.signal })
+        if (!response.ok) throw new Error('Failed to fetch')
+        
+        const data = await response.json()
+        if (!isMounted) return
+        
+        if (data.success && data.activeDrones) {
+          setIsActive(data.activeDrones[droneId]?.active === true)
+        }
+      } catch (error) {
+        // Silently ignore
+      }
+    }
+    
+    fetchActiveStatus()
+    const interval = setInterval(fetchActiveStatus, 500)
+    
+    return () => {
+      isMounted = false
+      controller.abort()
+      clearInterval(interval)
+    }
+  }, [droneId])
 
   // Handle telemetry updates from TelemetryLog
   const handleTelemetryUpdate = useCallback((data) => {
@@ -161,6 +196,17 @@ function App() {
             <span className={`status-mode ${telemetry.connected ? telemetry.md_str.toLowerCase().replace(/\s+/g, '-') : 'offline'}`}>
               {telemetry.connected ? telemetry.md_str : 'OFFLINE'}
             </span>
+            {isActive && (
+              <span className="status-active">
+                <svg viewBox="0 0 40 40" className="active-joystick-icon">
+                  <circle cx="20" cy="20" r="14" className="joystick-base" />
+                  <line x1="20" y1="9" x2="20" y2="31" className="joystick-cross" />
+                  <line x1="9" y1="20" x2="31" y2="20" className="joystick-cross" />
+                  <circle cx="20" cy="20" r="5" className="joystick-stick" />
+                </svg>
+                ACTIVE
+              </span>
+            )}
           </div>
 
           <div className="hud-right-indicators">

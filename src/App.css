@@ -148,6 +148,67 @@ body {
   letter-spacing: 1px;
 }
 
+.status-active {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--theme-accent-primary, #00ff88);
+  border-radius: 3px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--theme-accent-primary, #00ff88);
+  background: rgba(0, 255, 136, 0.15);
+  text-shadow: 0 0 8px var(--theme-accent-primary, #00ff88);
+  animation: active-badge-pulse 1.5s ease-in-out infinite;
+}
+
+.active-joystick-icon {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 0 3px var(--theme-accent-primary, #00ff88));
+}
+
+.active-joystick-icon .joystick-base {
+  fill: rgba(0, 0, 0, 0.4);
+  stroke: var(--theme-accent-primary, #00ff88);
+  stroke-width: 1.5;
+}
+
+.active-joystick-icon .joystick-cross {
+  stroke: var(--theme-accent-primary, #00ff88);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.active-joystick-icon .joystick-stick {
+  fill: var(--theme-accent-primary, #00ff88);
+  animation: joystick-move-small 2s ease-in-out infinite;
+}
+
+@keyframes joystick-move-small {
+  0%, 100% { transform: translate(0, 0); }
+  12.5% { transform: translate(3px, 0); }
+  25% { transform: translate(3px, 3px); }
+  37.5% { transform: translate(0, 3px); }
+  50% { transform: translate(-3px, 3px); }
+  62.5% { transform: translate(-3px, 0); }
+  75% { transform: translate(-3px, -3px); }
+  87.5% { transform: translate(0, -3px); }
+}
+
+@keyframes active-badge-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 5px var(--theme-accent-primary, #00ff88);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 15px var(--theme-accent-primary, #00ff88);
+  }
+}
+
 .status-fs {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.65rem;
