@@ -23,7 +23,7 @@ REPO_URL="https://github.com/tarassych/guidashboard.git"
 MEDIAMTX_VERSION="v1.9.3"
 MEDIAMTX_VERSION_NUM="1.9.3"
 MEDIAMTX_ARCH="linux_arm64v8"
-MIN_NODE_VERSION=18
+MIN_NODE_VERSION=20
 
 # Directories
 HOME_DIR="/home/orangepi"
