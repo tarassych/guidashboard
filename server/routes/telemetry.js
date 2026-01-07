@@ -1,11 +1,56 @@
 /**
  * Telemetry API routes
  * - GET /api/telemetry - Get telemetry records
+ * - GET /api/drones/active - Get active drone status
  */
 import express from 'express';
 import { getDb } from '../lib/database.js';
 
 const router = express.Router();
+
+/**
+ * GET /api/drones/active
+ * Get the current active status for all drones
+ * Returns which drones have active=1 in their most recent telemetry
+ */
+router.get('/drones/active', (req, res) => {
+  const db = getDb();
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+
+  try {
+    // Get the most recent active status for each drone
+    // Using a subquery to get the latest record per drone
+    const stmt = db.prepare(`
+      SELECT t1.drone_id, t1.active, t1.timestamp
+      FROM telemetry t1
+      INNER JOIN (
+        SELECT drone_id, MAX(ID) as max_id
+        FROM telemetry
+        GROUP BY drone_id
+      ) t2 ON t1.drone_id = t2.drone_id AND t1.ID = t2.max_id
+    `);
+    const rows = stmt.all();
+
+    const activeDrones = {};
+    rows.forEach(row => {
+      activeDrones[row.drone_id] = {
+        active: row.active === 1,
+        lastUpdate: row.timestamp
+      };
+    });
+
+    res.json({
+      success: true,
+      activeDrones
+    });
+
+  } catch (error) {
+    console.error('Query error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 /**
  * GET /api/telemetry
@@ -101,4 +146,5 @@ router.get('/telemetry', (req, res) => {
 });
 
 export default router;
+
 

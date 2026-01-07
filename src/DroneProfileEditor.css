@@ -100,6 +100,42 @@
   animation: pulse-badge 1s ease-in-out infinite;
 }
 
+/* MediaMTX status dot */
+.mmtx-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.mmtx-status-dot.running {
+  background-color: #00ff88;
+  box-shadow: 0 0 6px #00ff88;
+}
+
+.mmtx-status-dot.stopped {
+  background-color: #ff4444;
+  box-shadow: 0 0 6px #ff4444;
+}
+
+.mmtx-status-dot.restarting {
+  background-color: #ffaa00;
+  box-shadow: 0 0 6px #ffaa00;
+  animation: mmtx-pulse 0.8s ease-in-out infinite;
+}
+
+.mmtx-status-dot.unknown {
+  background-color: #666;
+  box-shadow: none;
+}
+
+@keyframes mmtx-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 @keyframes pulse-badge {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }

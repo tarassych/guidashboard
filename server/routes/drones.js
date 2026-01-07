@@ -123,3 +123,4 @@ router.get('/drone/:droneId/has-telemetry', (req, res) => {
 
 export default router;
 
+

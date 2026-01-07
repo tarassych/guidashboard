@@ -846,6 +846,9 @@ function DroneProfileEditor() {
   // Camera scanner modal state
   const [cameraScannerDrone, setCameraScannerDrone] = useState(null) // { droneId, droneIp }
   
+  // MediaMTX status for tab indicator
+  const [mmtxStatus, setMmtxStatus] = useState('unknown') // 'running' | 'stopped' | 'restarting' | 'unknown'
+  
   // Auto-scroll terminal to bottom when logs change
   useEffect(() => {
     if (terminalRef.current) {
@@ -882,6 +885,37 @@ function DroneProfileEditor() {
     }
     
     fetchData()
+  }, [])
+  
+  // Poll MediaMTX status for tab indicator
+  useEffect(() => {
+    let isMounted = true
+    
+    const fetchMmtxStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/mediamtx/status`)
+        if (!response.ok) throw new Error('Failed to fetch')
+        
+        const data = await response.json()
+        if (!isMounted) return
+        
+        if (data.success) {
+          setMmtxStatus(data.running ? 'running' : 'stopped')
+        } else {
+          setMmtxStatus('stopped')
+        }
+      } catch (error) {
+        if (isMounted) setMmtxStatus('unknown')
+      }
+    }
+    
+    fetchMmtxStatus()
+    const interval = setInterval(fetchMmtxStatus, 3000) // Poll every 3 seconds
+    
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [])
   
   const handleSaveProfile = async (droneId, profileData) => {
@@ -1236,6 +1270,7 @@ function DroneProfileEditor() {
           className={`tab-btn ${activeTab === 'cameras' ? 'active' : ''}`}
           onClick={() => setActiveTab('cameras')}
         >
+          <span className={`mmtx-status-dot ${mmtxStatus}`} title={`MediaMTX: ${mmtxStatus}`}></span>
           MMTX Cameras
         </button>
       </nav>

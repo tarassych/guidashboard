@@ -6,8 +6,25 @@ import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
 
+// Animated Joystick Icon for active drone
+function JoystickIcon() {
+  return (
+    <div className="joystick-icon">
+      <svg viewBox="0 0 40 40" className="joystick-svg">
+        {/* Base circle */}
+        <circle cx="20" cy="20" r="16" className="joystick-base" />
+        {/* Crosshair lines */}
+        <line x1="20" y1="8" x2="20" y2="32" className="joystick-cross" />
+        <line x1="8" y1="20" x2="32" y2="20" className="joystick-cross" />
+        {/* Animated stick */}
+        <circle cx="20" cy="20" r="6" className="joystick-stick" />
+      </svg>
+    </div>
+  )
+}
+
 // Mini drone preview card with live telemetry and camera feed
-function DroneCard({ droneId, profile, telemetry, onClick }) {
+function DroneCard({ droneId, profile, telemetry, isActive, onClick }) {
   const isOnline = telemetry?.connected
   // Use front camera for dashboard preview
   const previewCameraUrl = profile?.frontCameraUrl
@@ -16,7 +33,7 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
   
   return (
     <div 
-      className={`drone-card ${isOnline ? 'online' : 'offline'}`}
+      className={`drone-card ${isOnline ? 'online' : 'offline'} ${isActive ? 'active-control' : 'inactive-control'}`}
       onClick={onClick}
     >
       {/* Title bar */}
@@ -59,6 +76,9 @@ function DroneCard({ droneId, profile, telemetry, onClick }) {
         <div className="preview-overlay">
           <span className="preview-hint">▶ FULL SCREEN</span>
         </div>
+        
+        {/* Joystick icon for active drone */}
+        {isActive && <JoystickIcon />}
       </div>
     </div>
   )
@@ -92,6 +112,7 @@ function Dashboard() {
   const [droneIds, setDroneIds] = useState([])
   const [detectedDrones, setDetectedDrones] = useState([])
   const [droneTelemetry, setDroneTelemetry] = useState({})
+  const [activeDrones, setActiveDrones] = useState({}) // Track which drones are actively controlled
   const [loading, setLoading] = useState(true)
   const lastIdsRef = useRef({}) // Track last ID per drone
   
@@ -205,6 +226,40 @@ function Dashboard() {
     }
   }, [droneIds])
   
+  // Poll active drone status
+  useEffect(() => {
+    let isMounted = true
+    let controller = new AbortController()
+    
+    const fetchActiveStatus = async () => {
+      controller.abort()
+      controller = new AbortController()
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/drones/active`, { signal: controller.signal })
+        if (!response.ok) throw new Error('Failed to fetch')
+        
+        const data = await response.json()
+        if (!isMounted) return
+        
+        if (data.success) {
+          setActiveDrones(data.activeDrones)
+        }
+      } catch (error) {
+        // Silently ignore errors for active status
+      }
+    }
+    
+    fetchActiveStatus()
+    const interval = setInterval(fetchActiveStatus, 300) // Poll frequently for responsive UI
+    
+    return () => {
+      isMounted = false
+      controller.abort()
+      clearInterval(interval)
+    }
+  }, [])
+  
   const handleDroneClick = useCallback((droneId) => {
     navigate(`/drone/${droneId}`)
   }, [navigate])
@@ -257,6 +312,7 @@ function Dashboard() {
               droneId={droneId}
               profile={profiles[droneId]}
               telemetry={droneTelemetry[droneId]}
+              isActive={activeDrones[droneId]?.active === true}
               onClick={() => handleDroneClick(droneId)}
             />
           ))
