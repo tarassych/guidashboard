@@ -385,7 +385,7 @@ install_system_packages() {
         print_info "curl: not found, will install"
     fi
     
-    # nodejs - check version
+    # nodejs - check version (MUST be v20+ for better-sqlite3)
     local need_node=false
     if cmd_exists node; then
         local node_ver=$(node --version | sed 's/v//')
@@ -393,104 +393,86 @@ install_system_packages() {
         if [ "$node_major" -ge "$MIN_NODE_VERSION" ]; then
             print_installed "nodejs v$node_ver"
         else
-            print_warning "nodejs v$node_ver found (need v$MIN_NODE_VERSION+, will upgrade)"
+            print_warning "nodejs v$node_ver found (REQUIRES v$MIN_NODE_VERSION+, will upgrade)"
             need_node=true
         fi
     else
-        print_info "nodejs: not found, will install"
+        print_info "nodejs: not found, will install v$MIN_NODE_VERSION"
         need_node=true
     fi
     
-    # npm (comes with node usually)
+    # npm version will be updated with node
     if cmd_exists npm; then
         local ver=$(npm --version)
-        print_installed "npm v$ver"
-    else
-        if [ "$need_node" = false ]; then
-            packages_to_install+=("npm")
-            print_info "npm: not found, will install"
+        if [ "$need_node" = true ]; then
+            print_info "npm v$ver (will be upgraded with Node.js)"
+        else
+            print_installed "npm v$ver"
         fi
+    else
+        print_info "npm: will be installed with Node.js"
     fi
     
     echo ""
     
-    # Install missing packages via apt
+    # Install missing packages via apt (excluding nodejs - handled separately)
     if [ ${#packages_to_install[@]} -gt 0 ]; then
         print_info "Installing: ${packages_to_install[*]}"
-        print_info "This may take 1-2 minutes..."
         echo ""
+        echo -e "  ${CYAN}>${NC} Running apt install..."
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
         
-        local apt_start=$(date +%s)
-        local logfile="/tmp/apt-install-$$.log"
-        
-        # Start apt in background
-        apt install -y ${packages_to_install[*]} > "$logfile" 2>&1 &
-        local apt_pid=$!
-        
-        echo -ne "  ${CYAN}>${NC} apt install running"
-        
-        while kill -0 $apt_pid 2>/dev/null; do
-            sleep 2
-            local elapsed=$(( $(date +%s) - apt_start ))
-            printf "\r  ${CYAN}>${NC} apt install running... [%02ds] " "$elapsed"
-            
-            # Show what's being processed
-            local current=$(tail -1 "$logfile" 2>/dev/null | grep -oE '(Unpacking|Setting up|Processing) [^ ]+' | head -1)
-            if [ -n "$current" ]; then
-                printf "${DIM}%-30s${NC}" "$current"
-            fi
+        apt install -y ${packages_to_install[*]} 2>&1 | while IFS= read -r line; do
+            echo -e "    ${GRAY}|${NC} $line"
         done
+        local apt_exit=${PIPESTATUS[0]}
         
-        wait $apt_pid
-        local apt_exit=$?
-        
-        local apt_duration=$(( $(date +%s) - apt_start ))
-        echo ""
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
         
         if [ $apt_exit -eq 0 ]; then
-            print_success "Packages installed (${apt_duration}s)"
+            print_success "Packages installed"
         else
-            echo -e "  ${RED}apt install failed:${NC}"
-            tail -15 "$logfile" | while IFS= read -r line; do
-                echo -e "    ${GRAY}|${NC} $line"
-            done
-            rm -f "$logfile"
             fail "Failed to install packages"
         fi
-        
-        rm -f "$logfile"
     else
         print_success "All apt packages already installed"
     fi
     
-    # Handle Node.js upgrade if needed
+    # Handle Node.js installation/upgrade (REQUIRED for better-sqlite3)
     if [ "$need_node" = true ]; then
         echo ""
-        print_info "Setting up Node.js v20.x from NodeSource..."
-        print_info "This requires downloading and running setup script..."
+        echo -e "  ${YELLOW}[!]${NC} ${WHITE}Node.js v$MIN_NODE_VERSION+ is REQUIRED for better-sqlite3${NC}"
+        print_info "Installing Node.js v20.x from NodeSource..."
         echo ""
         
-        start_spinner "Adding NodeSource repository"
-        if ! curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /tmp/nodesource.log 2>&1; then
-            stop_spinner
-            print_error "Failed to setup NodeSource repository"
-            tail -10 /tmp/nodesource.log
-            fail "NodeSource setup failed"
-        fi
-        stop_spinner
-        print_success "NodeSource repository added"
+        echo -e "  ${CYAN}>${NC} Adding NodeSource repository..."
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
         
-        start_spinner "Installing Node.js (may take a minute)"
-        if ! apt install -y nodejs > /tmp/nodejs-install.log 2>&1; then
-            stop_spinner
-            print_error "Failed to install Node.js"
-            tail -10 /tmp/nodejs-install.log
-            fail "Node.js installation failed"
-        fi
-        stop_spinner
+        curl -fsSL https://deb.nodesource.com/setup_20.x 2>&1 | bash - 2>&1 | while IFS= read -r line; do
+            echo -e "    ${GRAY}|${NC} $line"
+        done
         
-        local new_ver=$(node --version)
-        print_success "Node.js $new_ver installed"
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+        
+        echo ""
+        echo -e "  ${CYAN}>${NC} Installing Node.js v20..."
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+        
+        apt install -y nodejs 2>&1 | while IFS= read -r line; do
+            echo -e "    ${GRAY}|${NC} $line"
+        done
+        local node_exit=${PIPESTATUS[0]}
+        
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+        
+        if [ $node_exit -eq 0 ]; then
+            local new_ver=$(node --version)
+            local new_npm=$(npm --version)
+            print_success "Node.js $new_ver installed"
+            print_success "npm v$new_npm installed"
+        else
+            fail "Failed to install Node.js"
+        fi
     fi
 }
 
