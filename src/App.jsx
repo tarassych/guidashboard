@@ -283,9 +283,6 @@ function App() {
               <circle cx="31" cy="23" r="2" className="joystick-stick-right" />
               {/* Indicator */}
               <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
-              {/* Hands */}
-              <path className="hand" d="M 6 22 Q 4 24, 6 28 L 8 32 Q 10 34, 12 32 L 12 22 Q 10 20, 6 22" />
-              <path className="hand" d="M 44 22 Q 46 24, 44 28 L 42 32 Q 40 34, 38 32 L 38 22 Q 40 20, 44 22" />
             </svg>
           </div>
         )}
