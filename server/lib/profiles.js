@@ -1,7 +1,12 @@
 /**
  * Drone profiles management
- * Profiles are stored as an array where array index + 1 = drone number
- * e.g., drones[0] = drone #1, drones[1] = drone #2
+ * 
+ * IMPORTANT: There is only ONE drone-profiles.json file located at:
+ *   server/drone-profiles.json (in repo)
+ *   /home/orangepi/guidashboard/drone-profiles.json (when deployed)
+ * 
+ * Format: { "drones": [ { droneId, name, ... }, ... ] }
+ * Array index + 1 = drone display number (drones[0] = #1, drones[1] = #2)
  */
 import fs from 'fs';
 import path from 'path';
@@ -10,7 +15,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Profiles file path (relative to server directory)
+// Single profiles file - located in server root directory
+// When deployed: /home/orangepi/guidashboard/drone-profiles.json
 const profilesPath = path.join(__dirname, '..', 'drone-profiles.json');
 
 /**
@@ -25,6 +31,7 @@ export function loadProfiles() {
       
       // Handle migration from old object format to array format
       if (parsed.drones && !Array.isArray(parsed.drones)) {
+        console.log('Migrating drone-profiles.json from object to array format...');
         // Convert object to array (sorted by droneId)
         const dronesObj = parsed.drones;
         const dronesArray = Object.values(dronesObj).sort((a, b) => {
@@ -32,7 +39,15 @@ export function loadProfiles() {
           const idB = parseInt(b.droneId) || 0;
           return idA - idB;
         });
-        return { drones: dronesArray };
+        const migrated = { drones: dronesArray };
+        // Save the migrated format back to disk
+        try {
+          fs.writeFileSync(profilesPath, JSON.stringify(migrated, null, 2));
+          console.log(`Migrated ${dronesArray.length} drones to array format`);
+        } catch (e) {
+          console.error('Failed to save migrated profiles:', e.message);
+        }
+        return migrated;
       }
       
       // Ensure drones is an array

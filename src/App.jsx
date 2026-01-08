@@ -118,6 +118,24 @@ function App() {
       clearInterval(interval)
     }
   }, [droneId])
+  
+  // Check for stale telemetry data - mark offline if no data in 1 minute
+  useEffect(() => {
+    const ONLINE_TIMEOUT_MS = 60000 // 1 minute
+    
+    const checkStale = () => {
+      setTelemetry(prev => {
+        if (prev.connected && prev.timestamp && Date.now() - prev.timestamp > ONLINE_TIMEOUT_MS) {
+          return { ...prev, connected: false }
+        }
+        return prev
+      })
+    }
+    
+    // Check every 5 seconds
+    const interval = setInterval(checkStale, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Handle telemetry updates from TelemetryLog
   const handleTelemetryUpdate = useCallback((data) => {
@@ -172,7 +190,9 @@ function App() {
   // Get camera URLs from profile or use defaults
   const frontCameraUrl = droneProfile?.frontCameraUrl || '/nginxhls/cam1/index.m3u8'
   const rearCameraUrl = droneProfile?.rearCameraUrl || '/nginxhls/cam2/index.m3u8'
-  const droneName = droneProfile?.name || `Drone ${droneId}`
+  // Drone number is array index + 1
+  const droneNumber = (droneProfile?._index ?? 0) + 1
+  const droneName = droneProfile?.name || `Drone #${droneNumber}`
 
   return (
     <div className="hud-container">

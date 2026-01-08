@@ -145,25 +145,46 @@
   background: #ffcc00;
 }
 
-/* Grid - Rectangle cards */
+/* Grid - Fixed 6 slots layout (3x2 on desktop, 2x3 on tablet, 1x6 on mobile) */
 .dashboard-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  grid-auto-rows: min-content;
-  gap: 1.5rem;
-  padding: 2rem;
-  align-content: start;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  min-height: 0;
+}
+
+/* Tablet: 2 columns x 3 rows */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+}
+
+/* Mobile: 1 column x 6 rows */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(6, auto);
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
 }
 
 /* Drone Card - Compact rectangle */
 .drone-card {
+  display: flex;
+  flex-direction: column;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
+  min-height: 0;
 }
 
 .drone-card:hover {
@@ -238,6 +259,11 @@
   margin-right: 0.5rem;
 }
 
+.drone-title .drone-num {
+  opacity: 0.7;
+  font-weight: 400;
+}
+
 .drone-status {
   font-size: 0.7rem;
   letter-spacing: 0.05em;
@@ -258,7 +284,8 @@
 /* Video section with OSD overlay */
 .drone-card-video {
   position: relative;
-  height: 200px;
+  flex: 1;
+  min-height: 150px;
   background: linear-gradient(135deg, #0a0a0a 0%, #101018 100%);
   overflow: hidden;
 }
@@ -408,7 +435,57 @@
   opacity: 0.3;
 }
 
-/* No drones state */
+/* Empty slot state */
+.drone-card.empty-slot {
+  opacity: 0.35;
+  cursor: default;
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.drone-card.empty-slot:hover {
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.drone-card.empty-slot .drone-card-header {
+  opacity: 0.5;
+}
+
+.drone-card.empty-slot .drone-title {
+  color: #666;
+}
+
+.empty-slot-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.empty-slot-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.15);
+  text-shadow: none;
+}
+
+.empty-slot-hint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.drone-card.empty-slot .drone-number-overlay {
+  display: none;
+}
+
+/* No drones state - now unused but keep for reference */
 .no-drones {
   grid-column: 1 / -1;
   display: flex;

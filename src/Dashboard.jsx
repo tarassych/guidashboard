@@ -53,7 +53,9 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
     >
       {/* Title bar */}
       <div className="drone-card-header">
-        <span className="drone-title">{displayName && <span className="drone-name">{displayName}</span>} #{droneId}</span>
+        <span className="drone-title">
+          {displayName || `Drone #${droneNumber}`}
+        </span>
         <span className={`drone-status ${isOnline ? 'online' : 'offline'}`}>
           {isOnline ? '● ONLINE' : '○ OFFLINE'}
         </span>
@@ -99,6 +101,26 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
         
         {/* Joystick icon for active drone */}
         {isActive && <JoystickIcon />}
+      </div>
+    </div>
+  )
+}
+
+// Empty slot placeholder for unfilled drone positions
+function EmptySlot({ slotNumber }) {
+  return (
+    <div className="drone-card empty-slot">
+      <div className="drone-card-header">
+        <span className="drone-title">Empty Slot</span>
+      </div>
+      <div className="drone-card-video">
+        <div className="empty-slot-content">
+          <span className="empty-slot-number">#{slotNumber}</span>
+          <span className="empty-slot-hint">No drone assigned</span>
+        </div>
+        <div className="drone-number-overlay">
+          <span className="drone-number">#{slotNumber}</span>
+        </div>
       </div>
     </div>
   )
@@ -171,6 +193,9 @@ function Dashboard() {
   useEffect(() => {
     if (droneIds.length === 0) return
     
+    // Online timeout: 1 minute (60000ms) - drone is offline if no data received in this time
+    const ONLINE_TIMEOUT_MS = 60000
+    
     const controllers = {}
     let isMounted = true
     
@@ -195,7 +220,7 @@ function Dashboard() {
           // Process all records to build merged state
           setDroneTelemetry(prev => {
             const currentState = prev[droneId] || { connected: false }
-            const updated = { ...currentState, connected: true, timestamp: Date.now() }
+            const updated = { ...currentState, connected: true, lastDataTime: Date.now() }
             
             // Process oldest to newest
             data.records.slice().reverse().forEach(record => {
@@ -223,12 +248,27 @@ function Dashboard() {
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
-          setDroneTelemetry(prev => ({
-            ...prev,
-            [droneId]: { ...prev[droneId], connected: false }
-          }))
+          // On error, check if we should mark offline based on last data time
+          setDroneTelemetry(prev => {
+            const current = prev[droneId] || {}
+            const lastData = current.lastDataTime || 0
+            const isStale = Date.now() - lastData > ONLINE_TIMEOUT_MS
+            return {
+              ...prev,
+              [droneId]: { ...current, connected: !isStale }
+            }
+          })
         }
       }
+      
+      // Also check for stale data (no new data in 1 minute = offline)
+      setDroneTelemetry(prev => {
+        const current = prev[droneId] || {}
+        if (current.lastDataTime && Date.now() - current.lastDataTime > ONLINE_TIMEOUT_MS) {
+          return { ...prev, [droneId]: { ...current, connected: false } }
+        }
+        return prev
+      })
     }
     
     // Initial fetch for all drones
@@ -318,31 +358,31 @@ function Dashboard() {
       )}
       
       <main className="dashboard-grid">
-        {connectedDroneIds.length === 0 ? (
-          <div className="no-drones">
-            <span className="no-drones-icon">◇</span>
-            <h2>No Connected Drones</h2>
-            <p>Add drone profiles to see them here.</p>
-            <Link to="/settings" className="add-drone-btn">⚙ Settings</Link>
-          </div>
-        ) : (
-          connectedDroneIds.map(droneId => {
-            const profile = profiles[droneId]
-            // droneNumber is array index + 1 (index 0 = #1)
-            const droneNumber = (profile?._index ?? 0) + 1
+        {/* Always render exactly 6 slots */}
+        {[1, 2, 3, 4, 5, 6].map(slotNumber => {
+          // Find drone at this slot position (by _index)
+          const droneEntry = Object.entries(profiles).find(
+            ([, profile]) => (profile?._index ?? -1) + 1 === slotNumber
+          )
+          
+          if (droneEntry) {
+            const [droneId, profile] = droneEntry
             return (
               <DroneCard
-                key={droneId}
+                key={slotNumber}
                 droneId={droneId}
                 profile={profile}
                 telemetry={droneTelemetry[droneId]}
                 isActive={activeDrones[droneId]?.active === true}
-                droneNumber={droneNumber}
+                droneNumber={slotNumber}
                 onClick={() => handleDroneClick(droneId)}
               />
             )
-          })
-        )}
+          }
+          
+          // Empty slot
+          return <EmptySlot key={slotNumber} slotNumber={slotNumber} />
+        })}
       </main>
       
       <footer className="dashboard-footer">

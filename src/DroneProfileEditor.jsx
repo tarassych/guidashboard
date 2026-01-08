@@ -1323,7 +1323,6 @@ function DroneProfileEditor() {
                       <div className="profile-card-header">
                         <span className="profile-drone-number">#{droneNumber}</span>
                         {profile.name && <span className="profile-name">{profile.name}</span>}
-                        <span className="profile-id">ID: {droneId}</span>
                         <button 
                           className="edit-btn"
                           onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
@@ -1338,6 +1337,10 @@ function DroneProfileEditor() {
                           <span className="detail-value">
                             {profile.ipAddress || <em>Not set</em>}
                           </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Drone ID:</span>
+                          <span className="detail-value drone-id-value">{droneId}</span>
                         </div>
                         <div className="detail-row camera-row">
                           <span className="detail-label">Front Camera:</span>

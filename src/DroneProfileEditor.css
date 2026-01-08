@@ -311,15 +311,21 @@ section h2 {
   letter-spacing: -0.02em;
 }
 
-.profile-id {
-  font-size: 0.75rem;
-  opacity: 0.4;
-  font-family: 'JetBrains Mono', monospace;
-}
-
 .profile-name {
   flex: 1;
   font-weight: 600;
+}
+
+/* Push edit button to the right when no name */
+.profile-card-header .edit-btn {
+  margin-left: auto;
+}
+
+/* Drone ID in details section */
+.drone-id-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  opacity: 0.6;
 }
 
 .edit-btn {

@@ -11,7 +11,7 @@ const router = express.Router();
 
 /**
  * GET /api/drones
- * Get recently active drones from database (GPS telemetry within last 10 minutes)
+ * Get recently active drones from database (GPS telemetry within last 1 minute)
  */
 router.get('/drones', (req, res) => {
   const db = getDb();
@@ -20,9 +20,9 @@ router.get('/drones', (req, res) => {
   }
 
   try {
-    // Calculate cutoff time (10 minutes ago) as Unix milliseconds
+    // Calculate cutoff time (1 minute ago) as Unix milliseconds
     // Database stores timestamps as Unix milliseconds (e.g., 1767017842866)
-    const ACTIVE_THRESHOLD_MINUTES = 10;
+    const ACTIVE_THRESHOLD_MINUTES = 1;
     const cutoffTime = Date.now() - ACTIVE_THRESHOLD_MINUTES * 60 * 1000;
     
     // Load profiles to check which drones are configured

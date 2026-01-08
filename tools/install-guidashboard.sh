@@ -628,6 +628,13 @@ clone_repository() {
 setup_backend() {
     print_step 5 "Setting Up Backend Server"
     
+    # Backup existing drone-profiles.json before copying (to preserve paired drones)
+    local profiles_backup=""
+    if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
+        profiles_backup=$(cat "$SERVER_DIR/drone-profiles.json")
+        print_info "Backing up existing drone profiles..."
+    fi
+    
     # Copy server files
     if [ -d "$REPO_DIR/server" ]; then
         start_spinner "Copying server files to $SERVER_DIR"
@@ -639,20 +646,48 @@ setup_backend() {
         fail "Server directory not found in repository"
     fi
     
+    # Clean up any stray nested server/ directory (from previous bad deployments)
+    if [ -d "$SERVER_DIR/server" ]; then
+        print_warning "Removing stray nested server/ directory..."
+        rm -rf "$SERVER_DIR/server"
+        print_success "Cleaned up nested server/ directory"
+    fi
+    
     # Verify package.json exists
     if [ ! -f "$SERVER_DIR/package.json" ]; then
         fail "package.json not found in $SERVER_DIR"
     fi
     print_success "package.json found"
     
-    # Create drone-profiles.json if not exists (drones must be an array)
-    if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
-        # Check if drones is already an array (starts with [)
+    # Restore or create drone-profiles.json (drones must be an array)
+    # The ONLY profiles file is at $SERVER_DIR/drone-profiles.json
+    if [ -n "$profiles_backup" ]; then
+        # Restore the backed up profiles
+        echo "$profiles_backup" > "$SERVER_DIR/drone-profiles.json"
+        chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
+        
+        # Validate format
         if grep -q '"drones"\s*:\s*\[' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
-            print_installed "drone-profiles.json (preserved, array format)"
+            print_installed "drone-profiles.json (restored, array format)"
         elif grep -q '"drones"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
             # Has drones but as object - backend will auto-migrate on first load
             print_warning "drone-profiles.json has object format, will be migrated to array on first use"
+        else
+            print_warning "drone-profiles.json backup had wrong format, creating new..."
+            echo '{"drones":[]}' > "$SERVER_DIR/drone-profiles.json"
+            chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
+            print_success "Created new drone-profiles.json (array format)"
+        fi
+    elif [ -f "$SERVER_DIR/drone-profiles.json" ]; then
+        # Check format of the file copied from repo
+        if grep -q '"drones"\s*:\s*\[' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
+            # It's the example file from repo - create empty array instead
+            local drone_count=$(grep -c '"droneId"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null || echo "0")
+            if [ "$drone_count" -gt 0 ]; then
+                print_installed "drone-profiles.json (from repo, $drone_count drones)"
+            else
+                print_success "drone-profiles.json ready (array format)"
+            fi
         else
             print_warning "drone-profiles.json has wrong format, fixing..."
             echo '{"drones":[]}' > "$SERVER_DIR/drone-profiles.json"
