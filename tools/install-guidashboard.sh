@@ -385,6 +385,23 @@ install_system_packages() {
         print_info "curl: not found, will install"
     fi
     
+    # build-essential (needed to compile native Node.js modules like better-sqlite3)
+    if dpkg -s build-essential > /dev/null 2>&1; then
+        print_installed "build-essential"
+    else
+        packages_to_install+=("build-essential")
+        print_info "build-essential: not found, will install (needed for native modules)"
+    fi
+    
+    # python3 (needed by node-gyp for compiling native modules)
+    if cmd_exists python3; then
+        local ver=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+        print_installed "python3 v$ver"
+    else
+        packages_to_install+=("python3")
+        print_info "python3: not found, will install (needed for node-gyp)"
+    fi
+    
     # nodejs - check version (MUST be v20+ for better-sqlite3)
     local need_node=false
     if cmd_exists node; then
@@ -472,6 +489,19 @@ install_system_packages() {
             print_success "npm v$new_npm installed"
         else
             fail "Failed to install Node.js"
+        fi
+    fi
+    
+    # Ensure node-gyp is installed globally (needed to compile native modules)
+    if npm list -g node-gyp > /dev/null 2>&1; then
+        print_installed "node-gyp (global)"
+    else
+        print_info "Installing node-gyp globally (needed for native modules)..."
+        if npm install -g node-gyp > /dev/null 2>&1; then
+            print_success "node-gyp installed"
+        else
+            print_warning "Could not install node-gyp globally"
+            print_detail "Native modules may fail to compile"
         fi
     fi
 }
