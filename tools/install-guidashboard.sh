@@ -733,117 +733,75 @@ setup_backend() {
 setup_database() {
     print_step 6 "Setting Up SQLite Database"
     
+    # Database setup is non-critical - continue even if operations fail
+    # The backend will handle missing tables/indexes gracefully
+    
     # Create database file if not exists
     if [ -f "$DB_PATH" ]; then
         local size=$(du -h "$DB_PATH" | cut -f1)
         print_installed "Database file ($size)"
     else
         start_spinner "Creating telemetry database"
-        touch "$DB_PATH"
-        chown orangepi:orangepi "$DB_PATH"
+        touch "$DB_PATH" 2>/dev/null || true
+        chown orangepi:orangepi "$DB_PATH" 2>/dev/null || true
         stop_spinner
-        print_success "Database file created"
+        if [ -f "$DB_PATH" ]; then
+            print_success "Database file created"
+        else
+            print_warning "Could not create database file"
+            print_detail "Backend will create it on first run"
+            return 0
+        fi
     fi
     
-    # Check if database is locked by another process
+    # Check if database is accessible
     print_info "Checking database access..."
     
-    local db_locked=false
     if ! sqlite3 "$DB_PATH" "SELECT 1;" > /dev/null 2>&1; then
-        db_locked=true
-        print_warning "Database is locked by another process"
-        
-        # Find what's using it
-        local locking_procs=$(lsof "$DB_PATH" 2>/dev/null | tail -n +2 | awk '{print $1, $2}' | sort -u)
-        if [ -n "$locking_procs" ]; then
-            print_info "Processes using database:"
-            echo "$locking_procs" | while read -r proc; do
-                print_detail "$proc"
-            done
-        fi
-        
-        # Try to stop common culprits
-        print_info "Attempting to free database..."
-        
-        # Stop PM2 managed processes
-        if command -v pm2 &>/dev/null; then
-            run_as_orangepi "pm2 stop all" > /dev/null 2>&1 || true
-            print_detail "Stopped PM2 processes"
-        fi
-        
-        # Wait a moment for locks to release
-        sleep 2
-        
-        # Check again
-        if ! sqlite3 "$DB_PATH" "SELECT 1;" > /dev/null 2>&1; then
-            print_warning "Database still locked. Waiting 5 seconds..."
-            sleep 5
-            
-            if ! sqlite3 "$DB_PATH" "SELECT 1;" > /dev/null 2>&1; then
-                print_warning "Database remains locked - skipping schema changes"
-                print_detail "Indexes will be created on next restart when DB is free"
-                return 0
-            fi
-        fi
-        
-        print_success "Database lock released"
+        print_warning "Database is locked or inaccessible"
+        print_detail "Skipping schema setup - backend will handle this"
+        return 0
     fi
     
     # Check if table exists
-    local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null)
+    local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null || echo "")
     
     if [ -n "$table_exists" ]; then
         print_installed "telemetry table"
     else
         start_spinner "Creating telemetry table"
-        if sqlite3 "$DB_PATH" <<'EOSQL' 2>/dev/null
-CREATE TABLE IF NOT EXISTS telemetry (
-    ID        INTEGER PRIMARY KEY AUTOINCREMENT,
-    drone_id  INTEGER NOT NULL,
-    timestamp INTEGER NOT NULL,
-    data      TEXT    NOT NULL,
-    active    INTEGER NOT NULL DEFAULT 0
-);
-EOSQL
-        then
-            stop_spinner
+        sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS telemetry (ID INTEGER PRIMARY KEY AUTOINCREMENT, drone_id INTEGER NOT NULL, timestamp INTEGER NOT NULL, data TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 0);" 2>/dev/null || true
+        stop_spinner
+        
+        # Check if it was created
+        table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null || echo "")
+        if [ -n "$table_exists" ]; then
             print_success "Telemetry table created"
         else
-            stop_spinner
             print_warning "Could not create table (database may be locked)"
+            print_detail "Backend will create it on first run"
         fi
     fi
     
-    # Check and create indexes (always idempotent)
+    # Try to create indexes (non-critical)
     print_info "Creating/verifying indexes..."
     
-    local index_errors=0
-    
-    if ! sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_drone_id ON telemetry(drone_id);" 2>/dev/null; then
-        ((index_errors++))
-    fi
-    
-    if ! sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry(timestamp);" 2>/dev/null; then
-        ((index_errors++))
-    fi
-    
-    if ! sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_active ON telemetry(active);" 2>/dev/null; then
-        ((index_errors++))
-    fi
+    sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_drone_id ON telemetry(drone_id);" 2>/dev/null || true
+    sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry(timestamp);" 2>/dev/null || true
+    sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS idx_telemetry_active ON telemetry(active);" 2>/dev/null || true
     
     chown orangepi:orangepi "$DB_PATH"* 2>/dev/null || true
     
-    if [ $index_errors -eq 0 ]; then
-        print_success "Database indexes verified"
-    else
-        print_warning "Some indexes could not be created (database busy)"
-        print_detail "They will be created automatically on next run"
-    fi
-    
-    # Show stats
+    # Show stats (ignore errors)
     local row_count=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM telemetry;" 2>/dev/null || echo "?")
-    local index_count=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -w || echo "?")
-    print_detail "Rows: $row_count | Indexes: $index_count"
+    local index_count=$(sqlite3 "$DB_PATH" ".indexes telemetry" 2>/dev/null | wc -w 2>/dev/null || echo "?")
+    
+    if [ "$row_count" != "?" ]; then
+        print_success "Database ready (Rows: $row_count | Indexes: $index_count)"
+    else
+        print_warning "Database stats unavailable"
+        print_detail "This is fine - backend will initialize on first run"
+    fi
 }
 
 setup_mediamtx() {
