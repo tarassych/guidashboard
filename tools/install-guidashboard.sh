@@ -1340,8 +1340,18 @@ uninstall_all() {
     # 3. Remove MediaMTX directory
     echo -e "  ${CYAN}[3/8]${NC} Removing MediaMTX..."
     if [ -d "$MMTX_DIR" ]; then
-        rm -rf "$MMTX_DIR"
-        print_success "MediaMTX directory removed"
+        if rm -rf "$MMTX_DIR" 2>/dev/null; then
+            print_success "MediaMTX directory removed"
+        else
+            # Try with force and check if read-only
+            if ! rm -rf "$MMTX_DIR" 2>&1 | grep -q "Read-only"; then
+                print_warning "Could not fully remove MediaMTX directory"
+            else
+                print_error "Filesystem is read-only! Cannot remove $MMTX_DIR"
+                echo -e "    ${YELLOW}Try: sudo mount -o remount,rw /${NC}"
+                ((errors++))
+            fi
+        fi
     else
         print_info "MediaMTX directory not found"
     fi
@@ -1349,8 +1359,12 @@ uninstall_all() {
     # 4. Remove backend server directory
     echo -e "  ${CYAN}[4/8]${NC} Removing backend server..."
     if [ -d "$SERVER_DIR" ]; then
-        rm -rf "$SERVER_DIR"
-        print_success "Backend server removed"
+        if rm -rf "$SERVER_DIR" 2>/dev/null; then
+            print_success "Backend server removed"
+        else
+            print_warning "Could not fully remove backend directory"
+            ((errors++))
+        fi
     else
         print_info "Backend directory not found"
     fi
@@ -1358,8 +1372,12 @@ uninstall_all() {
     # 5. Remove repository clone
     echo -e "  ${CYAN}[5/8]${NC} Removing repository..."
     if [ -d "$REPO_DIR" ]; then
-        rm -rf "$REPO_DIR"
-        print_success "Repository removed"
+        if rm -rf "$REPO_DIR" 2>/dev/null; then
+            print_success "Repository removed"
+        else
+            print_warning "Could not fully remove repository"
+            ((errors++))
+        fi
     else
         print_info "Repository not found"
     fi
@@ -1367,8 +1385,12 @@ uninstall_all() {
     # 6. Remove frontend from nginx
     echo -e "  ${CYAN}[6/8]${NC} Removing frontend..."
     if [ -d "$WEB_DIR" ] && [ -f "$WEB_DIR/index.html" ]; then
-        rm -rf "$WEB_DIR"/*
-        print_success "Frontend files removed"
+        if rm -rf "$WEB_DIR"/* 2>/dev/null; then
+            print_success "Frontend files removed"
+        else
+            print_warning "Could not fully remove frontend files"
+            ((errors++))
+        fi
     else
         print_info "Frontend not found"
     fi
@@ -1406,9 +1428,30 @@ uninstall_all() {
     fi
     
     echo ""
-    echo -e "${GREEN}+==================================================================+${NC}"
-    echo -e "${GREEN}|${NC}${BOLD}${WHITE}                  UNINSTALL COMPLETED                          ${NC}${GREEN}|${NC}"
-    echo -e "${GREEN}+==================================================================+${NC}"
+    
+    if [ $errors -gt 0 ]; then
+        echo -e "${YELLOW}+==================================================================+${NC}"
+        echo -e "${YELLOW}|${NC}${BOLD}${WHITE}              UNINSTALL COMPLETED WITH WARNINGS                ${NC}${YELLOW}|${NC}"
+        echo -e "${YELLOW}+==================================================================+${NC}"
+        echo ""
+        echo -e "  ${YELLOW}$errors component(s) could not be fully removed${NC}"
+        echo ""
+        echo -e "  ${WHITE}Possible causes:${NC}"
+        echo -e "    - Filesystem is read-only (disk issue or corruption)"
+        echo -e "    - Disk is full"
+        echo -e "    - Permission issues"
+        echo ""
+        echo -e "  ${WHITE}Try these fixes:${NC}"
+        echo -e "    ${CYAN}sudo mount -o remount,rw /${NC}      # Remount as read-write"
+        echo -e "    ${CYAN}sudo fsck -y /dev/mmcblk0p1${NC}     # Check filesystem (after reboot)"
+        echo -e "    ${CYAN}df -h${NC}                           # Check disk space"
+        echo ""
+    else
+        echo -e "${GREEN}+==================================================================+${NC}"
+        echo -e "${GREEN}|${NC}${BOLD}${WHITE}                  UNINSTALL COMPLETED                          ${NC}${GREEN}|${NC}"
+        echo -e "${GREEN}+==================================================================+${NC}"
+    fi
+    
     echo ""
     echo -e "  ${WHITE}Removed:${NC}"
     echo -e "    - PM2 processes and configuration"
@@ -1425,6 +1468,12 @@ uninstall_all() {
     echo ""
     
     if [ "$REINSTALL_MODE" = true ]; then
+        if [ $errors -gt 0 ]; then
+            echo -e "  ${RED}Cannot proceed with reinstall due to filesystem errors${NC}"
+            echo -e "  ${YELLOW}Fix the filesystem issues first, then run the installer again${NC}"
+            echo ""
+            exit 1
+        fi
         echo -e "  ${CYAN}Proceeding with fresh installation...${NC}"
         echo ""
         sleep 2
