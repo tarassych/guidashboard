@@ -763,6 +763,23 @@ setup_database() {
         return 0
     fi
     
+    # Enable WAL mode for better concurrent access (allows reads while writing)
+    local current_mode=$(sqlite3 "$DB_PATH" "PRAGMA journal_mode;" 2>/dev/null || echo "unknown")
+    if [ "$current_mode" = "wal" ]; then
+        print_installed "WAL mode"
+    else
+        start_spinner "Enabling WAL mode for concurrent access"
+        sqlite3 "$DB_PATH" "PRAGMA journal_mode=WAL;" > /dev/null 2>&1 || true
+        stop_spinner
+        local new_mode=$(sqlite3 "$DB_PATH" "PRAGMA journal_mode;" 2>/dev/null || echo "unknown")
+        if [ "$new_mode" = "wal" ]; then
+            print_success "WAL mode enabled"
+        else
+            print_warning "Could not enable WAL mode (current: $new_mode)"
+            print_detail "Backend will work but may have lock issues"
+        fi
+    fi
+    
     # Check if table exists
     local table_exists=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry';" 2>/dev/null || echo "")
     

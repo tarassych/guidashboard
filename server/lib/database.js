@@ -12,9 +12,16 @@ let db = null;
  */
 export function connectDatabase() {
   try {
-    // WAL mode requires write access even for reading (for -wal and -shm files)
-    db = new Database(config.dbPath);
-    console.log(`Connected to database: ${config.dbPath}`);
+    // Open database with timeout for busy connections
+    db = new Database(config.dbPath, { timeout: 5000 });
+    
+    // Enable WAL mode for better concurrent access (allows reads while writing)
+    db.pragma('journal_mode = WAL');
+    
+    // Set busy timeout to wait for locks instead of failing immediately
+    db.pragma('busy_timeout = 5000');
+    
+    console.log(`Connected to database: ${config.dbPath} (WAL mode)`);
     return true;
   } catch (error) {
     console.error(`Failed to connect to database: ${error.message}`);
