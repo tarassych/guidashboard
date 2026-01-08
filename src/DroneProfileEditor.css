@@ -302,9 +302,19 @@ section h2 {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.profile-drone-number {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--hud-primary, #00ff88);
+  text-shadow: 0 0 8px currentColor;
+  min-width: 2.5rem;
+  letter-spacing: -0.02em;
+}
+
 .profile-id {
-  font-size: 0.85rem;
-  opacity: 0.5;
+  font-size: 0.75rem;
+  opacity: 0.4;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .profile-name {

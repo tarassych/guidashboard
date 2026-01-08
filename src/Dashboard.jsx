@@ -39,7 +39,7 @@ function JoystickIcon() {
 }
 
 // Mini drone preview card with live telemetry and camera feed
-function DroneCard({ droneId, profile, telemetry, isActive, onClick }) {
+function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick }) {
   const isOnline = telemetry?.connected
   // Use front camera for dashboard preview
   const previewCameraUrl = profile?.frontCameraUrl
@@ -69,6 +69,11 @@ function DroneCard({ droneId, profile, telemetry, isActive, onClick }) {
             <span>No camera</span>
           </div>
         )}
+        
+        {/* Big drone number indicator - left center */}
+        <div className="drone-number-overlay">
+          <span className="drone-number">#{droneNumber}</span>
+        </div>
         
         {/* OSD Elements overlaid on video */}
         <div className="card-osd-overlay">
@@ -321,16 +326,22 @@ function Dashboard() {
             <Link to="/settings" className="add-drone-btn">⚙ Settings</Link>
           </div>
         ) : (
-          connectedDroneIds.map(droneId => (
-            <DroneCard
-              key={droneId}
-              droneId={droneId}
-              profile={profiles[droneId]}
-              telemetry={droneTelemetry[droneId]}
-              isActive={activeDrones[droneId]?.active === true}
-              onClick={() => handleDroneClick(droneId)}
-            />
-          ))
+          connectedDroneIds.map(droneId => {
+            const profile = profiles[droneId]
+            // droneNumber is array index + 1 (index 0 = #1)
+            const droneNumber = (profile?._index ?? 0) + 1
+            return (
+              <DroneCard
+                key={droneId}
+                droneId={droneId}
+                profile={profile}
+                telemetry={droneTelemetry[droneId]}
+                isActive={activeDrones[droneId]?.active === true}
+                droneNumber={droneNumber}
+                onClick={() => handleDroneClick(droneId)}
+              />
+            )
+          })
         )}
       </main>
       

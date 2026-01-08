@@ -1,6 +1,6 @@
 {
-  "drones": {
-    "DRONE_ID_HERE": {
+  "drones": [
+    {
       "droneId": "DRONE_ID_HERE",
       "name": "Drone Name",
       "ipAddress": "",
@@ -25,5 +25,5 @@
       "color": "#00ff88",
       "updatedAt": 0
     }
-  }
+  ]
 }

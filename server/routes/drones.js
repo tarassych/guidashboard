@@ -5,7 +5,7 @@
  */
 import express from 'express';
 import { getDb } from '../lib/database.js';
-import { loadProfiles } from '../lib/profiles.js';
+import { loadProfiles, getAllDroneIds } from '../lib/profiles.js';
 
 const router = express.Router();
 
@@ -26,8 +26,8 @@ router.get('/drones', (req, res) => {
     const cutoffTime = Date.now() - ACTIVE_THRESHOLD_MINUTES * 60 * 1000;
     
     // Load profiles to check which drones are configured
-    const profiles = loadProfiles();
-    const configuredIds = Object.keys(profiles.drones);
+    // getAllDroneIds returns array of droneId strings
+    const configuredIds = getAllDroneIds();
     
     // Single optimized query: Get recent drone IDs with their latest GPS data
     // Uses json_extract for exact type matching (types: gps, batt, state)
@@ -122,5 +122,3 @@ router.get('/drone/:droneId/has-telemetry', (req, res) => {
 });
 
 export default router;
-
-

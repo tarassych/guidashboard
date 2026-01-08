@@ -4,3 +4,4 @@ cd /home/orangepi/mmtx
 cat mediamtx.base.yml paths.yml > mediamtx.yml
 echo "Config rebuilt: mediamtx.yml"
 
+

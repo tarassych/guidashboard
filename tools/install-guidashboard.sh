@@ -645,23 +645,26 @@ setup_backend() {
     fi
     print_success "package.json found"
     
-    # Create drone-profiles.json if not exists (must have "drones" key, not "profiles")
+    # Create drone-profiles.json if not exists (drones must be an array)
     if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
-        # Verify it has correct structure
-        if grep -q '"drones"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
-            print_installed "drone-profiles.json (preserved)"
+        # Check if drones is already an array (starts with [)
+        if grep -q '"drones"\s*:\s*\[' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
+            print_installed "drone-profiles.json (preserved, array format)"
+        elif grep -q '"drones"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
+            # Has drones but as object - backend will auto-migrate on first load
+            print_warning "drone-profiles.json has object format, will be migrated to array on first use"
         else
             print_warning "drone-profiles.json has wrong format, fixing..."
-            echo '{"drones":{}}' > "$SERVER_DIR/drone-profiles.json"
+            echo '{"drones":[]}' > "$SERVER_DIR/drone-profiles.json"
             chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
-            print_success "Fixed drone-profiles.json structure"
+            print_success "Fixed drone-profiles.json structure (array format)"
         fi
     else
         start_spinner "Creating initial drone-profiles.json"
-        echo '{"drones":{}}' > "$SERVER_DIR/drone-profiles.json"
+        echo '{"drones":[]}' > "$SERVER_DIR/drone-profiles.json"
         chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
         stop_spinner
-        print_success "Created drone-profiles.json"
+        print_success "Created drone-profiles.json (array format)"
     fi
     
     # Install npm dependencies with live output

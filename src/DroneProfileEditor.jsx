@@ -1242,7 +1242,12 @@ function DroneProfileEditor() {
     )
   }
   
-  const connectedDroneIds = Object.keys(profiles).sort((a, b) => String(a).localeCompare(String(b)))
+  // Sort by array index (_index) to maintain consistent drone numbering
+  const connectedDroneIds = Object.keys(profiles).sort((a, b) => {
+    const indexA = profiles[a]?._index ?? 999
+    const indexB = profiles[b]?._index ?? 999
+    return indexA - indexB
+  })
   
   return (
     <div className="profile-editor">
@@ -1307,6 +1312,8 @@ function DroneProfileEditor() {
               <div className="profiles-grid">
                 {connectedDroneIds.map(droneId => {
                   const profile = profiles[droneId]
+                  // Drone number is array index + 1
+                  const droneNumber = (profile?._index ?? 0) + 1
                   return (
                     <div
                       key={droneId}
@@ -1314,8 +1321,9 @@ function DroneProfileEditor() {
                       style={{ '--accent-color': profile.color }}
                     >
                       <div className="profile-card-header">
+                        <span className="profile-drone-number">#{droneNumber}</span>
                         {profile.name && <span className="profile-name">{profile.name}</span>}
-                        <span className="profile-id">#{droneId}</span>
+                        <span className="profile-id">ID: {droneId}</span>
                         <button 
                           className="edit-btn"
                           onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}

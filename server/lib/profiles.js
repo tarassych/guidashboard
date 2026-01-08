@@ -1,5 +1,7 @@
 /**
  * Drone profiles management
+ * Profiles are stored as an array where array index + 1 = drone number
+ * e.g., drones[0] = drone #1, drones[1] = drone #2
  */
 import fs from 'fs';
 import path from 'path';
@@ -13,18 +15,37 @@ const profilesPath = path.join(__dirname, '..', 'drone-profiles.json');
 
 /**
  * Load drone profiles from file
- * @returns {Object} Profiles object with drones map
+ * @returns {Object} Profiles object with drones array
  */
 export function loadProfiles() {
   try {
     if (fs.existsSync(profilesPath)) {
       const data = fs.readFileSync(profilesPath, 'utf-8');
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      
+      // Handle migration from old object format to array format
+      if (parsed.drones && !Array.isArray(parsed.drones)) {
+        // Convert object to array (sorted by droneId)
+        const dronesObj = parsed.drones;
+        const dronesArray = Object.values(dronesObj).sort((a, b) => {
+          const idA = parseInt(a.droneId) || 0;
+          const idB = parseInt(b.droneId) || 0;
+          return idA - idB;
+        });
+        return { drones: dronesArray };
+      }
+      
+      // Ensure drones is an array
+      if (!Array.isArray(parsed.drones)) {
+        parsed.drones = [];
+      }
+      
+      return parsed;
     }
   } catch (error) {
     console.error('Failed to load drone profiles:', error.message);
   }
-  return { drones: {} };
+  return { drones: [] };
 }
 
 /**
@@ -34,6 +55,10 @@ export function loadProfiles() {
  */
 export function saveProfiles(profiles) {
   try {
+    // Ensure drones is an array
+    if (!Array.isArray(profiles.drones)) {
+      profiles.drones = [];
+    }
     fs.writeFileSync(profilesPath, JSON.stringify(profiles, null, 2));
     return true;
   } catch (error) {
@@ -43,32 +68,55 @@ export function saveProfiles(profiles) {
 }
 
 /**
- * Get a single drone profile
+ * Get a single drone profile by droneId
  * @param {string} droneId - Drone ID
  * @returns {Object|null} Profile or null if not found
  */
 export function getProfile(droneId) {
   const profiles = loadProfiles();
-  return profiles.drones[droneId] || null;
+  return profiles.drones.find(d => String(d.droneId) === String(droneId)) || null;
+}
+
+/**
+ * Get drone profile by array index
+ * @param {number} index - Array index (0-based)
+ * @returns {Object|null} Profile or null if not found
+ */
+export function getProfileByIndex(index) {
+  const profiles = loadProfiles();
+  return profiles.drones[index] || null;
 }
 
 /**
  * Save a single drone profile
+ * Updates existing profile by droneId or adds new one
  * @param {string} droneId - Drone ID
  * @param {Object} profileData - Profile data to save
  * @returns {Object|null} Saved profile or null on error
  */
 export function saveProfile(droneId, profileData) {
   const profiles = loadProfiles();
-  profiles.drones[droneId] = {
-    ...profiles.drones[droneId],
+  
+  // Find existing profile index
+  const existingIndex = profiles.drones.findIndex(d => String(d.droneId) === String(droneId));
+  
+  const updatedProfile = {
+    ...(existingIndex >= 0 ? profiles.drones[existingIndex] : {}),
     ...profileData,
-    droneId,
+    droneId: String(droneId),
     updatedAt: Date.now()
   };
   
+  if (existingIndex >= 0) {
+    // Update existing
+    profiles.drones[existingIndex] = updatedProfile;
+  } else {
+    // Add new profile
+    profiles.drones.push(updatedProfile);
+  }
+  
   if (saveProfiles(profiles)) {
-    return profiles.drones[droneId];
+    return updatedProfile;
   }
   return null;
 }
@@ -80,11 +128,36 @@ export function saveProfile(droneId, profileData) {
  */
 export function deleteProfile(droneId) {
   const profiles = loadProfiles();
-  if (profiles.drones[droneId]) {
-    delete profiles.drones[droneId];
+  const index = profiles.drones.findIndex(d => String(d.droneId) === String(droneId));
+  
+  if (index >= 0) {
+    profiles.drones.splice(index, 1);
     return saveProfiles(profiles);
   }
   return false;
 }
 
+/**
+ * Get all drone IDs from profiles
+ * @returns {string[]} Array of drone IDs
+ */
+export function getAllDroneIds() {
+  const profiles = loadProfiles();
+  return profiles.drones.map(d => String(d.droneId));
+}
 
+/**
+ * Convert profiles array to object keyed by droneId (for API compatibility)
+ * @returns {Object} Object with droneId as keys
+ */
+export function getProfilesAsObject() {
+  const profiles = loadProfiles();
+  const obj = {};
+  profiles.drones.forEach((drone, index) => {
+    obj[drone.droneId] = {
+      ...drone,
+      _index: index // Include index for reference
+    };
+  });
+  return obj;
+}

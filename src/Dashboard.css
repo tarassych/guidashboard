@@ -268,6 +268,29 @@
   inset: 0;
 }
 
+/* Big drone number indicator - left center */
+.drone-number-overlay {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 8;
+  padding: 0.5rem 1rem 0.5rem 0.8rem;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.6) 70%, transparent 100%);
+  pointer-events: none;
+}
+
+.drone-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--hud-primary, #00ff88);
+  text-shadow: 
+    0 0 10px rgba(0, 255, 136, 0.8),
+    0 0 20px rgba(0, 255, 136, 0.4);
+  letter-spacing: -0.02em;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
 /* OSD Overlay on video */
 .card-osd-overlay {
   position: absolute;
