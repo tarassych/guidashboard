@@ -10,10 +10,21 @@
 # - SQLite database (indexes only, preserves existing data)
 # - PM2 process manager
 #
-# Usage: sudo ./install-guidashboard.sh
+# Usage: sudo ./install-guidashboard.sh [OPTIONS]
+#
+# Options:
+#   -reinstall, --reinstall    Remove everything and install fresh
+#   -uninstall, --uninstall    Remove all installed components
+#   -y, --yes                  Skip confirmation prompts
+#   -h, --help                 Show this help message
 #
 
 set -euo pipefail
+
+# Command line flags
+REINSTALL_MODE=false
+UNINSTALL_MODE=false
+SKIP_CONFIRM=false
 
 # =============================================================================
 # Configuration
@@ -1291,14 +1302,239 @@ print_summary() {
 }
 
 # =============================================================================
+# Uninstall Function
+# =============================================================================
+
+uninstall_all() {
+    echo ""
+    echo -e "${RED}+==================================================================+${NC}"
+    echo -e "${RED}|${NC}${BOLD}${WHITE}                    UNINSTALLING GUI DASHBOARD                 ${NC}${RED}|${NC}"
+    echo -e "${RED}+==================================================================+${NC}"
+    echo ""
+    
+    local errors=0
+    
+    # 1. Stop and remove PM2 processes
+    echo -e "  ${CYAN}[1/8]${NC} Stopping PM2 processes..."
+    if command -v pm2 &> /dev/null; then
+        sudo -u orangepi pm2 stop all 2>/dev/null || true
+        sudo -u orangepi pm2 delete all 2>/dev/null || true
+        sudo -u orangepi pm2 save --force 2>/dev/null || true
+        print_success "PM2 processes stopped"
+    else
+        print_info "PM2 not installed, skipping"
+    fi
+    
+    # 2. Stop MediaMTX service
+    echo -e "  ${CYAN}[2/8]${NC} Stopping MediaMTX service..."
+    if systemctl is-active --quiet mediamtx 2>/dev/null; then
+        systemctl stop mediamtx 2>/dev/null || true
+        systemctl disable mediamtx 2>/dev/null || true
+        print_success "MediaMTX service stopped"
+    else
+        print_info "MediaMTX service not running"
+    fi
+    rm -f /etc/systemd/system/mediamtx.service 2>/dev/null || true
+    systemctl daemon-reload 2>/dev/null || true
+    
+    # 3. Remove MediaMTX directory
+    echo -e "  ${CYAN}[3/8]${NC} Removing MediaMTX..."
+    if [ -d "$MMTX_DIR" ]; then
+        rm -rf "$MMTX_DIR"
+        print_success "MediaMTX directory removed"
+    else
+        print_info "MediaMTX directory not found"
+    fi
+    
+    # 4. Remove backend server directory
+    echo -e "  ${CYAN}[4/8]${NC} Removing backend server..."
+    if [ -d "$SERVER_DIR" ]; then
+        rm -rf "$SERVER_DIR"
+        print_success "Backend server removed"
+    else
+        print_info "Backend directory not found"
+    fi
+    
+    # 5. Remove repository clone
+    echo -e "  ${CYAN}[5/8]${NC} Removing repository..."
+    if [ -d "$REPO_DIR" ]; then
+        rm -rf "$REPO_DIR"
+        print_success "Repository removed"
+    else
+        print_info "Repository not found"
+    fi
+    
+    # 6. Remove frontend from nginx
+    echo -e "  ${CYAN}[6/8]${NC} Removing frontend..."
+    if [ -d "$WEB_DIR" ] && [ -f "$WEB_DIR/index.html" ]; then
+        rm -rf "$WEB_DIR"/*
+        print_success "Frontend files removed"
+    else
+        print_info "Frontend not found"
+    fi
+    
+    # 7. Remove nginx config
+    echo -e "  ${CYAN}[7/8]${NC} Resetting nginx config..."
+    if [ -f /etc/nginx/sites-enabled/guidashboard ]; then
+        rm -f /etc/nginx/sites-enabled/guidashboard
+        rm -f /etc/nginx/sites-available/guidashboard
+        # Restore default nginx config
+        ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default 2>/dev/null || true
+        systemctl reload nginx 2>/dev/null || true
+        print_success "Nginx config reset"
+    else
+        print_info "Custom nginx config not found"
+    fi
+    
+    # 8. Uninstall Node.js and npm (optional - ask user)
+    echo -e "  ${CYAN}[8/8]${NC} Removing Node.js..."
+    if command -v node &> /dev/null; then
+        # Remove node-gyp
+        npm uninstall -g node-gyp 2>/dev/null || true
+        # Remove PM2 globally
+        npm uninstall -g pm2 2>/dev/null || true
+        # Remove nodejs
+        apt remove -y nodejs 2>/dev/null || true
+        apt autoremove -y 2>/dev/null || true
+        # Clean up npm directories
+        rm -rf /usr/lib/node_modules 2>/dev/null || true
+        rm -rf "$HOME_DIR/.npm" 2>/dev/null || true
+        rm -rf "$HOME_DIR/.pm2" 2>/dev/null || true
+        print_success "Node.js removed"
+    else
+        print_info "Node.js not installed"
+    fi
+    
+    echo ""
+    echo -e "${GREEN}+==================================================================+${NC}"
+    echo -e "${GREEN}|${NC}${BOLD}${WHITE}                  UNINSTALL COMPLETED                          ${NC}${GREEN}|${NC}"
+    echo -e "${GREEN}+==================================================================+${NC}"
+    echo ""
+    echo -e "  ${WHITE}Removed:${NC}"
+    echo -e "    - PM2 processes and configuration"
+    echo -e "    - MediaMTX streaming server"
+    echo -e "    - Backend API server"
+    echo -e "    - Frontend web files"
+    echo -e "    - Node.js and npm"
+    echo ""
+    echo -e "  ${YELLOW}Preserved:${NC}"
+    echo -e "    - Telemetry database: $DB_PATH"
+    echo -e "    - Scripts in: $CODE_DIR"
+    echo -e "    - Nginx (base installation)"
+    echo -e "    - SQLite3"
+    echo ""
+    
+    if [ "$REINSTALL_MODE" = true ]; then
+        echo -e "  ${CYAN}Proceeding with fresh installation...${NC}"
+        echo ""
+        sleep 2
+    fi
+}
+
+show_help() {
+    echo ""
+    echo -e "${CYAN}GUI Dashboard Installer for Orange Pi${NC}"
+    echo ""
+    echo -e "${WHITE}Usage:${NC} sudo ./install-guidashboard.sh [OPTIONS]"
+    echo ""
+    echo -e "${WHITE}Options:${NC}"
+    echo -e "  ${GREEN}-reinstall, --reinstall${NC}    Remove everything and install fresh"
+    echo -e "  ${GREEN}-uninstall, --uninstall${NC}    Remove all installed components"
+    echo -e "  ${GREEN}-y, --yes${NC}                  Skip confirmation prompts"
+    echo -e "  ${GREEN}-h, --help${NC}                 Show this help message"
+    echo ""
+    echo -e "${WHITE}Examples:${NC}"
+    echo -e "  sudo ./install-guidashboard.sh              # Normal install"
+    echo -e "  sudo ./install-guidashboard.sh -reinstall   # Clean reinstall"
+    echo -e "  sudo ./install-guidashboard.sh -reinstall -y # Clean reinstall without prompts"
+    echo -e "  sudo ./install-guidashboard.sh -uninstall   # Remove everything"
+    echo ""
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -reinstall|--reinstall)
+                REINSTALL_MODE=true
+                shift
+                ;;
+            -uninstall|--uninstall)
+                UNINSTALL_MODE=true
+                shift
+                ;;
+            -y|--yes)
+                SKIP_CONFIRM=true
+                shift
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}Unknown option: $1${NC}"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 
 main() {
+    # Parse command line arguments
+    parse_args "$@"
+    
     print_banner
     
     check_root
     check_user_exists
+    
+    # Handle uninstall mode
+    if [ "$UNINSTALL_MODE" = true ]; then
+        echo -e "  ${YELLOW}${BOLD}UNINSTALL MODE${NC}"
+        echo -e "  ${DIM}This will remove all GUI Dashboard components${NC}"
+        echo ""
+        echo -e "  ${RED}WARNING: This action cannot be undone!${NC}"
+        echo ""
+        if [ "$SKIP_CONFIRM" != true ]; then
+            read -p "  Are you sure you want to continue? (y/N) " -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "  ${YELLOW}Uninstall cancelled${NC}"
+                exit 0
+            fi
+        else
+            echo -e "  ${DIM}Skipping confirmation (-y flag)${NC}"
+        fi
+        uninstall_all
+        exit 0
+    fi
+    
+    # Handle reinstall mode
+    if [ "$REINSTALL_MODE" = true ]; then
+        echo -e "  ${YELLOW}${BOLD}REINSTALL MODE${NC}"
+        echo -e "  ${DIM}This will remove everything and install fresh${NC}"
+        echo ""
+        echo -e "  ${RED}WARNING: All existing configuration will be lost!${NC}"
+        echo ""
+        if [ "$SKIP_CONFIRM" != true ]; then
+            read -p "  Are you sure you want to continue? (y/N) " -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "  ${YELLOW}Reinstall cancelled${NC}"
+                exit 0
+            fi
+        else
+            echo -e "  ${DIM}Skipping confirmation (-y flag)${NC}"
+        fi
+        uninstall_all
+        # Reset timer for fresh install
+        INSTALL_START_TIME=$(date +%s)
+        print_banner
+    fi
     
     echo -e "  ${WHITE}Starting installation...${NC}"
     echo -e "  ${DIM}Checking existing packages and installing only what's needed${NC}"
