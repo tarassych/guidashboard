@@ -1,8 +1,10 @@
 import { useRef, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import './CameraFeed.css'
 
 // Camera Feed Component - HLS video player with auto-reconnect
 function CameraFeed({ streamUrl, variant = "main" }) {
+  const { t } = useTranslation()
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const retryTimeoutRef = useRef(null)
@@ -133,9 +135,9 @@ function CameraFeed({ streamUrl, variant = "main" }) {
       />
       {status !== 'playing' && (
         <div className="camera-status-overlay">
-          {status === 'connecting' && <span className="status-text">◌ CONNECTING</span>}
-          {status === 'reconnecting' && <span className="status-text">↻ RECONNECTING</span>}
-          {status === 'error' && <span className="status-text error">✕ NO SIGNAL</span>}
+          {status === 'connecting' && <span className="status-text">◌ {t('camera.connecting')}</span>}
+          {status === 'reconnecting' && <span className="status-text">↻ {t('camera.reconnecting')}</span>}
+          {status === 'error' && <span className="status-text error">✕ {t('camera.noSignal')}</span>}
         </div>
       )}
     </div>

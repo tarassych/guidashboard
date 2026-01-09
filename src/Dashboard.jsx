@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import config from './config'
 import CameraFeed from './components/CameraFeed'
+import LanguageSwitcher from './components/LanguageSwitcher'
 import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
@@ -40,6 +42,7 @@ function JoystickIcon() {
 
 // Mini drone preview card with live telemetry and camera feed
 function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick }) {
+  const { t } = useTranslation()
   const isOnline = telemetry?.connected
   // Use front camera for dashboard preview
   const previewCameraUrl = profile?.frontCameraUrl
@@ -57,7 +60,7 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
           {displayName || `Drone #${droneNumber}`}
         </span>
         <span className={`drone-status ${isOnline ? 'online' : 'offline'}`}>
-          {isOnline ? '● ONLINE' : '○ OFFLINE'}
+          {isOnline ? `● ${t('common.online')}` : `○ ${t('common.offline')}`}
         </span>
       </div>
       
@@ -68,7 +71,7 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
         ) : (
           <div className="no-camera">
             <span className="camera-icon">◇</span>
-            <span>No camera</span>
+            <span>{t('dashboard.noCamera')}</span>
           </div>
         )}
         
@@ -89,14 +92,14 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
           
           {/* Bottom row - Speed & GPS */}
           <div className="osd-bottom">
-            <span className="osd-speed">{telemetry?.speed?.toFixed(0) || '--'} km/h</span>
+            <span className="osd-speed">{telemetry?.speed?.toFixed(0) || '--'} {t('osd.speedUnit')}</span>
             <span className="osd-gps">◎ {telemetry?.satellites || '--'}</span>
           </div>
         </div>
         
         {/* Hover hint */}
         <div className="preview-overlay">
-          <span className="preview-hint">▶ FULL SCREEN</span>
+          <span className="preview-hint">▶ {t('dashboard.fullScreen')}</span>
         </div>
         
         {/* Joystick icon for active drone */}
@@ -108,15 +111,16 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
 
 // Empty slot placeholder for unfilled drone positions
 function EmptySlot({ slotNumber }) {
+  const { t } = useTranslation()
   return (
     <div className="drone-card empty-slot">
       <div className="drone-card-header">
-        <span className="drone-title">Empty Slot</span>
+        <span className="drone-title">{t('dashboard.emptySlot')}</span>
       </div>
       <div className="drone-card-video">
         <div className="empty-slot-content">
           <span className="empty-slot-number">#{slotNumber}</span>
-          <span className="empty-slot-hint">No drone assigned</span>
+          <span className="empty-slot-hint">{t('dashboard.noDroneAssigned')}</span>
         </div>
         <div className="drone-number-overlay">
           <span className="drone-number">#{slotNumber}</span>
@@ -128,13 +132,14 @@ function EmptySlot({ slotNumber }) {
 
 // Detected drone alert - drones with telemetry but no profile
 function DetectedDroneAlert({ detectedDrones, onAddProfile }) {
+  const { t } = useTranslation()
   if (!detectedDrones || detectedDrones.length === 0) return null
   
   return (
     <div className="detected-drone-alert">
       <div className="alert-icon">◈</div>
       <div className="alert-content">
-        <span className="alert-title">Detected Drones ({detectedDrones.length})</span>
+        <span className="alert-title">{t('dashboard.detectedDrones', { count: detectedDrones.length })}</span>
         <div className="alert-drone-list">
           {detectedDrones.map(drone => (
             <span key={drone.droneId} className="alert-drone-id">#{drone.droneId}</span>
@@ -142,13 +147,14 @@ function DetectedDroneAlert({ detectedDrones, onAddProfile }) {
         </div>
       </div>
       <button className="alert-action" onClick={onAddProfile}>
-        Configure Profiles →
+        {t('dashboard.configureProfiles')}
       </button>
     </div>
   )
 }
 
 function Dashboard() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
@@ -331,7 +337,7 @@ function Dashboard() {
     return (
       <div className="dashboard loading">
         <div className="loading-spinner">◌</div>
-        <span>Loading drones...</span>
+        <span>{t('dashboard.loadingDrones')}</span>
       </div>
     )
   }
@@ -341,12 +347,13 @@ function Dashboard() {
       <header className="dashboard-header">
         <div className="header-left">
           <span className="logo-icon">◈</span>
-          <h1>RATERA DRONE CONTROL CENTER</h1>
+          <h1>{t('dashboard.title')}</h1>
         </div>
         <div className="header-right">
           <Link to="/settings" className="header-btn">
-            ⚙ Settings
+            ⚙ {t('nav.settings')}
           </Link>
+          <LanguageSwitcher />
         </div>
       </header>
       
@@ -387,8 +394,8 @@ function Dashboard() {
       
       <footer className="dashboard-footer">
         <span className="footer-text">
-          {connectedDroneIds.length} drone{connectedDroneIds.length !== 1 ? 's' : ''} • 
-          {Object.values(droneTelemetry).filter(t => t?.connected).length} online
+          {t('dashboard.dronesCount', { count: connectedDroneIds.length })} • 
+          {t('dashboard.onlineCount', { count: Object.values(droneTelemetry).filter(tel => tel?.connected).length })}
         </span>
       </footer>
     </div>

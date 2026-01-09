@@ -1,0 +1,261 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "online": "ONLINE",
+    "offline": "OFFLINE",
+    "active": "ACTIVE",
+    "on": "ON",
+    "off": "OFF",
+    "yes": "Yes",
+    "no": "No",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "unknown": "Unknown"
+  },
+  
+  "nav": {
+    "backToDashboard": "Back to Dashboard",
+    "settings": "Settings"
+  },
+  
+  "dashboard": {
+    "title": "RATERA DRONE CONTROL CENTER",
+    "loadingDrones": "Loading drones...",
+    "dronesCount": "{{count}} drone",
+    "dronesCount_plural": "{{count}} drones",
+    "onlineCount": "{{count}} online",
+    "emptySlot": "Empty Slot",
+    "noDroneAssigned": "No drone assigned",
+    "noCamera": "No camera",
+    "fullScreen": "FULL SCREEN",
+    "detectedDrones": "Detected Drones ({{count}})",
+    "configureProfiles": "Configure Profiles →"
+  },
+  
+  "osd": {
+    "title": "{{name}} OSD",
+    "version": "v2.5",
+    "telemetry": "TELEMETRY",
+    "telemetryLog": "TELEMETRY LOG",
+    "live": "LIVE",
+    "connecting": "...",
+    "waiting": "Waiting...",
+    "rear": "REAR",
+    "map": "MAP",
+    "altitude": "ALT",
+    "sat": "SAT",
+    "pwr": "PWR",
+    "speedUnit": "km/h",
+    "distanceUnit": "m",
+    "warning": "WARNING",
+    "armed": "ARMED",
+    "mapError": "Map Error",
+    "checkApiKey": "Check API Key",
+    "loadingMap": "Loading Map..."
+  },
+  
+  "telemetry": {
+    "lat": "LAT",
+    "lng": "LNG",
+    "alt": "ALT",
+    "hdg": "HDG",
+    "gs": "GS",
+    "spd": "SPD",
+    "dist": "DIST",
+    "bat": "BAT",
+    "sat": "SAT",
+    "mode": "MODE",
+    "time": "TIME",
+    "fs": "FS"
+  },
+  
+  "battery": {
+    "good": "Good",
+    "warning": "Warning",
+    "critical": "Critical"
+  },
+  
+  "satellites": {
+    "excellent": "EXCELLENT",
+    "good": "GOOD",
+    "weak": "WEAK",
+    "poor": "POOR"
+  },
+  
+  "power": {
+    "off": "OFF",
+    "eco": "ECO",
+    "max": "MAX"
+  },
+  
+  "compass": {
+    "n": "N",
+    "ne": "NE",
+    "e": "E",
+    "se": "SE",
+    "s": "S",
+    "sw": "SW",
+    "w": "W",
+    "nw": "NW"
+  },
+  
+  "camera": {
+    "connecting": "CONNECTING",
+    "reconnecting": "RECONNECTING",
+    "noSignal": "NO SIGNAL",
+    "front": "FRONT",
+    "rear": "REAR",
+    "noSnapshot": "No snapshot",
+    "setAsFront": "Set as Front",
+    "setAsRear": "Set as Rear",
+    "change": "Change",
+    "set": "SET",
+    "notSet": "Not set"
+  },
+  
+  "settings": {
+    "title": "Settings",
+    "connectedTab": "Connected",
+    "discoverTab": "Discover & Pair",
+    "camerasTab": "MMTX Cameras",
+    "connectedDrones": "Connected Drones",
+    "noDronesYet": "No connected drones yet. Go to Discover & Pair to add drones.",
+    "detectedDrones": "Detected Drones",
+    "telemetryActive": "Telemetry active. Click to connect.",
+    "connectDrone": "+ Connect Drone",
+    "noGpsCoords": "No GPS coordinates",
+    "lastSeen": "Last seen: {{time}}"
+  },
+  
+  "profile": {
+    "title": "Drone #{{id}} Profile",
+    "droneName": "Drone Name",
+    "droneNamePlaceholder": "Drone {{id}}",
+    "ipAddress": "IP Address",
+    "ipPlaceholder": "192.168.0.xxx",
+    "ipHint": "IP address from pairing (auto-filled)",
+    "droneId": "Drone ID",
+    "frontCameraUrl": "Front Camera URL (HLS)",
+    "frontCameraPlaceholder": "http://192.168.88.15:8888/cam1/index.m3u8",
+    "frontCameraHint": "HLS stream URL for main camera view",
+    "rearCameraUrl": "Rear Camera URL (HLS)",
+    "rearCameraPlaceholder": "http://192.168.88.15:8888/cam2/index.m3u8",
+    "rearCameraHint": "HLS stream URL for rear view mirror",
+    "accentColor": "Accent Color",
+    "frontCamera": "Front Camera",
+    "rearCamera": "Rear Camera",
+    "saving": "Saving...",
+    "saveProfile": "Save Profile",
+    "deleteProfile": "Delete Profile",
+    "deleteConfirm": "Are you sure you want to delete the profile for Drone #{{id}}?",
+    "open": "Open →"
+  },
+  
+  "discover": {
+    "title": "Discover Drones",
+    "subtitle": "Scan the network for new drones to pair",
+    "discoverBtn": "Discover Drones",
+    "scanning": "Scanning...",
+    "pairingInProgress": "Pairing in progress...",
+    "emptyHint": "Click \"Discover Drones\" to scan for available drones on the network",
+    "foundDrones": "Found {{count}} drone(s) on network",
+    "noDronesFound": "No drones found on network",
+    "discoveryFailed": "Discovery failed"
+  },
+  
+  "pairing": {
+    "pair": "Pair",
+    "rePair": "Re-pair",
+    "pairing": "Pairing...",
+    "paired": "Paired!",
+    "wait": "Wait...",
+    "initiating": "Initiating pairing...",
+    "waitingTelemetry": "Waiting for telemetry...",
+    "success": "Drone paired successfully!",
+    "noTelemetry": "No telemetry received. Try again.",
+    "commandFailed": "Pairing command failed",
+    "alreadyConnected": "Connected drone",
+    "alreadyPaired": "Already paired - telemetry active",
+    "rePairTitle": "Re-pair Drone",
+    "rePairConnectedMsg": "Drone \"{{name}}\" is already connected. Re-pairing may update network settings. Continue?",
+    "rePairTelemetryMsg": "Drone {{id}} already has active telemetry. Are you sure you want to re-pair this drone?",
+    "waitingForTelemetry": "Waiting 10 seconds for telemetry from drone {{id}}...",
+    "telemetryReceived": "Telemetry received from drone {{id}} - Paired successfully!",
+    "noTelemetryReceived": "No telemetry from drone {{id}} - Try pairing again",
+    "pairCommandSent": "Pair command sent to drone {{id}}"
+  },
+  
+  "cameraScanner": {
+    "title": "Camera Scanner",
+    "subtitle": "Drone #{{id}} • IP: {{ip}}",
+    "ipNotSet": "Not set",
+    "scanForCameras": "Scan for Cameras",
+    "rescan": "Rescan for Cameras",
+    "scanning": "Scanning...",
+    "noIpError": "Drone IP address is not set. Please set it first.",
+    "noCamerasFound": "No cameras found on the network",
+    "foundCameras": "Found {{count}} camera",
+    "foundCameras_plural": "Found {{count}} cameras",
+    "saveCameraSettings": "Save Camera Settings",
+    "savingConfiguring": "Saving & Configuring...",
+    "profileSaved": "Profile saved",
+    "updatingMmtx": "Updating MediaMTX configuration...",
+    "mmtxConfigSaved": "MMTX CONFIG SAVED - You can now close this window",
+    "operationFailed": "Operation failed"
+  },
+  
+  "mediamtx": {
+    "title": "MediaMTX Status",
+    "loading": "Loading MediaMTX status...",
+    "running": "Running",
+    "stopped": "Stopped",
+    "pid": "PID",
+    "uptime": "Uptime",
+    "restart": "Restart MediaMTX",
+    "restarting": "Restarting...",
+    "configuredStreams": "Configured Streams",
+    "activeStreams": "Active Streams",
+    "connectedViewers": "Connected Viewers",
+    "hlsMuxers": "HLS Muxers",
+    "dataReceived": "Data Received",
+    "dataSent": "Data Sent",
+    "cameraStreams": "Camera Streams",
+    "streamName": "Stream Name",
+    "status": "Status",
+    "usedBy": "Used By",
+    "source": "Source",
+    "tracks": "Tracks",
+    "viewers": "Viewers",
+    "hlsUrl": "HLS URL",
+    "active": "Active",
+    "inactive": "Inactive",
+    "notAssigned": "—",
+    "noStreams": "No streams configured",
+    "configuration": "Configuration (paths.yml)",
+    "lastUpdated": "Last updated: {{time}}",
+    "noConfig": "No configuration loaded",
+    "recentLogs": "Recent Logs",
+    "noLogs": "No logs available"
+  },
+  
+  "terminal": {
+    "title": "Terminal",
+    "clear": "Clear",
+    "running": "Running...",
+    "success": "Success",
+    "error": "Error",
+    "parseWarning": "Parse Warning",
+    "savingCameraSettings": "Saving camera settings..."
+  }
+}
+

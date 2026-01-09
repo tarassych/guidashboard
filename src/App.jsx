@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
+import { useTranslation } from 'react-i18next'
 import './App.css'
 import config from './config'
 import { useTheme } from './hooks/useTheme'
@@ -52,6 +53,8 @@ const createInitialState = () => ({
 })
 
 function App() {
+  const { t } = useTranslation()
+  
   // Get drone ID from URL params (can be numeric string like "1604695971")
   const { droneId: droneIdParam } = useParams()
   const droneId = droneIdParam || '1'
@@ -184,7 +187,10 @@ function App() {
     })
   }, [])
 
-  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+  const directions = [
+    t('compass.n'), t('compass.ne'), t('compass.e'), t('compass.se'),
+    t('compass.s'), t('compass.sw'), t('compass.w'), t('compass.nw')
+  ]
   const directionIndex = Math.round(telemetry.heading / 45) % 8
 
   // Get camera URLs from profile or use defaults
@@ -206,17 +212,17 @@ function App() {
         {/* Top Bar */}
         <div className="hud-top-bar">
           <div className="hud-logo">
-            <Link to="/" className="back-to-dashboard" title="Back to Dashboard">←</Link>
+            <Link to="/" className="back-to-dashboard" title={t('nav.backToDashboard')}>←</Link>
             <span className="logo-icon">◈</span>
-            <span className="logo-text">{droneName.toUpperCase()} OSD</span>
-            <span className="logo-version">v2.5</span>
+            <span className="logo-text">{t('osd.title', { name: droneName.toUpperCase() })}</span>
+            <span className="logo-version">{t('osd.version')}</span>
           </div>
           
           <div className="hud-status-center">
             <span className={`status-mode ${telemetry.connected ? telemetry.md_str.toLowerCase().replace(/\s+/g, '-') : 'offline'}`}>
-              {telemetry.connected ? telemetry.md_str : 'OFFLINE'}
+              {telemetry.connected ? telemetry.md_str : t('common.offline')}
             </span>
-            {isActive && <span className="status-active">ACTIVE</span>}
+            {isActive && <span className="status-active">{t('common.active')}</span>}
           </div>
 
           <div className="hud-right-indicators">
@@ -231,7 +237,7 @@ function App() {
           <div className="rear-mirror">
             <div className="mirror-frame">
               <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
-              <span className="mirror-label">REAR</span>
+              <span className="mirror-label">{t('osd.rear')}</span>
             </div>
           </div>
           <FuseSwitch label="F2" armed={telemetry.f2} />
@@ -342,6 +348,7 @@ function BatteryIndicator({ voltage }) {
 
 // Fuse Switch Indicator (read-only, driven by telemetry)
 function FuseSwitch({ label, armed }) {
+  const { t } = useTranslation()
   return (
     <div className={`fuse-switch ${armed ? 'armed' : 'safe'}`}>
       <div className="fuse-label">{label}</div>
@@ -350,21 +357,22 @@ function FuseSwitch({ label, armed }) {
           <div className={`fuse-element ${armed ? 'active' : ''}`}></div>
         </div>
       </div>
-      <div className="fuse-status">{armed ? 'ON' : 'OFF'}</div>
+      <div className="fuse-status">{armed ? t('common.on') : t('common.off')}</div>
     </div>
   )
 }
 
 // HUD Compass
 function HudCompass({ heading, direction }) {
+  const { t } = useTranslation()
   return (
     <div className="hud-compass">
       <div className="compass-outer">
         <div className="compass-ring" style={{ transform: `rotate(${-heading}deg)` }}>
-          <span className="compass-n">N</span>
-          <span className="compass-e">E</span>
-          <span className="compass-s">S</span>
-          <span className="compass-w">W</span>
+          <span className="compass-n">{t('compass.n')}</span>
+          <span className="compass-e">{t('compass.e')}</span>
+          <span className="compass-s">{t('compass.s')}</span>
+          <span className="compass-w">{t('compass.w')}</span>
         </div>
         <div className="compass-pointer">▲</div>
       </div>
@@ -378,6 +386,7 @@ function HudCompass({ heading, direction }) {
 
 // Satellite Indicator (replaces Altitude)
 function SatelliteIndicator({ satellites }) {
+  const { t } = useTranslation()
   const maxSatellites = 16
   const satArray = Array.from({ length: maxSatellites }, (_, i) => i < satellites)
   
@@ -391,7 +400,7 @@ function SatelliteIndicator({ satellites }) {
 
   return (
     <div className="hud-satellites">
-      <div className="sat-label"><span className="sat-icon">◎</span> SAT</div>
+      <div className="sat-label"><span className="sat-icon">◎</span> {t('osd.sat')}</div>
       <div className="sat-grid">
         {satArray.map((active, i) => (
           <div 
@@ -405,7 +414,7 @@ function SatelliteIndicator({ satellites }) {
       </div>
       <div className="sat-info">
         <span className={`sat-count ${getQuality()}`}>{satellites}</span>
-        <span className="sat-quality">{getQuality().toUpperCase()}</span>
+        <span className="sat-quality">{t(`satellites.${getQuality()}`)}</span>
       </div>
     </div>
   )
@@ -413,6 +422,7 @@ function SatelliteIndicator({ satellites }) {
 
 // Speedometer (km/h from wheel speed) with Odometer
 function Speedometer({ speed, dist }) {
+  const { t } = useTranslation()
   const speedKmh = speed
   const maxSpeed = 60 // max km/h for display
   const angle = Math.min((speedKmh / maxSpeed) * 240, 240) - 120 // -120 to +120 degrees
@@ -481,7 +491,7 @@ function Speedometer({ speed, dist }) {
       </svg>
       <div className="speedo-readout">
         <span className="speedo-value">{speedKmh.toFixed(0)}</span>
-        <span className="speedo-unit">km/h</span>
+        <span className="speedo-unit">{t('osd.speedUnit')}</span>
       </div>
       {/* Odometer */}
       <div className="odometer">
@@ -492,7 +502,7 @@ function Speedometer({ speed, dist }) {
             </div>
           ))}
         </div>
-        <span className="odo-unit">m</span>
+        <span className="odo-unit">{t('osd.distanceUnit')}</span>
       </div>
     </div>
   )
@@ -500,12 +510,13 @@ function Speedometer({ speed, dist }) {
 
 // Power Indicator (0, 1, 2 levels)
 function PowerIndicator({ power }) {
+  const { t } = useTranslation()
   const levels = [0, 1, 2]
-  const labels = ['OFF', 'ECO', 'MAX']
+  const labels = [t('power.off'), t('power.eco'), t('power.max')]
 
   return (
     <div className="power-indicator">
-      <div className="power-label">PWR</div>
+      <div className="power-label">{t('osd.pwr')}</div>
       <div className="power-bars">
         {levels.map(level => (
           <div 
@@ -514,13 +525,14 @@ function PowerIndicator({ power }) {
           />
         ))}
       </div>
-      <div className={`power-mode level-${power}`}>{labels[power] || 'OFF'}</div>
+      <div className={`power-mode level-${power}`}>{labels[power] || t('power.off')}</div>
     </div>
   )
 }
 
 // Map Panel with Google Maps satellite view
 function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
+  const { t } = useTranslation()
   const [zoom, setZoom] = useState(17) // Google Maps zoom level (1-21)
   const mapRef = useRef(null)
   
@@ -609,8 +621,8 @@ function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
   return (
     <div className="map-panel">
       <div className="map-header">
-        <span className="map-title">MAP</span>
-        <span className="map-alt">ALT: {altitude.toFixed(0)}m</span>
+        <span className="map-title">{t('osd.map')}</span>
+        <span className="map-alt">{t('osd.altitude')}: {altitude.toFixed(0)}m</span>
         <span className="map-coords">
           {lat ? lat.toFixed(6) : '-.------'}°, {lng ? lng.toFixed(6) : '-.------'}°
         </span>
@@ -627,14 +639,14 @@ function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
         {/* Google Map */}
         {loadError && (
           <div className="map-error">
-            <span>Map Error</span>
-            <small>Check API Key</small>
+            <span>{t('osd.mapError')}</span>
+            <small>{t('osd.checkApiKey')}</small>
           </div>
         )}
         
         {!isLoaded && !loadError && (
           <div className="map-loading">
-            <span>Loading Map...</span>
+            <span>{t('osd.loadingMap')}</span>
           </div>
         )}
         
@@ -701,6 +713,7 @@ function HeadingTape({ heading }) {
 
 // Warning Banner - shown when both fuses are armed
 function WarningBanner() {
+  const { t } = useTranslation()
   return (
     <div className="warning-banner">
       <div className="warning-chevrons left">
@@ -711,10 +724,10 @@ function WarningBanner() {
       <div className="warning-center">
         <div className="warning-frame">
           <span className="warning-icon">⚠</span>
-          <span className="warning-text">WARNING</span>
+          <span className="warning-text">{t('osd.warning')}</span>
           <span className="warning-icon">⚠</span>
         </div>
-        <div className="warning-subtext">ARMED</div>
+        <div className="warning-subtext">{t('osd.armed')}</div>
       </div>
       <div className="warning-chevrons right">
         <span>▶</span>
@@ -727,6 +740,7 @@ function WarningBanner() {
 
 // Telemetry Strip - now using real telemetry data
 function TelemetryStrip({ telemetry }) {
+  const { t } = useTranslation()
   const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
   
   // Format telemetry_time as clock
@@ -747,53 +761,53 @@ function TelemetryStrip({ telemetry }) {
         className="telem-toggle"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        {isCollapsed ? '▲ TELEMETRY' : '▼ TELEMETRY'}
+        {isCollapsed ? `▲ ${t('osd.telemetry')}` : `▼ ${t('osd.telemetry')}`}
       </button>
       
       {!isCollapsed && (
         <div className="telem-content">
           <div className="telem-item">
-            <span className="telem-label">LAT</span>
+            <span className="telem-label">{t('telemetry.lat')}</span>
             <span className="telem-value">{telemetry.latitude ? telemetry.latitude.toFixed(6) : '-.------'}°</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">LNG</span>
+            <span className="telem-label">{t('telemetry.lng')}</span>
             <span className="telem-value">{telemetry.longitude ? telemetry.longitude.toFixed(6) : '-.------'}°</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">ALT</span>
+            <span className="telem-label">{t('telemetry.alt')}</span>
             <span className="telem-value">{telemetry.altitude.toFixed(0)}m</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">HDG</span>
+            <span className="telem-label">{t('telemetry.hdg')}</span>
             <span className="telem-value">{telemetry.heading.toFixed(0)}°</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">GS</span>
+            <span className="telem-label">{t('telemetry.gs')}</span>
             <span className="telem-value">{telemetry.groundspeed.toFixed(1)}</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">SPD</span>
+            <span className="telem-label">{t('telemetry.spd')}</span>
             <span className="telem-value">{telemetry.speed.toFixed(1)}</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">DIST</span>
+            <span className="telem-label">{t('telemetry.dist')}</span>
             <span className="telem-value">{telemetry.dist.toFixed(0)}m</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">BAT</span>
+            <span className="telem-label">{t('telemetry.bat')}</span>
             <span className="telem-value">{telemetry.batt_v.toFixed(1)}V</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">SAT</span>
+            <span className="telem-label">{t('telemetry.sat')}</span>
             <span className="telem-value">{telemetry.satellites}</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">MODE</span>
+            <span className="telem-label">{t('telemetry.mode')}</span>
             <span className="telem-value">{telemetry.md_str}</span>
           </div>
           <div className="telem-item">
-            <span className="telem-label">TIME</span>
+            <span className="telem-label">{t('telemetry.time')}</span>
             <span className="telem-value">{formatClock(telemetry.telemetry_time)}</span>
           </div>
         </div>
@@ -888,6 +902,7 @@ function AnimatedCardiogram({ heartbeats }) {
 
 // Telemetry Log Component - Real-time database telemetry
 function TelemetryLog({ droneId, onTelemetryUpdate }) {
+  const { t } = useTranslation()
   const [records, setRecords] = useState([])
   const [connectionStatus, setConnectionStatus] = useState('connecting')
   const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
@@ -1012,9 +1027,9 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
   return (
     <div className={`telemetry-log ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="tlog-header" onClick={() => setIsCollapsed(!isCollapsed)}>
-        <span className="tlog-title">{isCollapsed ? '▶' : '▼'} TELEMETRY LOG</span>
+        <span className="tlog-title">{isCollapsed ? '▶' : '▼'} {t('osd.telemetryLog')}</span>
         <span className={`tlog-status ${connectionStatus}`}>
-          {connectionStatus === 'connected' ? '● LIVE' : connectionStatus === 'connecting' ? '○ ...' : '○ OFF'}
+          {connectionStatus === 'connected' ? `● ${t('osd.live')}` : connectionStatus === 'connecting' ? `○ ${t('osd.connecting')}` : `○ ${t('common.off')}`}
         </span>
       </div>
       
@@ -1025,7 +1040,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
       ) : (
         <div className="tlog-console">
           {records.length === 0 ? (
-            <div className="tlog-empty">Waiting...</div>
+            <div className="tlog-empty">{t('osd.waiting')}</div>
           ) : (
             records.map(record => (
               <div key={record.id} className="tlog-entry">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
+import { useTranslation } from 'react-i18next'
 import config from './config'
 import './DroneProfileEditor.css'
 
@@ -19,16 +20,17 @@ const miniMapStyles = [
 
 // Mini map component for showing drone position
 function DroneLocationMap({ latitude, longitude }) {
+  const { t } = useTranslation()
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: config.googleMapsApiKey
   })
   
   if (!isLoaded) {
-    return <div className="mini-map-loading">Loading map...</div>
+    return <div className="mini-map-loading">{t('osd.loadingMap')}</div>
   }
   
   if (!latitude || !longitude) {
-    return <div className="mini-map-no-data">No GPS data</div>
+    return <div className="mini-map-no-data">{t('settings.noGpsCoords')}</div>
   }
   
   return (
@@ -74,6 +76,7 @@ const defaultProfile = {
 
 // Camera Scanner Modal Component
 function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
+  const { t } = useTranslation()
   const [isScanning, setIsScanning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [scanError, setScanError] = useState(null)
@@ -92,7 +95,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   
   const handleScan = async () => {
     if (!droneIp) {
-      setScanError('Drone IP address is not set. Please set it first.')
+      setScanError(t('cameraScanner.noIpError'))
       return
     }
     
@@ -126,7 +129,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       if (data.success && data.cameras && data.cameras.length > 0) {
         setCameras(data.cameras)
       } else {
-        setScanError(data.error || 'No cameras found on the network')
+        setScanError(data.error || t('cameraScanner.noCamerasFound'))
       }
     } catch (error) {
       console.error('Camera scan error:', error)
@@ -206,7 +209,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     
     // Initialize terminal log for save operation
     setScanLog({
-      command: 'Saving camera settings...',
+      command: t('terminal.savingCameraSettings'),
       stdout: '[SAVE] Saving drone profile...\n',
       stderr: '',
       status: 'running'
@@ -266,15 +269,15 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   return (
     <div className="camera-scanner-modal">
       <div className="camera-scanner-header">
-        <h3>Camera Scanner</h3>
-        <span className="scanner-subtitle">Drone #{droneId} • IP: {droneIp || 'Not set'}</span>
+        <h3>{t('cameraScanner.title')}</h3>
+        <span className="scanner-subtitle">{t('cameraScanner.subtitle', { id: droneId, ip: droneIp || t('cameraScanner.ipNotSet') })}</span>
       </div>
       
       {/* Terminal Output */}
       {scanLog && (
         <div className="camera-scanner-terminal">
           <div className="terminal-header">
-            <span className="terminal-title"><span className="terminal-icon">&gt;_</span> Terminal</span>
+            <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
           </div>
           <div className="terminal-body" ref={scanTerminalRef}>
             <div className={`terminal-entry scan ${scanLog.status}`}>
@@ -291,12 +294,12 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
               )}
               {scanLog.status === 'success' && scanLog.camerasFound !== undefined && (
                 <div className="terminal-result success">
-                  ✓ Found {scanLog.camerasFound} camera{scanLog.camerasFound !== 1 ? 's' : ''}
+                  ✓ {t('cameraScanner.foundCameras', { count: scanLog.camerasFound })}
                 </div>
               )}
               {scanLog.status === 'error' && (
                 <div className="terminal-result error">
-                  ✗ Operation failed
+                  ✗ {t('cameraScanner.operationFailed')}
                 </div>
               )}
             </div>
@@ -332,7 +335,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
                     />
                   ) : null}
                   <div className="snapshot-placeholder" style={{ display: camera.snapshot?.url ? 'none' : 'flex' }}>
-                    No snapshot
+                    {t('camera.noSnapshot')}
                   </div>
                 </div>
                 
@@ -346,7 +349,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
                 <div className="camera-assignment">
                   {assignment && (
                     <div className={`assignment-badge ${assignment}`}>
-                      {assignment === 'front' ? 'FRONT' : 'REAR'}
+                      {assignment === 'front' ? t('camera.front') : t('camera.rear')}
                     </div>
                   )}
                 </div>
@@ -356,13 +359,13 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
                     className={`assign-btn front ${assignment === 'front' ? 'selected' : ''}`}
                     onClick={() => handleAssignFront(camera)}
                   >
-                    {assignment === 'front' ? '✓ Front' : 'Set as Front'}
+                    {assignment === 'front' ? `✓ ${t('camera.front')}` : t('camera.setAsFront')}
                   </button>
                   <button
                     className={`assign-btn rear ${assignment === 'rear' ? 'selected' : ''}`}
                     onClick={() => handleAssignRear(camera)}
                   >
-                    {assignment === 'rear' ? '✓ Rear' : 'Set as Rear'}
+                    {assignment === 'rear' ? `✓ ${t('camera.rear')}` : t('camera.setAsRear')}
                   </button>
                 </div>
               </div>
@@ -381,19 +384,19 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
           {isScanning ? (
             <>
               <span className="scan-spinner">◌</span>
-              Scanning...
+              {t('cameraScanner.scanning')}
             </>
           ) : cameras.length > 0 ? (
-            'Rescan for Cameras'
+            t('cameraScanner.rescan')
           ) : (
-            'Scan for Cameras'
+            t('cameraScanner.scanForCameras')
           )}
         </button>
       </div>
       
       <div className="camera-scanner-footer">
         <button className="cancel-btn" onClick={onClose} disabled={isSaving}>
-          Close
+          {t('common.close')}
         </button>
         <button 
           className="save-btn"
@@ -403,10 +406,10 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
           {isSaving ? (
             <>
               <span className="spinner"></span>
-              Saving & Configuring...
+              {t('cameraScanner.savingConfiguring')}
             </>
           ) : (
-            'Save Camera Settings'
+            t('cameraScanner.saveCameraSettings')
           )}
         </button>
       </div>
@@ -415,6 +418,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
 }
 
 function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     ...defaultProfile,
     ...profile
@@ -439,71 +443,71 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
   return (
     <form className="profile-form" onSubmit={handleSubmit}>
       <div className="form-header">
-        <h3>Drone #{droneId} Profile</h3>
+        <h3>{t('profile.title', { id: droneId })}</h3>
         {profile && (
           <button 
             type="button" 
             className="delete-btn"
             onClick={() => onDelete(droneId)}
           >
-            ✕ Delete
+            ✕ {t('common.delete')}
           </button>
         )}
       </div>
       
       <div className="form-group">
-        <label htmlFor={`name-${droneId}`}>Drone Name</label>
+        <label htmlFor={`name-${droneId}`}>{t('profile.droneName')}</label>
         <input
           id={`name-${droneId}`}
           name="name"
           type="text"
           value={formData.name}
           onChange={handleChange}
-          placeholder={`Drone ${droneId}`}
+          placeholder={t('profile.droneNamePlaceholder', { id: droneId })}
         />
       </div>
       
       <div className="form-group">
-        <label htmlFor={`ip-${droneId}`}>IP Address</label>
+        <label htmlFor={`ip-${droneId}`}>{t('profile.ipAddress')}</label>
         <input
           id={`ip-${droneId}`}
           name="ipAddress"
           type="text"
           value={formData.ipAddress || ''}
           onChange={handleChange}
-          placeholder="192.168.0.xxx"
+          placeholder={t('profile.ipPlaceholder')}
         />
-        <span className="form-hint">IP address from pairing (auto-filled)</span>
+        <span className="form-hint">{t('profile.ipHint')}</span>
       </div>
       
       <div className="form-group">
-        <label htmlFor={`frontCamera-${droneId}`}>Front Camera URL (HLS)</label>
+        <label htmlFor={`frontCamera-${droneId}`}>{t('profile.frontCameraUrl')}</label>
         <input
           id={`frontCamera-${droneId}`}
           name="frontCameraUrl"
           type="text"
           value={formData.frontCameraUrl}
           onChange={handleChange}
-          placeholder="http://192.168.88.15:8888/cam1/index.m3u8"
+          placeholder={t('profile.frontCameraPlaceholder')}
         />
-        <span className="form-hint">HLS stream URL for main camera view</span>
+        <span className="form-hint">{t('profile.frontCameraHint')}</span>
       </div>
       
       <div className="form-group">
-        <label htmlFor={`rearCamera-${droneId}`}>Rear Camera URL (HLS)</label>
+        <label htmlFor={`rearCamera-${droneId}`}>{t('profile.rearCameraUrl')}</label>
         <input
           id={`rearCamera-${droneId}`}
           name="rearCameraUrl"
           type="text"
           value={formData.rearCameraUrl}
           onChange={handleChange}
-          placeholder="http://192.168.88.15:8888/cam2/index.m3u8"
+          placeholder={t('profile.rearCameraPlaceholder')}
         />
-        <span className="form-hint">HLS stream URL for rear view mirror</span>
+        <span className="form-hint">{t('profile.rearCameraHint')}</span>
       </div>
       
       <div className="form-group">
-        <label htmlFor={`color-${droneId}`}>Accent Color</label>
+        <label htmlFor={`color-${droneId}`}>{t('profile.accentColor')}</label>
         <div className="color-input-row">
           <input
             id={`color-${droneId}`}
@@ -524,10 +528,10 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
       
       <div className="form-actions">
         <button type="button" className="cancel-btn" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="save-btn" disabled={saving}>
-          {saving ? 'Saving...' : 'Save Profile'}
+          {saving ? t('profile.saving') : t('profile.saveProfile')}
         </button>
       </div>
     </form>
@@ -536,6 +540,7 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
 
 // MediaMTX Status Panel Component
 function MediaMTXPanel({ profiles = {} }) {
+  const { t } = useTranslation()
   const [status, setStatus] = useState(null)
   const [config, setConfig] = useState(null)
   const [logs, setLogs] = useState([])
@@ -656,7 +661,7 @@ function MediaMTXPanel({ profiles = {} }) {
     return (
       <div className="mediamtx-panel loading">
         <div className="loading-spinner"></div>
-        <p>Loading MediaMTX status...</p>
+        <p>{t('mediamtx.loading')}</p>
       </div>
     )
   }
@@ -668,9 +673,9 @@ function MediaMTXPanel({ profiles = {} }) {
         <div className="mmtx-status-indicator">
           <span className={`status-dot ${status?.status?.running ? 'running' : 'stopped'}`}></span>
           <span className="status-text">
-            {status?.status?.running ? 'Running' : 'Stopped'}
-            {status?.status?.pid && <span className="pid">PID: {status.status.pid}</span>}
-            {status?.status?.uptime && <span className="uptime">Uptime: {status.status.uptime}</span>}
+            {status?.status?.running ? t('mediamtx.running') : t('mediamtx.stopped')}
+            {status?.status?.pid && <span className="pid">{t('mediamtx.pid')}: {status.status.pid}</span>}
+            {status?.status?.uptime && <span className="uptime">{t('mediamtx.uptime')}: {status.status.uptime}</span>}
           </span>
         </div>
         <button 
@@ -678,7 +683,7 @@ function MediaMTXPanel({ profiles = {} }) {
           onClick={handleRestart}
           disabled={restarting}
         >
-          {restarting ? 'Restarting...' : 'Restart MediaMTX'}
+          {restarting ? t('mediamtx.restarting') : t('mediamtx.restart')}
         </button>
       </div>
       
@@ -692,44 +697,44 @@ function MediaMTXPanel({ profiles = {} }) {
       <div className="mmtx-stats-grid">
         <div className="stat-card">
           <span className="stat-value">{status?.stats?.totalPaths || 0}</span>
-          <span className="stat-label">Configured Streams</span>
+          <span className="stat-label">{t('mediamtx.configuredStreams')}</span>
         </div>
         <div className="stat-card">
           <span className="stat-value active">{status?.stats?.activePaths || 0}</span>
-          <span className="stat-label">Active Streams</span>
+          <span className="stat-label">{t('mediamtx.activeStreams')}</span>
         </div>
         <div className="stat-card">
           <span className="stat-value">{status?.stats?.totalReaders || 0}</span>
-          <span className="stat-label">Connected Viewers</span>
+          <span className="stat-label">{t('mediamtx.connectedViewers')}</span>
         </div>
         <div className="stat-card">
           <span className="stat-value">{status?.stats?.hlsMuxers || 0}</span>
-          <span className="stat-label">HLS Muxers</span>
+          <span className="stat-label">{t('mediamtx.hlsMuxers')}</span>
         </div>
         <div className="stat-card bytes">
           <span className="stat-value">{formatBytes(status?.stats?.bytesReceived)}</span>
-          <span className="stat-label">Data Received</span>
+          <span className="stat-label">{t('mediamtx.dataReceived')}</span>
         </div>
         <div className="stat-card bytes">
           <span className="stat-value">{formatBytes(status?.stats?.bytesSent)}</span>
-          <span className="stat-label">Data Sent</span>
+          <span className="stat-label">{t('mediamtx.dataSent')}</span>
         </div>
       </div>
       
       {/* Streams Table */}
       <div className="mmtx-streams-section">
-        <h3>Camera Streams</h3>
+        <h3>{t('mediamtx.cameraStreams')}</h3>
         {status?.paths?.length > 0 ? (
           <table className="mmtx-streams-table">
             <thead>
               <tr>
-                <th>Stream Name</th>
-                <th>Status</th>
-                <th>Used By</th>
-                <th>Source</th>
-                <th>Tracks</th>
-                <th>Viewers</th>
-                <th>HLS URL</th>
+                <th>{t('mediamtx.streamName')}</th>
+                <th>{t('mediamtx.status')}</th>
+                <th>{t('mediamtx.usedBy')}</th>
+                <th>{t('mediamtx.source')}</th>
+                <th>{t('mediamtx.tracks')}</th>
+                <th>{t('mediamtx.viewers')}</th>
+                <th>{t('mediamtx.hlsUrl')}</th>
               </tr>
             </thead>
             <tbody>
@@ -740,7 +745,7 @@ function MediaMTXPanel({ profiles = {} }) {
                     <td className="stream-name">{path.name}</td>
                     <td>
                       <span className={`stream-status ${path.ready ? 'active' : 'inactive'}`}>
-                        {path.ready ? '● Active' : '○ Inactive'}
+                        {path.ready ? `● ${t('mediamtx.active')}` : `○ ${t('mediamtx.inactive')}`}
                       </span>
                     </td>
                     <td className="stream-usage">
@@ -753,7 +758,7 @@ function MediaMTXPanel({ profiles = {} }) {
                           </span>
                         ))
                       ) : (
-                        <span className="not-assigned">—</span>
+                        <span className="not-assigned">{t('mediamtx.notAssigned')}</span>
                       )}
                     </td>
                     <td className="source-type">{path.sourceType}</td>
@@ -768,31 +773,31 @@ function MediaMTXPanel({ profiles = {} }) {
             </tbody>
           </table>
         ) : (
-          <p className="no-streams">No streams configured</p>
+          <p className="no-streams">{t('mediamtx.noStreams')}</p>
         )}
       </div>
       
       {/* Config Section */}
       <div className="mmtx-config-section">
         <div className="config-header">
-          <h3>Configuration (paths.yml)</h3>
+          <h3>{t('mediamtx.configuration')}</h3>
           {config?.lastModified && (
             <span className="config-modified">
-              Last updated: {new Date(config.lastModified).toLocaleString()}
+              {t('mediamtx.lastUpdated', { time: new Date(config.lastModified).toLocaleString() })}
             </span>
           )}
         </div>
         <pre className="config-preview">
-          {config?.raw || 'No configuration loaded'}
+          {config?.raw || t('mediamtx.noConfig')}
         </pre>
       </div>
       
       {/* Logs Section */}
       <div className="mmtx-logs-section">
         <div className="logs-header">
-          <h3>Recent Logs</h3>
+          <h3>{t('mediamtx.recentLogs')}</h3>
           <button className="refresh-logs-btn" onClick={fetchLogs}>
-            Refresh
+            {t('common.refresh')}
           </button>
         </div>
         <div className="logs-container" ref={logsRef}>
@@ -803,7 +808,7 @@ function MediaMTXPanel({ profiles = {} }) {
               </div>
             ))
           ) : (
-            <p className="no-logs">No logs available</p>
+            <p className="no-logs">{t('mediamtx.noLogs')}</p>
           )}
         </div>
       </div>
@@ -812,6 +817,7 @@ function MediaMTXPanel({ profiles = {} }) {
 }
 
 function DroneProfileEditor() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
@@ -982,8 +988,8 @@ function DroneProfileEditor() {
   
   const handleDeleteProfile = (droneId) => {
     setConfirmModal({
-      title: 'Delete Profile',
-      message: `Are you sure you want to delete the profile for Drone #${droneId}?`,
+      title: t('profile.deleteProfile'),
+      message: t('profile.deleteConfirm', { id: droneId }),
       onConfirm: async () => {
         setConfirmModal(null)
         try {
@@ -1078,7 +1084,7 @@ function DroneProfileEditor() {
     // Set pairing status
     setPairingStatus(prev => ({
       ...prev,
-      [ip]: { status: 'pairing', message: 'Initiating pairing...' }
+      [ip]: { status: 'pairing', message: t('pairing.initiating') }
     }))
     
     // Add "running" log
@@ -1116,7 +1122,7 @@ function DroneProfileEditor() {
       if (!pairData.success || !pairData.result) {
         setPairingStatus(prev => ({
           ...prev,
-          [ip]: { status: 'failed', message: 'Pairing command failed' }
+          [ip]: { status: 'failed', message: t('pairing.commandFailed') }
         }))
         return
       }
@@ -1124,13 +1130,13 @@ function DroneProfileEditor() {
       // Update status to checking
       setPairingStatus(prev => ({
         ...prev,
-        [ip]: { status: 'checking', message: 'Waiting for telemetry...' }
+        [ip]: { status: 'checking', message: t('pairing.waitingTelemetry') }
       }))
       
       // Add waiting log
       addTerminalLog({
         type: 'info',
-        message: `Waiting 10 seconds for telemetry from drone ${drone_id}...`
+        message: t('pairing.waitingForTelemetry', { id: drone_id })
       })
       
       // Wait at least 10 seconds, then check for telemetry
@@ -1152,7 +1158,7 @@ function DroneProfileEditor() {
         // Success! Move drone to detected drones
         setPairingStatus(prev => ({
           ...prev,
-          [ip]: { status: 'success', message: 'Drone paired successfully!' }
+          [ip]: { status: 'success', message: t('pairing.success') }
         }))
         
         // Create or update profile with IP address
@@ -1237,7 +1243,7 @@ function DroneProfileEditor() {
     return (
       <div className="profile-editor loading">
         <div className="loading-spinner">◌</div>
-        <span>Loading profiles...</span>
+        <span>{t('common.loading')}</span>
       </div>
     )
   }
@@ -1253,8 +1259,8 @@ function DroneProfileEditor() {
     <div className="profile-editor">
       <header className="editor-header">
         <div className="header-left">
-          <Link to="/" className="back-btn">← Back to Dashboard</Link>
-          <h1>Settings</h1>
+          <Link to="/" className="back-btn">← {t('nav.backToDashboard')}</Link>
+          <h1>{t('settings.title')}</h1>
         </div>
       </header>
       
@@ -1264,13 +1270,13 @@ function DroneProfileEditor() {
           className={`tab-btn ${activeTab === 'connected' ? 'active' : ''}`}
           onClick={() => setActiveTab('connected')}
         >
-          Connected ({connectedDroneIds.length})
+          {t('settings.connectedTab')} ({connectedDroneIds.length})
         </button>
         <button 
           className={`tab-btn ${activeTab === 'discover' ? 'active' : ''}`}
           onClick={() => setActiveTab('discover')}
         >
-          Discover & Pair
+          {t('settings.discoverTab')}
           {isPairingAny && <span className="tab-badge pairing">●</span>}
         </button>
         <button 
@@ -1278,7 +1284,7 @@ function DroneProfileEditor() {
           onClick={() => setActiveTab('cameras')}
         >
           <span className={`mmtx-status-dot ${mmtxStatus}`} title={`MediaMTX: ${mmtxStatus}`}></span>
-          MMTX Cameras
+          {t('settings.camerasTab')}
         </button>
       </nav>
       
@@ -1302,11 +1308,11 @@ function DroneProfileEditor() {
         <div className="tab-content">
           {/* Connected drone profiles */}
           <section className="profiles-section">
-            <h2>Connected Drones ({connectedDroneIds.length})</h2>
+            <h2>{t('settings.connectedDrones')} ({connectedDroneIds.length})</h2>
             
             {connectedDroneIds.length === 0 ? (
               <div className="no-profiles">
-                <p>No connected drones yet. Go to Discover & Pair to add drones.</p>
+                <p>{t('settings.noDronesYet')}</p>
               </div>
             ) : (
               <div className="profiles-grid">
@@ -1327,27 +1333,27 @@ function DroneProfileEditor() {
                           className="edit-btn"
                           onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
                         >
-                          Edit
+                          {t('common.edit')}
                         </button>
                       </div>
                       
                       <div className="profile-details">
                         <div className="detail-row">
-                          <span className="detail-label">IP Address:</span>
+                          <span className="detail-label">{t('profile.ipAddress')}:</span>
                           <span className="detail-value">
-                            {profile.ipAddress || <em>Not set</em>}
+                            {profile.ipAddress || <em>{t('camera.notSet')}</em>}
                           </span>
                         </div>
                         <div className="detail-row">
-                          <span className="detail-label">Drone ID:</span>
+                          <span className="detail-label">{t('profile.droneId')}:</span>
                           <span className="detail-value drone-id-value">{droneId}</span>
                         </div>
                         <div className="detail-row camera-row">
-                          <span className="detail-label">Front Camera:</span>
+                          <span className="detail-label">{t('profile.frontCamera')}:</span>
                           <span className="detail-value">
                             {profile.frontCamera?.ip || profile.frontCameraUrl ? (
                               <>
-                                <span className="camera-status set">✓ Set</span>
+                                <span className="camera-status set">✓ {t('camera.set')}</span>
                                 <button 
                                   className="set-camera-btn change"
                                   onClick={(e) => {
@@ -1355,12 +1361,12 @@ function DroneProfileEditor() {
                                     setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
                                   }}
                                 >
-                                  Change
+                                  {t('camera.change')}
                                 </button>
                               </>
                             ) : (
                               <>
-                                <span className="camera-status not-set">Not set</span>
+                                <span className="camera-status not-set">{t('camera.notSet')}</span>
                                 <button 
                                   className="set-camera-btn"
                                   onClick={(e) => {
@@ -1368,18 +1374,18 @@ function DroneProfileEditor() {
                                     setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
                                   }}
                                 >
-                                  SET
+                                  {t('camera.set')}
                                 </button>
                               </>
                             )}
                           </span>
                         </div>
                         <div className="detail-row camera-row">
-                          <span className="detail-label">Rear Camera:</span>
+                          <span className="detail-label">{t('profile.rearCamera')}:</span>
                           <span className="detail-value">
                             {profile.rearCamera?.ip || profile.rearCameraUrl ? (
                               <>
-                                <span className="camera-status set">✓ Set</span>
+                                <span className="camera-status set">✓ {t('camera.set')}</span>
                                 <button 
                                   className="set-camera-btn change"
                                   onClick={(e) => {
@@ -1387,12 +1393,12 @@ function DroneProfileEditor() {
                                     setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
                                   }}
                                 >
-                                  Change
+                                  {t('camera.change')}
                                 </button>
                               </>
                             ) : (
                               <>
-                                <span className="camera-status not-set">Not set</span>
+                                <span className="camera-status not-set">{t('camera.notSet')}</span>
                                 <button 
                                   className="set-camera-btn"
                                   onClick={(e) => {
@@ -1400,7 +1406,7 @@ function DroneProfileEditor() {
                                     setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
                                   }}
                                 >
-                                  SET
+                                  {t('camera.set')}
                                 </button>
                               </>
                             )}
@@ -1413,7 +1419,7 @@ function DroneProfileEditor() {
                           to={`/drone/${droneId}`} 
                           className="view-osd-btn"
                         >
-                          Open →
+                          {t('profile.open')}
                         </Link>
                       </div>
                     </div>
@@ -1426,8 +1432,8 @@ function DroneProfileEditor() {
           {/* Detected drones - telemetry but no profile */}
           {detectedDrones.length > 0 && (
             <section className="detected-section">
-              <h2>Detected Drones ({detectedDrones.length})</h2>
-              <p>Telemetry active. Click to connect.</p>
+              <h2>{t('settings.detectedDrones')} ({detectedDrones.length})</h2>
+              <p>{t('settings.telemetryActive')}</p>
               <div className="detected-drones-grid">
                 {detectedDrones.map(drone => (
                   <div
@@ -1440,7 +1446,7 @@ function DroneProfileEditor() {
                   >
                     <div className="detected-drone-header">
                       <span className="drone-id-badge">ID: {drone.droneId}</span>
-                      <span className="add-profile-hint">+ Connect Drone</span>
+                      <span className="add-profile-hint">{t('settings.connectDrone')}</span>
                     </div>
                     <div className="detected-drone-map">
                       <DroneLocationMap 
@@ -1454,11 +1460,11 @@ function DroneProfileEditor() {
                           {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}
                         </span>
                       ) : (
-                        <span className="no-coords">No GPS coordinates</span>
+                        <span className="no-coords">{t('settings.noGpsCoords')}</span>
                       )}
                       {drone.lastSeen && (
                         <span className="last-seen">
-                          Last seen: {new Date(drone.lastSeen).toLocaleString()}
+                          {t('settings.lastSeen', { time: new Date(drone.lastSeen).toLocaleString() })}
                         </span>
                       )}
                     </div>
@@ -1476,8 +1482,8 @@ function DroneProfileEditor() {
           <section className="discover-section">
             <div className="discover-header">
               <div className="discover-title">
-                <h2>Discover Drones</h2>
-                <p>Scan the network for new drones to pair</p>
+                <h2>{t('discover.title')}</h2>
+                <p>{t('discover.subtitle')}</p>
               </div>
               <button 
                 className={`discover-btn ${isDiscovering ? 'discovering' : ''} ${isPairingAny ? 'disabled-pairing' : ''}`}
@@ -1487,12 +1493,12 @@ function DroneProfileEditor() {
                 {isDiscovering ? (
                   <>
                     <span className="discover-spinner">◌</span>
-                    Scanning...
+                    {t('discover.scanning')}
                   </>
                 ) : isPairingAny ? (
-                  'Pairing in progress...'
+                  t('discover.pairingInProgress')
                 ) : (
-                  'Discover Drones'
+                  t('discover.discoverBtn')
                 )}
               </button>
             </div>
@@ -1602,12 +1608,12 @@ function DroneProfileEditor() {
                 {terminalLogs.length > 0 && (
                   <div className="terminal-output">
                     <div className="terminal-header">
-                      <span className="terminal-title"><span className="terminal-icon">&gt;_</span> Terminal</span>
+                      <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
                       <button 
                         className="terminal-clear-btn"
                         onClick={() => setTerminalLogs([])}
                       >
-                        Clear
+                        {t('terminal.clear')}
                       </button>
                     </div>
                     <div className="terminal-body" ref={terminalRef}>
@@ -1662,11 +1668,11 @@ function DroneProfileEditor() {
                           {log.type === 'discover' && log.status !== 'running' && (
                             <div className="terminal-result">
                               {log.dronesFound > 0 ? (
-                                <span className="result-success">✓ Found {log.dronesFound} drone(s) on network</span>
+                                <span className="result-success">✓ {t('discover.foundDrones', { count: log.dronesFound })}</span>
                               ) : log.error ? (
-                                <span className="result-error">✕ Discovery failed</span>
+                                <span className="result-error">✕ {t('discover.discoveryFailed')}</span>
                               ) : (
-                                <span className="result-empty">○ No drones found on network</span>
+                                <span className="result-empty">○ {t('discover.noDronesFound')}</span>
                               )}
                             </div>
                           )}
@@ -1675,9 +1681,9 @@ function DroneProfileEditor() {
                           {log.type === 'pair' && log.status !== 'running' && (
                             <div className="terminal-result">
                               {log.result ? (
-                                <span className="result-success">✓ Pair command sent to drone {log.droneId}</span>
+                                <span className="result-success">✓ {t('pairing.pairCommandSent', { id: log.droneId })}</span>
                               ) : (
-                                <span className="result-error">✕ Pairing failed for drone {log.droneId}</span>
+                                <span className="result-error">✕ {t('pairing.commandFailed')}</span>
                               )}
                             </div>
                           )}
@@ -1686,9 +1692,9 @@ function DroneProfileEditor() {
                           {log.type === 'telemetry-check' && (
                             <div className="terminal-result">
                               {log.hasTelemetry ? (
-                                <span className="result-success">✓ Telemetry received from drone {log.droneId} - Paired successfully!</span>
+                                <span className="result-success">✓ {t('pairing.telemetryReceived', { id: log.droneId })}</span>
                               ) : (
-                                <span className="result-error">✕ No telemetry from drone {log.droneId} - Try pairing again</span>
+                                <span className="result-error">✕ {t('pairing.noTelemetryReceived', { id: log.droneId })}</span>
                               )}
                             </div>
                           )}
@@ -1703,7 +1709,7 @@ function DroneProfileEditor() {
             {!isDiscovering && discoveredDrones.length === 0 && terminalLogs.length === 0 && !discoverError && (
               <div className="discover-empty">
                 <span className="empty-icon">◇</span>
-                <span>Click "Discover Drones" to scan for available drones on the network</span>
+                <span>{t('discover.emptyHint')}</span>
               </div>
             )}
           </section>
@@ -1723,10 +1729,10 @@ function DroneProfileEditor() {
             </div>
             <div className="confirm-modal-actions">
               <button className="confirm-modal-btn cancel" onClick={confirmModal.onCancel}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button className="confirm-modal-btn confirm" onClick={confirmModal.onConfirm}>
-                Confirm
+                {t('common.confirm')}
               </button>
             </div>
           </div>
