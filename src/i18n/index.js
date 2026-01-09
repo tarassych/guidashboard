@@ -32,7 +32,10 @@ i18n
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false // React already escapes values
-    }
+    },
+    // Enable proper plural handling for languages like Ukrainian
+    compatibilityJSON: 'v4',
+    returnNull: false
   })
 
 // Listen for language changes and save to cookie

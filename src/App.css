@@ -1292,7 +1292,8 @@ body {
 
 .telemetry-log.collapsed {
   max-height: 90px;
-  width: 220px;
+  width: auto;
+  min-width: 180px;
 }
 
 .telemetry-log.collapsed .tlog-header {
