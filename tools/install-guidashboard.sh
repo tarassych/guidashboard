@@ -1017,40 +1017,87 @@ EOF
 }
 
 deploy_frontend() {
-    print_step 8 "Deploying Frontend"
+    print_step 8 "Building & Deploying Frontend"
     
-    # Check if dist folder exists in repo
-    if [ -d "$REPO_DIR/dist" ]; then
-        local new_files=$(find "$REPO_DIR/dist" -type f | wc -l)
-        
-        # Check if already deployed and same
-        if [ -d "$WEB_DIR" ] && [ -f "$WEB_DIR/index.html" ]; then
-            print_installed "Frontend files in $WEB_DIR"
-            print_info "Updating frontend files..."
-        fi
-        
-        # Backup existing
-        if [ -d "$WEB_DIR" ] && [ "$(ls -A $WEB_DIR 2>/dev/null)" ]; then
-            start_spinner "Backing up existing web files"
-            mkdir -p /tmp/web-backup-$$
-            cp -r "$WEB_DIR"/* /tmp/web-backup-$$/ 2>/dev/null || true
-            add_rollback "rm -rf '$WEB_DIR'/* && cp -r /tmp/web-backup-$$/* '$WEB_DIR'/"
-            stop_spinner
-            print_success "Backup created"
-        fi
-        
-        # Copy dist files
-        start_spinner "Copying frontend files"
-        mkdir -p "$WEB_DIR"
-        cp -r "$REPO_DIR/dist/"* "$WEB_DIR/"
-        chown -R www-data:www-data "$WEB_DIR"
-        stop_spinner
-        print_success "Frontend deployed ($new_files files)"
-    else
-        print_warning "No dist/ folder found in repository"
-        print_detail "Build on dev machine: npm run build"
-        print_detail "Then deploy: scp -r dist/* orangepi@IP:$WEB_DIR/"
+    # Check if package.json exists in repo root (frontend)
+    if [ ! -f "$REPO_DIR/package.json" ]; then
+        fail "Frontend package.json not found in repository"
     fi
+    
+    # Install frontend dependencies
+    echo ""
+    print_info "Installing frontend dependencies..."
+    echo -e "  ${CYAN}>${NC} Running npm install (frontend)..."
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    
+    cd "$REPO_DIR"
+    local npm_exit=0
+    
+    sudo -u orangepi npm install 2>&1 | while IFS= read -r line; do
+        echo -e "    ${GRAY}|${NC} $line"
+    done
+    npm_exit=${PIPESTATUS[0]}
+    
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    
+    if [ $npm_exit -eq 0 ]; then
+        print_success "Frontend dependencies installed"
+    else
+        # Check if node_modules was created anyway
+        if [ -d "$REPO_DIR/node_modules" ]; then
+            print_warning "npm reported warnings but dependencies appear installed"
+        else
+            fail "Failed to install frontend dependencies"
+        fi
+    fi
+    
+    # Build frontend
+    echo ""
+    print_info "Building frontend (this may take a minute)..."
+    echo -e "  ${CYAN}>${NC} Running npm run build..."
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    
+    local build_start=$(date +%s)
+    
+    sudo -u orangepi npm run build 2>&1 | while IFS= read -r line; do
+        echo -e "    ${GRAY}|${NC} $line"
+    done
+    local build_exit=${PIPESTATUS[0]}
+    
+    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    
+    local build_duration=$(( $(date +%s) - build_start ))
+    
+    if [ $build_exit -ne 0 ]; then
+        fail "Frontend build failed"
+    fi
+    
+    # Check if dist was created
+    if [ ! -d "$REPO_DIR/dist" ] || [ ! -f "$REPO_DIR/dist/index.html" ]; then
+        fail "Build succeeded but dist/ folder not found"
+    fi
+    
+    local new_files=$(find "$REPO_DIR/dist" -type f | wc -l)
+    print_success "Frontend built ($new_files files in ${build_duration}s)"
+    
+    # Backup existing web files
+    if [ -d "$WEB_DIR" ] && [ "$(ls -A $WEB_DIR 2>/dev/null)" ]; then
+        start_spinner "Backing up existing web files"
+        mkdir -p /tmp/web-backup-$$
+        cp -r "$WEB_DIR"/* /tmp/web-backup-$$/ 2>/dev/null || true
+        add_rollback "rm -rf '$WEB_DIR'/* && cp -r /tmp/web-backup-$$/* '$WEB_DIR'/"
+        stop_spinner
+        print_success "Backup created"
+    fi
+    
+    # Deploy built files
+    start_spinner "Deploying frontend to web directory"
+    mkdir -p "$WEB_DIR"
+    rm -rf "$WEB_DIR"/* 2>/dev/null || true
+    cp -r "$REPO_DIR/dist/"* "$WEB_DIR/"
+    chown -R www-data:www-data "$WEB_DIR"
+    stop_spinner
+    print_success "Frontend deployed to $WEB_DIR"
 }
 
 configure_nginx() {
