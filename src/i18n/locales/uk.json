@@ -1,0 +1,261 @@
+{
+  "common": {
+    "loading": "Завантаження...",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "delete": "Видалити",
+    "edit": "Редагувати",
+    "close": "Закрити",
+    "confirm": "Підтвердити",
+    "back": "Назад",
+    "refresh": "Оновити",
+    "settings": "Налаштування",
+    "online": "ОНЛАЙН",
+    "offline": "ОФЛАЙН",
+    "active": "АКТИВНИЙ",
+    "on": "УВІМК",
+    "off": "ВИМК",
+    "yes": "Так",
+    "no": "Ні",
+    "error": "Помилка",
+    "success": "Успішно",
+    "warning": "Попередження",
+    "unknown": "Невідомо"
+  },
+  
+  "nav": {
+    "backToDashboard": "До панелі",
+    "settings": "Налаштування"
+  },
+  
+  "dashboard": {
+    "title": "ЦЕНТР КЕРУВАННЯ ДРОНАМИ RATERA",
+    "loadingDrones": "Завантаження дронів...",
+    "dronesCount": "{{count}} дрон",
+    "dronesCount_plural": "{{count}} дронів",
+    "onlineCount": "{{count}} онлайн",
+    "emptySlot": "Порожній слот",
+    "noDroneAssigned": "Дрон не призначено",
+    "noCamera": "Немає камери",
+    "fullScreen": "НА ВЕСЬ ЕКРАН",
+    "detectedDrones": "Виявлені дрони ({{count}})",
+    "configureProfiles": "Налаштувати профілі →"
+  },
+  
+  "osd": {
+    "title": "{{name}} OSD",
+    "version": "v3.0",
+    "telemetry": "ТЕЛЕМЕТРІЯ",
+    "telemetryLog": "ЖУРНАЛ ТЕЛЕМЕТРІЇ",
+    "live": "НАЖИВО",
+    "connecting": "...",
+    "waiting": "Очікування...",
+    "rear": "ЗАДНЯ",
+    "map": "КАРТА",
+    "altitude": "ВИС",
+    "sat": "СУП",
+    "pwr": "ЖИВ",
+    "speedUnit": "км/г",
+    "distanceUnit": "м",
+    "warning": "УВАГА",
+    "armed": "ОЗБРОЄНИЙ",
+    "mapError": "Помилка карти",
+    "checkApiKey": "Перевірте API ключ",
+    "loadingMap": "Завантаження карти..."
+  },
+  
+  "telemetry": {
+    "lat": "ШИР",
+    "lng": "ДОВ",
+    "alt": "ВИС",
+    "hdg": "КУР",
+    "gs": "ШВ",
+    "spd": "ШВД",
+    "dist": "ВІДС",
+    "bat": "АКБ",
+    "sat": "СУП",
+    "mode": "РЕЖ",
+    "time": "ЧАС",
+    "fs": "АВР"
+  },
+  
+  "battery": {
+    "good": "Добре",
+    "warning": "Увага",
+    "critical": "Критично"
+  },
+  
+  "satellites": {
+    "excellent": "ВІДМІННО",
+    "good": "ДОБРЕ",
+    "weak": "СЛАБКО",
+    "poor": "ПОГАНО"
+  },
+  
+  "power": {
+    "off": "ВИМК",
+    "eco": "ЕКО",
+    "max": "МАКС"
+  },
+  
+  "compass": {
+    "n": "Пн",
+    "ne": "ПнСх",
+    "e": "Сх",
+    "se": "ПдСх",
+    "s": "Пд",
+    "sw": "ПдЗх",
+    "w": "Зх",
+    "nw": "ПнЗх"
+  },
+  
+  "camera": {
+    "connecting": "З'ЄДНАННЯ",
+    "reconnecting": "ПЕРЕПІДКЛЮЧЕННЯ",
+    "noSignal": "НЕМАЄ СИГНАЛУ",
+    "front": "ПЕРЕДНЯ",
+    "rear": "ЗАДНЯ",
+    "noSnapshot": "Немає знімку",
+    "setAsFront": "Встановити як передню",
+    "setAsRear": "Встановити як задню",
+    "change": "Змінити",
+    "set": "ВИБР",
+    "notSet": "Не встановлено"
+  },
+  
+  "settings": {
+    "title": "Налаштування",
+    "connectedTab": "Підключені",
+    "discoverTab": "Пошук та з'єднання",
+    "camerasTab": "MMTX Камери",
+    "connectedDrones": "Підключені дрони",
+    "noDronesYet": "Дронів ще немає. Перейдіть до Пошук та з'єднання щоб додати дрони.",
+    "detectedDrones": "Виявлені дрони",
+    "telemetryActive": "Телеметрія активна. Натисніть для підключення.",
+    "connectDrone": "+ Підключити дрон",
+    "noGpsCoords": "Немає GPS координат",
+    "lastSeen": "Останній раз: {{time}}"
+  },
+  
+  "profile": {
+    "title": "Профіль дрона #{{id}}",
+    "droneName": "Назва дрона",
+    "droneNamePlaceholder": "Дрон {{id}}",
+    "ipAddress": "IP адреса",
+    "ipPlaceholder": "192.168.0.xxx",
+    "ipHint": "IP адреса з пейрингу (автозаповнення)",
+    "droneId": "ID дрона",
+    "frontCameraUrl": "URL передньої камери (HLS)",
+    "frontCameraPlaceholder": "http://192.168.88.15:8888/cam1/index.m3u8",
+    "frontCameraHint": "HLS потік для основного виду камери",
+    "rearCameraUrl": "URL задньої камери (HLS)",
+    "rearCameraPlaceholder": "http://192.168.88.15:8888/cam2/index.m3u8",
+    "rearCameraHint": "HLS потік для заднього виду",
+    "accentColor": "Колір акценту",
+    "frontCamera": "Передня камера",
+    "rearCamera": "Задня камера",
+    "saving": "Збереження...",
+    "saveProfile": "Зберегти профіль",
+    "deleteProfile": "Видалити профіль",
+    "deleteConfirm": "Ви впевнені, що хочете видалити профіль дрона #{{id}}?",
+    "open": "Відкрити →"
+  },
+  
+  "discover": {
+    "title": "Пошук дронів",
+    "subtitle": "Сканування мережі для пошуку нових дронів",
+    "discoverBtn": "Шукати дрони",
+    "scanning": "Сканування...",
+    "pairingInProgress": "Виконується з'єднання...",
+    "emptyHint": "Натисніть \"Шукати дрони\" для пошуку доступних дронів у мережі",
+    "foundDrones": "Знайдено {{count}} дрон(ів) у мережі",
+    "noDronesFound": "Дронів у мережі не знайдено",
+    "discoveryFailed": "Помилка пошуку"
+  },
+  
+  "pairing": {
+    "pair": "З'єднати",
+    "rePair": "Перепідключити",
+    "pairing": "З'єднання...",
+    "paired": "З'єднано!",
+    "wait": "Зачекайте...",
+    "initiating": "Початок з'єднання...",
+    "waitingTelemetry": "Очікування телеметрії...",
+    "success": "Дрон успішно з'єднано!",
+    "noTelemetry": "Телеметрію не отримано. Спробуйте ще раз.",
+    "commandFailed": "Команда з'єднання не вдалася",
+    "alreadyConnected": "Підключений дрон",
+    "alreadyPaired": "Вже з'єднано - телеметрія активна",
+    "rePairTitle": "Перепідключити дрон",
+    "rePairConnectedMsg": "Дрон \"{{name}}\" вже підключений. Перепідключення може оновити налаштування мережі. Продовжити?",
+    "rePairTelemetryMsg": "Дрон {{id}} вже має активну телеметрію. Ви впевнені, що хочете перепідключити цей дрон?",
+    "waitingForTelemetry": "Очікування 10 секунд на телеметрію від дрона {{id}}...",
+    "telemetryReceived": "Телеметрію отримано від дрона {{id}} - Успішно з'єднано!",
+    "noTelemetryReceived": "Немає телеметрії від дрона {{id}} - Спробуйте з'єднати знову",
+    "pairCommandSent": "Команду з'єднання відправлено на дрон {{id}}"
+  },
+  
+  "cameraScanner": {
+    "title": "Сканер камер",
+    "subtitle": "Дрон #{{id}} • IP: {{ip}}",
+    "ipNotSet": "Не встановлено",
+    "scanForCameras": "Сканувати камери",
+    "rescan": "Повторне сканування",
+    "scanning": "Сканування...",
+    "noIpError": "IP адреса дрона не встановлена. Спочатку встановіть її.",
+    "noCamerasFound": "Камер у мережі не знайдено",
+    "foundCameras": "Знайдено {{count}} камеру",
+    "foundCameras_plural": "Знайдено {{count}} камер",
+    "saveCameraSettings": "Зберегти налаштування камери",
+    "savingConfiguring": "Збереження та налаштування...",
+    "profileSaved": "Профіль збережено",
+    "updatingMmtx": "Оновлення конфігурації MediaMTX...",
+    "mmtxConfigSaved": "MMTX НАЛАШТОВАНО - Тепер можете закрити це вікно",
+    "operationFailed": "Операція не вдалася"
+  },
+  
+  "mediamtx": {
+    "title": "Статус MediaMTX",
+    "loading": "Завантаження статусу MediaMTX...",
+    "running": "Працює",
+    "stopped": "Зупинено",
+    "pid": "PID",
+    "uptime": "Час роботи",
+    "restart": "Перезапустити MediaMTX",
+    "restarting": "Перезапуск...",
+    "configuredStreams": "Налаштовані потоки",
+    "activeStreams": "Активні потоки",
+    "connectedViewers": "Підключені глядачі",
+    "hlsMuxers": "HLS Мультиплексори",
+    "dataReceived": "Отримано даних",
+    "dataSent": "Надіслано даних",
+    "cameraStreams": "Потоки камер",
+    "streamName": "Назва потоку",
+    "status": "Статус",
+    "usedBy": "Використовується",
+    "source": "Джерело",
+    "tracks": "Доріжки",
+    "viewers": "Глядачі",
+    "hlsUrl": "HLS URL",
+    "active": "Активний",
+    "inactive": "Неактивний",
+    "notAssigned": "—",
+    "noStreams": "Потоки не налаштовані",
+    "configuration": "Конфігурація (paths.yml)",
+    "lastUpdated": "Останнє оновлення: {{time}}",
+    "noConfig": "Конфігурацію не завантажено",
+    "recentLogs": "Останні логи",
+    "noLogs": "Логів немає"
+  },
+  
+  "terminal": {
+    "title": "Термінал",
+    "clear": "Очистити",
+    "running": "Виконується...",
+    "success": "Успіх",
+    "error": "Помилка",
+    "parseWarning": "Попередження парсингу",
+    "savingCameraSettings": "Збереження налаштувань камери..."
+  }
+}
+

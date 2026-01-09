@@ -4,11 +4,8 @@ import './LanguageSwitcher.css'
 
 // Language configurations with flag emojis
 const languages = [
-  { code: 'en', name: 'EN', flag: '🇬🇧', fullName: 'English' }
-  // Add more languages here as they become available:
-  // { code: 'uk', name: 'UA', flag: '🇺🇦', fullName: 'Українська' },
-  // { code: 'de', name: 'DE', flag: '🇩🇪', fullName: 'Deutsch' },
-  // { code: 'es', name: 'ES', flag: '🇪🇸', fullName: 'Español' },
+  { code: 'en', name: 'EN', flag: '🇬🇧', fullName: 'English' },
+  { code: 'uk', name: 'UA', flag: '🇺🇦', fullName: 'Українська' }
 ]
 
 function LanguageSwitcher() {
@@ -34,8 +31,7 @@ function LanguageSwitcher() {
   const handleLanguageChange = (langCode) => {
     i18n.changeLanguage(langCode)
     setIsOpen(false)
-    // Persist language choice
-    localStorage.setItem('preferredLanguage', langCode)
+    // Cookie persistence is handled by i18n.on('languageChanged') in i18n/index.js
   }
   
   // Only show dropdown if more than one language is available

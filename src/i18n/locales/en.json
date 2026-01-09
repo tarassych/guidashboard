@@ -44,7 +44,7 @@
   
   "osd": {
     "title": "{{name}} OSD",
-    "version": "v2.5",
+    "version": "v3.0",
     "telemetry": "TELEMETRY",
     "telemetryLog": "TELEMETRY LOG",
     "live": "LIVE",
