@@ -591,31 +591,40 @@ clone_repository() {
     
     if [ -d "$REPO_DIR/.git" ]; then
         print_installed "Repository at $REPO_DIR"
-        print_info "Pulling latest changes..."
+        print_info "Updating to latest version..."
         
-        start_spinner "Fetching updates"
-        if run_as_orangepi "cd $REPO_DIR && git fetch origin" > /tmp/git-fetch.log 2>&1; then
-            stop_spinner
-            
-            # Check if update needed
-            local local_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD")
-            local remote_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse origin/main")
-            
-            if [ "$local_rev" = "$remote_rev" ]; then
-                print_success "Repository is up to date"
-            else
-                start_spinner "Pulling changes"
-                if run_as_orangepi "cd $REPO_DIR && git pull origin main" > /tmp/git-pull.log 2>&1; then
-                    stop_spinner
-                    print_success "Repository updated"
-                else
-                    stop_spinner
-                    print_warning "Pull failed, using existing version"
-                fi
-            fi
+        # Reset any local changes and force update to match remote
+        start_spinner "Fetching latest changes"
+        run_as_orangepi "cd $REPO_DIR && git fetch origin" > /tmp/git-fetch.log 2>&1 || true
+        stop_spinner
+        
+        # Get current and remote revisions
+        local local_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
+        local remote_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse origin/main" 2>/dev/null || echo "unknown")
+        
+        print_detail "Local:  ${local_rev:0:7}"
+        print_detail "Remote: ${remote_rev:0:7}"
+        
+        if [ "$local_rev" = "$remote_rev" ]; then
+            print_success "Repository is up to date"
         else
-            stop_spinner
-            print_warning "Fetch failed, using existing version"
+            # Force reset to match remote (discard any local changes)
+            print_info "Updating repository..."
+            echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+            
+            run_as_orangepi "cd $REPO_DIR && git reset --hard origin/main" 2>&1 | while IFS= read -r line; do
+                echo -e "    ${GRAY}|${NC} $line"
+            done
+            local reset_exit=${PIPESTATUS[0]}
+            
+            echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+            
+            if [ $reset_exit -eq 0 ]; then
+                local new_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
+                print_success "Repository updated to ${new_rev:0:7}"
+            else
+                print_warning "Update failed, using existing version"
+            fi
         fi
         return
     fi
