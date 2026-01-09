@@ -11,7 +11,7 @@ const router = express.Router();
 
 /**
  * GET /api/drones
- * Get recently active drones from database (GPS telemetry within last 1 minute)
+ * Get recently active drones from database (battery telemetry within last 1 minute)
  */
 router.get('/drones', (req, res) => {
   const db = getDb();
@@ -29,7 +29,7 @@ router.get('/drones', (req, res) => {
     // getAllDroneIds returns array of droneId strings
     const configuredIds = getAllDroneIds();
     
-    // Single optimized query: Get recent drone IDs with their latest GPS data
+    // Single optimized query: Get recent drone IDs with their latest battery data
     // Uses json_extract for exact type matching (types: gps, batt, state)
     // INDEXED BY forces SQLite to use timestamp index (otherwise it picks wrong index)
     const recentDronesStmt = db.prepare(`
@@ -42,7 +42,7 @@ router.get('/drones', (req, res) => {
         SELECT drone_id, MAX(ID) as max_id
         FROM telemetry INDEXED BY idx_telemetry_timestamp
         WHERE timestamp >= ?
-          AND json_extract(data, '$.type') = 'gps'
+          AND json_extract(data, '$.type') = 'batt'
         GROUP BY drone_id
       ) latest ON t.ID = latest.max_id
       ORDER BY t.drone_id ASC
