@@ -10,9 +10,13 @@ const router = express.Router();
 
 /**
  * GET /api/drones/active
- * Get the current active status for all drones
- * Returns which drones have active=1 in their most recent telemetry
- * Optimized: Only checks last 1000 records to avoid full table scan
+ * Get the current active control status for all drones
+ * 
+ * EXCLUSIVE ACTIVE CONTROL: Only ONE drone can be active at a time.
+ * The drone with the most recent active=1 telemetry (within 10 seconds) wins.
+ * All other drones are marked as inactive.
+ * 
+ * Active timeout: 10 seconds (if no active telemetry in 10s, drone loses active status)
  */
 router.get('/drones/active', (req, res) => {
   const db = getDb();
@@ -21,30 +25,48 @@ router.get('/drones/active', (req, res) => {
   }
 
   try {
-    // Get the most recent active status for each drone
-    // Only look at recent records (last 1000) for performance
-    const stmt = db.prepare(`
-      SELECT drone_id, active, timestamp
+    const ACTIVE_TIMEOUT_MS = 10000; // 10 seconds for active control timeout
+    const cutoffTime = Date.now() - ACTIVE_TIMEOUT_MS;
+    
+    // Find the most recent telemetry record with active=1 within the timeout window
+    // This ensures only ONE drone can be marked as active (the most recent one)
+    const activeStmt = db.prepare(`
+      SELECT drone_id, timestamp
+      FROM telemetry
+      WHERE active = 1 AND timestamp > ?
+      ORDER BY timestamp DESC
+      LIMIT 1
+    `);
+    const activeRow = activeStmt.get(cutoffTime);
+    
+    // Get all drones that have recent telemetry (for reference)
+    const allDronesStmt = db.prepare(`
+      SELECT drone_id, MAX(timestamp) as lastUpdate
       FROM telemetry
       WHERE ID IN (
         SELECT MAX(ID) FROM (
           SELECT ID, drone_id FROM telemetry ORDER BY ID DESC LIMIT 1000
         ) GROUP BY drone_id
       )
+      GROUP BY drone_id
     `);
-    const rows = stmt.all();
-
+    const allDrones = allDronesStmt.all();
+    
+    // Build response: only the most recent active drone gets active=true
     const activeDrones = {};
-    rows.forEach(row => {
+    const currentlyActiveDroneId = activeRow ? activeRow.drone_id : null;
+    
+    allDrones.forEach(row => {
       activeDrones[row.drone_id] = {
-        active: row.active === 1,
-        lastUpdate: row.timestamp
+        active: row.drone_id === currentlyActiveDroneId,
+        lastUpdate: row.lastUpdate
       };
     });
 
     res.json({
       success: true,
-      activeDrones
+      activeDrones,
+      currentlyActive: currentlyActiveDroneId // Which drone currently has joystick control
     });
 
   } catch (error) {

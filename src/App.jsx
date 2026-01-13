@@ -89,6 +89,8 @@ function App() {
   const { currentTheme } = useTheme(latestTelemetryData)
   
   // Poll active status for this drone
+  // Active control is EXCLUSIVE: only one drone can be active at a time
+  // Backend enforces 10-second timeout and exclusive active logic
   useEffect(() => {
     let isMounted = true
     let controller = new AbortController()
@@ -105,6 +107,7 @@ function App() {
         if (!isMounted) return
         
         if (data.success && data.activeDrones) {
+          // Only this drone gets active=true if it's the currently active one
           setIsActive(data.activeDrones[droneId]?.active === true)
         }
       } catch (error) {
@@ -113,7 +116,7 @@ function App() {
     }
     
     fetchActiveStatus()
-    const interval = setInterval(fetchActiveStatus, 500)
+    const interval = setInterval(fetchActiveStatus, 300) // Fast polling for responsive active status
     
     return () => {
       isMounted = false
