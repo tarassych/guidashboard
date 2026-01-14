@@ -163,18 +163,25 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   const handleSaveAssignments = async () => {
     // Generate WebRTC WHEP URL: /webrtc/cam{serial_number}/whep
     // Uses nginx proxy to MediaMTX WebRTC endpoint on port 8889
-    const generateWebrtcUrl = (camera) => {
+    const generateWebrtcUrl = (camera, suffix = '') => {
       const serialNumber = camera.onvif?.serial_number || camera.ip.replace(/\./g, '')
-      return `/webrtc/cam${serialNumber}/whep`
+      return `/webrtc/cam${serialNumber}${suffix}/whep`
     }
+    
+    // Check if front camera has HD path available
+    const hasHdPath = selectedFront?.rtsp?.path_hd
     
     const frontCamera = selectedFront ? {
       ip: selectedFront.ip,
       webrtcUrl: generateWebrtcUrl(selectedFront),
+      // HD stream URL for main camera view (only if path_hd available)
+      webrtcUrlHd: hasHdPath ? generateWebrtcUrl(selectedFront, '_hd') : null,
       snapshotUrl: selectedFront.snapshot?.url || '',
       rtspUrl: `rtsp://${selectedFront.login}:${selectedFront.password}@${selectedFront.ip}:${selectedFront.rtsp?.port || 554}${selectedFront.rtsp?.path || '/stream0'}`,
       rtspPort: selectedFront.rtsp?.port || 554,
       rtspPath: selectedFront.rtsp?.path || '/stream0',
+      // HD path for high quality stream (used for main camera view)
+      rtspPathHd: selectedFront.rtsp?.path_hd || null,
       login: selectedFront.login || '',
       password: selectedFront.password || '',
       serialNumber: selectedFront.onvif?.serial_number || '',
@@ -957,6 +964,8 @@ function DroneProfileEditor() {
           rearCamera,
           // Set WebRTC URL fields (format: /webrtc/cam{serial_number}/whep)
           frontCameraUrl: frontCamera?.webrtcUrl || existingProfile.frontCameraUrl || '',
+          // HD stream URL for main camera view on single drone screen
+          frontCameraUrlHd: frontCamera?.webrtcUrlHd || existingProfile.frontCameraUrlHd || '',
           rearCameraUrl: rearCamera?.webrtcUrl || existingProfile.rearCameraUrl || ''
         })
       })

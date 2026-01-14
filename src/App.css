@@ -828,6 +828,68 @@ body {
   margin-top: 2px;
 }
 
+/* Quality Switch (SD/HD) */
+.quality-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.quality-switch:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.quality-option {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.4;
+  transition: all 0.2s ease;
+}
+
+.quality-option.active {
+  opacity: 1;
+}
+
+.quality-toggle {
+  width: 36px;
+  height: 18px;
+  border-radius: 9px;
+  background: rgba(100, 100, 100, 0.3);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.quality-toggle.hd {
+  background: rgba(0, 200, 100, 0.3);
+}
+
+.quality-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #888;
+  transition: all 0.2s ease;
+}
+
+.quality-toggle.hd .quality-thumb {
+  left: 20px;
+  background: #00ff88;
+}
+
 /* ========== RIGHT PANEL LAYOUT ========== */
 .hud-right-panel {
   position: absolute;

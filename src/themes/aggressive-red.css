@@ -400,6 +400,35 @@ body {
   color: var(--theme-text-muted);
 }
 
+/* ========== QUALITY SWITCH THEME ========== */
+.quality-switch {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.quality-option {
+  color: var(--theme-text-muted);
+}
+
+.quality-option.active {
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
+}
+
+.quality-toggle {
+  border: 1px solid var(--theme-accent-primary-border);
+}
+
+.quality-toggle.hd {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: var(--theme-accent-primary);
+}
+
+.quality-toggle.hd .quality-thumb {
+  background: var(--theme-accent-primary);
+  box-shadow: 0 0 8px var(--theme-accent-primary-glow);
+}
+
 /* ========== MAP PANEL THEME ========== */
 .map-panel {
   background: var(--theme-bg-overlay);

@@ -84,6 +84,7 @@ function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   const [isActive, setIsActive] = useState(false) // Whether this drone is actively controlled
+  const [hdMode, setHdMode] = useState(true) // HD quality mode for main camera (default: HD)
   
   // Theme management - reacts to telemetry data
   const { currentTheme } = useTheme(latestTelemetryData)
@@ -198,16 +199,21 @@ function App() {
 
   // Get camera URLs from profile or use defaults
   const frontCameraUrl = droneProfile?.frontCameraUrl || '/webrtc/cam1/whep'
+  // HD stream URL for main camera view (if available)
+  const frontCameraUrlHd = droneProfile?.frontCameraUrlHd || null
+  const hasHdStream = !!frontCameraUrlHd
   const rearCameraUrl = droneProfile?.rearCameraUrl || '/webrtc/cam2/whep'
   // Drone number is array index + 1
   const droneNumber = (droneProfile?._index ?? 0) + 1
   const droneName = droneProfile?.name || `Drone #${droneNumber}`
+  // Determine which stream to use for main camera
+  const mainCameraUrl = (hdMode && hasHdStream) ? frontCameraUrlHd : frontCameraUrl
 
   return (
     <div className="hud-container">
-      {/* Full-screen Front Camera Background */}
+      {/* Full-screen Front Camera Background - HD or SD based on switch */}
       <div className="main-camera-bg">
-        <CameraFeed streamUrl={frontCameraUrl} />
+        <CameraFeed streamUrl={mainCameraUrl} />
       </div>
 
       {/* HUD Overlay */}
@@ -258,10 +264,13 @@ function App() {
           </div>
         )}
 
-        {/* Left Panel - Compass & Satellites */}
+        {/* Left Panel - Compass & Satellites & Quality */}
         <div className="hud-left-panel">
           <HudCompass heading={telemetry.heading} direction={directions[directionIndex]} />
           <SatelliteIndicator satellites={telemetry.satellites} />
+          {hasHdStream && (
+            <QualitySwitch isHd={hdMode} onToggle={() => setHdMode(!hdMode)} />
+          )}
         </div>
 
         {/* Right Panel - Speedometer & Power */}
@@ -410,6 +419,19 @@ function SatelliteIndicator({ satellites }) {
         <span className={`sat-count ${getQuality()} ${isLow ? 'critical' : ''}`}>{satellites}</span>
         <span className="sat-quality">{t(`satellites.${getQuality()}`)}</span>
       </div>
+    </div>
+  )
+}
+
+// Quality Switch (SD/HD toggle for main camera)
+function QualitySwitch({ isHd, onToggle }) {
+  return (
+    <div className="quality-switch" onClick={onToggle}>
+      <span className={`quality-option ${!isHd ? 'active' : ''}`}>SD</span>
+      <div className={`quality-toggle ${isHd ? 'hd' : 'sd'}`}>
+        <div className="quality-thumb" />
+      </div>
+      <span className={`quality-option ${isHd ? 'active' : ''}`}>HD</span>
     </div>
   )
 }

@@ -92,9 +92,10 @@ export function generatePathsYml(paths) {
  * Update a single camera config in paths.yml
  * @param {Object} camera - Camera configuration
  * @param {string} serialNumber - Camera serial number
+ * @param {Object} options - Additional options (includeHd: boolean)
  * @returns {Object} Result with success flag and logs
  */
-export function updateCameraInPaths(camera, serialNumber) {
+export function updateCameraInPaths(camera, serialNumber, options = {}) {
   const logs = [];
   
   if (!camera || !serialNumber) {
@@ -124,6 +125,22 @@ export function updateCameraInPaths(camera, serialNumber) {
     };
     
     logs.push(`[${isNew ? 'ADD' : 'UPDATE'}] ${pathName}: ${rtspUrlMasked}`);
+    
+    // Add HD stream path if available (for front camera main view)
+    if (options.includeHd && camera.rtspPathHd) {
+      const pathNameHd = `cam${serialNumber}_hd`;
+      const rtspUrlHd = `rtsp://${login}:${password}@${camera.ip}:${rtspPort}${camera.rtspPathHd}`;
+      const rtspUrlHdMasked = `rtsp://${login}:***@${camera.ip}:${rtspPort}${camera.rtspPathHd}`;
+      
+      const isNewHd = !paths[pathNameHd];
+      paths[pathNameHd] = {
+        source: rtspUrlHd,
+        sourceOnDemand: 'yes',
+        sourceProtocol: 'tcp'
+      };
+      
+      logs.push(`[${isNewHd ? 'ADD' : 'UPDATE'}] ${pathNameHd}: ${rtspUrlHdMasked} (HD)`);
+    }
     
     const newContent = generatePathsYml(paths);
     fs.writeFileSync(pathsYmlPath, newContent);
@@ -290,15 +307,15 @@ export async function updateProfileCamerasAsync(profile) {
     success: true
   };
   
-  // Update front camera
+  // Update front camera (include HD stream if path_hd available)
   if (profile.frontCamera && profile.frontCamera.serialNumber) {
     output.commands.push(`Updating front camera: cam${profile.frontCamera.serialNumber}`);
-    const result = updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber);
+    const result = updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber, { includeHd: true });
     output.stdout += result.logs.join('\n') + '\n';
     if (!result.success) output.success = false;
   }
   
-  // Update rear camera
+  // Update rear camera (no HD needed)
   if (profile.rearCamera && profile.rearCamera.serialNumber) {
     output.commands.push(`Updating rear camera: cam${profile.rearCamera.serialNumber}`);
     const result = updateCameraInPaths(profile.rearCamera, profile.rearCamera.serialNumber);
