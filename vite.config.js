@@ -11,13 +11,4 @@ export default defineConfig({
       process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001'
     ),
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'hls': ['hls.js'],
-        },
-      },
-    },
-  },
 })
