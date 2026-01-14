@@ -116,7 +116,7 @@ function App() {
     }
     
     fetchActiveStatus()
-    const interval = setInterval(fetchActiveStatus, 300) // Fast polling for responsive active status
+    const interval = setInterval(fetchActiveStatus, 500) // Poll every 500ms
     
     return () => {
       isMounted = false
@@ -908,6 +908,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
   const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
   const [heartbeats, setHeartbeats] = useState([]) // Track heartbeat events with timestamps
   const lastIdRef = useRef(0)
+  const isFirstFetch = useRef(true) // Skip heartbeat on initial historical data load
 
   const formatTimestamp = useCallback((timestamp) => {
     const date = new Date(timestamp)
@@ -993,8 +994,11 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
             // Stack behavior: new on top, limit to 20
             setRecords(prev => [...data.records, ...prev].slice(0, 20))
             
-            // Trigger heartbeat animation when new data arrives
-            triggerHeartbeat()
+            // Trigger heartbeat animation only for NEW data (not initial historical load)
+            if (!isFirstFetch.current) {
+              triggerHeartbeat()
+            }
+            isFirstFetch.current = false
             
             // Process ALL records (oldest to newest) so each type updates its fields
             // This ensures batt, gps, and state records all get merged into app state
@@ -1015,7 +1019,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
     }
 
     fetchTelemetry()
-    pollInterval = setInterval(fetchTelemetry, 300)
+    pollInterval = setInterval(fetchTelemetry, 500)
 
     return () => {
       isMounted = false

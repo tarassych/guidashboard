@@ -280,10 +280,10 @@ function Dashboard() {
     // Initial fetch for all drones
     droneIds.forEach(droneId => fetchDroneTelemetry(droneId))
     
-    // Poll every 500ms
+    // Poll every 1000ms
     const interval = setInterval(() => {
       droneIds.forEach(droneId => fetchDroneTelemetry(droneId))
-    }, 500)
+    }, 1000)
     
     return () => {
       isMounted = false
@@ -317,7 +317,7 @@ function Dashboard() {
     }
     
     fetchActiveStatus()
-    const interval = setInterval(fetchActiveStatus, 300) // Poll frequently for responsive UI
+    const interval = setInterval(fetchActiveStatus, 1000) // Poll every 1 second
     
     return () => {
       isMounted = false
