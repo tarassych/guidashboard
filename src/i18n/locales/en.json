@@ -55,7 +55,9 @@
     "map": "MAP",
     "altitude": "ALT",
     "sat": "SAT",
+    "satellites": "Satellites",
     "pwr": "PWR",
+    "power": "POWER",
     "speedUnit": "km/h",
     "distanceUnit": "m",
     "warning": "WARNING",
@@ -95,7 +97,8 @@
   
   "power": {
     "off": "OFF",
-    "eco": "ECO",
+    "min": "MIN",
+    "mid": "MID",
     "max": "MAX"
   },
   

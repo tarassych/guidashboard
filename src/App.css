@@ -308,21 +308,36 @@ body {
 .battery-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.battery-indicator.critical {
+  background: rgba(255, 0, 0, 0.2);
+  animation: battery-pulse 1s ease-in-out infinite;
+}
+
+@keyframes battery-pulse {
+  0%, 100% { background: rgba(255, 0, 0, 0.2); }
+  50% { background: rgba(255, 0, 0, 0.4); }
 }
 
 .battery-percent, .battery-voltage {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .battery-icon-mini {
-  width: 28px;
-  height: 14px;
-  border-width: 2px;
+  width: 48px;
+  height: 24px;
+  border-width: 3px;
   border-style: solid;
-  border-radius: 3px;
+  border-radius: 4px;
   position: relative;
   opacity: 0.9;
 }
@@ -330,18 +345,18 @@ body {
 .battery-icon-mini::after {
   content: '';
   position: absolute;
-  right: -5px;
-  top: 3px;
-  width: 3px;
-  height: 6px;
+  right: -8px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
   background: currentColor;
-  border-radius: 0 2px 2px 0;
+  border-radius: 0 3px 3px 0;
 }
 
 .battery-fill-mini {
   height: 100%;
   background: currentColor;
-  border-radius: 1px;
+  border-radius: 2px;
   transition: width 0.3s ease;
 }
 
@@ -782,6 +797,11 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 1.4rem;
   font-weight: 700;
+}
+
+.sat-count.critical {
+  color: #ff3333 !important;
+  text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
 }
 
 .sat-quality {

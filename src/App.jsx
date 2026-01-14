@@ -229,7 +229,7 @@ function App() {
           </div>
 
           <div className="hud-right-indicators">
-            <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>FS:{telemetry.fs}</span>
+            <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>FAILSAFE:{telemetry.fs}</span>
             <BatteryIndicator voltage={telemetry.batt_v} />
           </div>
         </div>
@@ -390,8 +390,6 @@ function HudCompass({ heading, direction }) {
 // Satellite Indicator (replaces Altitude)
 function SatelliteIndicator({ satellites }) {
   const { t } = useTranslation()
-  const maxSatellites = 16
-  const satArray = Array.from({ length: maxSatellites }, (_, i) => i < satellites)
   
   // Determine signal quality
   const getQuality = () => {
@@ -401,22 +399,14 @@ function SatelliteIndicator({ satellites }) {
     return 'poor'
   }
 
+  // Red color when 3 or less satellites
+  const isLow = satellites <= 3
+
   return (
     <div className="hud-satellites">
-      <div className="sat-label"><span className="sat-icon">◎</span> {t('osd.sat')}</div>
-      <div className="sat-grid">
-        {satArray.map((active, i) => (
-          <div 
-            key={i} 
-            className={`sat-dot ${active ? 'active' : ''}`}
-            style={{ 
-              animationDelay: active ? `${i * 50}ms` : undefined 
-            }}
-          />
-        ))}
-      </div>
+      <div className="sat-label"><span className="sat-icon">◎</span> {t('osd.satellites')}</div>
       <div className="sat-info">
-        <span className={`sat-count ${getQuality()}`}>{satellites}</span>
+        <span className={`sat-count ${getQuality()} ${isLow ? 'critical' : ''}`}>{satellites}</span>
         <span className="sat-quality">{t(`satellites.${getQuality()}`)}</span>
       </div>
     </div>
@@ -427,7 +417,7 @@ function SatelliteIndicator({ satellites }) {
 function Speedometer({ speed, dist }) {
   const { t } = useTranslation()
   const speedKmh = speed
-  const maxSpeed = 60 // max km/h for display
+  const maxSpeed = 40 // max km/h for display
   const angle = Math.min((speedKmh / maxSpeed) * 240, 240) - 120 // -120 to +120 degrees
 
   // Odometer: format distance in meters to 5-digit display
@@ -435,7 +425,7 @@ function Speedometer({ speed, dist }) {
   const odoDigits = String(odoValue).padStart(5, '0').split('')
 
   const ticks = []
-  for (let i = 0; i <= 60; i += 10) {
+  for (let i = 0; i <= 40; i += 10) {
     const tickAngle = (i / maxSpeed) * 240 - 120
     const isMain = i % 20 === 0
     const radians = (tickAngle - 90) * (Math.PI / 180)
@@ -511,24 +501,31 @@ function Speedometer({ speed, dist }) {
   )
 }
 
-// Power Indicator (0, 1, 2 levels)
+// Power Indicator (0=OFF, 1=MIN, 2=MID, 3=MAX)
 function PowerIndicator({ power }) {
   const { t } = useTranslation()
-  const levels = [0, 1, 2]
-  const labels = [t('power.off'), t('power.eco'), t('power.max')]
+  const bars = [1, 2, 3] // Three power bars
+  
+  // Get label based on power level
+  const getLabel = () => {
+    if (power <= 0) return t('power.off')
+    if (power === 1) return t('power.min')
+    if (power === 2) return t('power.mid')
+    return t('power.max')
+  }
 
   return (
     <div className="power-indicator">
-      <div className="power-label">{t('osd.pwr')}</div>
+      <div className="power-label">{t('osd.power')}</div>
       <div className="power-bars">
-        {levels.map(level => (
+        {bars.map(level => (
           <div 
             key={level} 
             className={`power-bar ${power >= level ? 'active' : ''} level-${level}`}
           />
         ))}
       </div>
-      <div className={`power-mode level-${power}`}>{labels[power] || t('power.off')}</div>
+      <div className={`power-mode level-${Math.min(power, 3)}`}>{getLabel()}</div>
     </div>
   )
 }

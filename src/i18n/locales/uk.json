@@ -57,7 +57,9 @@
     "map": "КАРТА",
     "altitude": "ВИСОТА",
     "sat": "СУПУТНИКИ",
+    "satellites": "Супутники",
     "pwr": "ЖИВ",
+    "power": "Потужність",
     "speedUnit": "км/г",
     "distanceUnit": "м",
     "warning": "УВАГА",
@@ -97,8 +99,9 @@
   
   "power": {
     "off": "ВИМК",
-    "eco": "ЕКО",
-    "max": "МАКС"
+    "min": "Мін",
+    "mid": "Серед",
+    "max": "Макс"
   },
   
   "compass": {
