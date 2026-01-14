@@ -110,6 +110,13 @@ else
     echo -e "${YELLOW}not listening${NC}"
 fi
 
+echo -ne "    Port 8889 (WebRTC): "
+if ss -tlnp 2>/dev/null | grep -q ":8889 "; then
+    echo -e "${GREEN}listening${NC}"
+else
+    echo -e "${YELLOW}not listening${NC}"
+fi
+
 echo ""
 echo -e "${CYAN}+------------------------------------------+${NC}"
 

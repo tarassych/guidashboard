@@ -198,7 +198,7 @@ cd /home/orangepi/mmtx
 ```bash
 sudo tee /etc/systemd/system/mediamtx.service << 'EOF'
 [Unit]
-Description=MediaMTX RTSP/HLS Server
+Description=MediaMTX RTSP/WebRTC Server
 After=network.target
 
 [Service]
@@ -280,12 +280,24 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # MediaMTX HLS Proxy
+    # MediaMTX HLS Proxy (legacy)
     location /hls/ {
         proxy_pass http://127.0.0.1:8888/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # MediaMTX WebRTC WHEP Proxy
+    location /webrtc/ {
+        proxy_pass http://127.0.0.1:8889/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
     }
 }
 EOF
@@ -353,7 +365,8 @@ chmod +x /home/orangepi/code/pair.sh
 sudo ufw allow 80/tcp      # Nginx HTTP
 sudo ufw allow 3001/tcp    # Backend API (optional, if direct access needed)
 sudo ufw allow 8554/tcp    # RTSP
-sudo ufw allow 8888/tcp    # HLS
+sudo ufw allow 8888/tcp    # HLS (legacy)
+sudo ufw allow 8889/tcp    # WebRTC
 sudo ufw allow 9997/tcp    # MediaMTX API
 ```
 
@@ -474,8 +487,8 @@ sudo lsof -i :9997
 | 80   | Nginx   | Frontend + API proxy |
 | 3001 | Node.js | Backend API |
 | 8554 | MediaMTX | RTSP streams |
-| 8888 | MediaMTX | HLS streams |
-| 8889 | MediaMTX | WebRTC |
+| 8888 | MediaMTX | HLS streams (legacy) |
+| 8889 | MediaMTX | WebRTC streams (primary) |
 | 9997 | MediaMTX | Control API |
 
 ---

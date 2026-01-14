@@ -982,7 +982,7 @@ EOF
         
         cat > /etc/systemd/system/mediamtx.service << EOF
 [Unit]
-Description=MediaMTX RTSP/HLS Server
+Description=MediaMTX RTSP/WebRTC Server
 After=network.target
 
 [Service]
@@ -1170,20 +1170,26 @@ configure_nginx() {
     print_step 9 "Configuring Nginx"
     
     local config_file="/etc/nginx/sites-available/default"
-    local config_hash=""
-    local new_hash=""
+    local needs_update=false
     
     # Check if our config is already in place
     if [ -f "$config_file" ]; then
-        if grep -q "guidashboard" "$config_file" 2>/dev/null || grep -q "proxy_pass http://127.0.0.1:3001" "$config_file" 2>/dev/null; then
-            print_installed "Nginx configuration (API proxy configured)"
-            
-            # Still restart to apply any changes
-            start_spinner "Reloading Nginx"
-            nginx -t > /dev/null 2>&1 && systemctl reload nginx
-            stop_spinner
-            print_success "Nginx reloaded"
-            return
+        if grep -q "proxy_pass http://127.0.0.1:3001" "$config_file" 2>/dev/null; then
+            # Check if WebRTC proxy is configured (required for v3.0+)
+            if grep -q "location /webrtc/" "$config_file" 2>/dev/null; then
+                print_installed "Nginx configuration (API + WebRTC proxy configured)"
+                
+                # Still restart to apply any changes
+                start_spinner "Reloading Nginx"
+                nginx -t > /dev/null 2>&1 && systemctl reload nginx
+                stop_spinner
+                print_success "Nginx reloaded"
+                return
+            else
+                # Old config without WebRTC - needs update
+                print_warning "Nginx config missing WebRTC proxy - updating..."
+                needs_update=true
+            fi
         fi
     fi
     

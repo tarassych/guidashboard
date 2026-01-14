@@ -60,8 +60,8 @@ router.get('/mediamtx/status', async (req, res) => {
     // Get paths from API
     const pathsData = await fetchMediamtxApi('/v3/paths/list');
     
-    // Get HLS muxers (active streams)
-    const hlsData = await fetchMediamtxApi('/v3/hlsmuxers/list');
+    // Get WebRTC sessions (active streams)
+    const webrtcData = await fetchMediamtxApi('/v3/webrtcsessions/list');
     
     // Get RTSP connections
     const rtspData = await fetchMediamtxApi('/v3/rtspconns/list');
@@ -87,7 +87,7 @@ router.get('/mediamtx/status', async (req, res) => {
         totalReaders,
         bytesReceived: totalBytesReceived,
         bytesSent: totalBytesSent,
-        hlsMuxers: hlsData.items?.length || 0,
+        webrtcSessions: webrtcData.items?.length || 0,
         rtspConnections: rtspData.items?.length || 0
       },
       paths: paths.map(p => ({
