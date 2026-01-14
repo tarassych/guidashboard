@@ -117,6 +117,12 @@ body {
   color: var(--theme-text-muted);
 }
 
+.status-offline {
+  background: rgba(255, 68, 68, 0.15);
+  border-color: var(--theme-status-danger);
+  color: var(--theme-status-danger);
+}
+
 /* FS Indicator */
 .status-fs {
   color: var(--theme-text-muted);

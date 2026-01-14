@@ -152,6 +152,19 @@ body {
   letter-spacing: 1px;
 }
 
+.status-offline {
+  padding: 3px 10px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 3px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: rgba(255, 68, 68, 0.15);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
 .status-active {
   padding: 3px 10px;
   border: 1px solid var(--theme-accent-primary, #00ff88);
@@ -1343,6 +1356,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   padding: 8px 12px;
   border-bottom-width: 1px;
   border-bottom-style: solid;
@@ -1376,6 +1390,11 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.55rem;
   letter-spacing: 1px;
+}
+
+.tlog-status.disconnected,
+.tlog-status.connecting {
+  color: #ff4444;
 }
 
 .tlog-console {

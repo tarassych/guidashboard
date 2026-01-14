@@ -1022,7 +1022,7 @@ EOF
         print_success "MediaMTX started"
     fi
     
-    print_detail "Ports: RTSP=8554, HLS=8888, API=9997"
+    print_detail "Ports: RTSP=8554, HLS=8888, WebRTC=8889, API=9997"
 }
 
 deploy_frontend() {
@@ -1225,12 +1225,24 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # MediaMTX HLS Proxy
+    # MediaMTX HLS Proxy (legacy)
     location /hls/ {
         proxy_pass http://127.0.0.1:8888/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # MediaMTX WebRTC WHEP Proxy
+    location /webrtc/ {
+        proxy_pass http://127.0.0.1:8889/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
     }
 }
 EOF
@@ -1396,7 +1408,7 @@ print_summary() {
     echo -e "    ${GREEN}*${NC} Backend API    : http://localhost:3001"
     echo -e "    ${GREEN}*${NC} Web Interface  : http://localhost"
     echo -e "    ${GREEN}*${NC} MediaMTX API   : http://localhost:9997"
-    echo -e "    ${GREEN}*${NC} HLS Streams    : http://localhost:8888"
+    echo -e "    ${GREEN}*${NC} WebRTC Streams : http://localhost:8889"
     echo ""
     echo -e "  ${CYAN}Quick Commands:${NC}"
     echo -e "    ${DIM}pm2 status${NC}                     - Backend status"

@@ -2,11 +2,11 @@ import { useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import './CameraFeed.css'
 
-// Camera Feed Component - HLS video player with auto-reconnect
+// Camera Feed Component - WebRTC player with auto-reconnect via WHEP
 function CameraFeed({ streamUrl, variant = "main" }) {
   const { t } = useTranslation()
   const videoRef = useRef(null)
-  const hlsRef = useRef(null)
+  const pcRef = useRef(null)
   const retryTimeoutRef = useRef(null)
   const [status, setStatus] = useState('connecting')
   const [retryKey, setRetryKey] = useState(0)
@@ -22,104 +22,96 @@ function CameraFeed({ streamUrl, variant = "main" }) {
       retryTimeoutRef.current = null
     }
 
-    if (hlsRef.current) {
-      hlsRef.current.destroy()
-      hlsRef.current = null
+    // Cleanup previous connection
+    if (pcRef.current) {
+      pcRef.current.close()
+      pcRef.current = null
     }
 
     setStatus('connecting')
 
     const scheduleRetry = (delay = 3000) => {
       retryTimeoutRef.current = setTimeout(() => {
-        setRetryKey(prev => prev + 1)
+        if (isMounted) setRetryKey(prev => prev + 1)
       }, delay)
     }
 
-    import('hls.js').then(({ default: Hls }) => {
-      if (!isMounted) return
-
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-          manifestLoadingTimeOut: 15000,
-          manifestLoadingMaxRetry: 4,
-          manifestLoadingRetryDelay: 1000,
-          levelLoadingTimeOut: 15000,
-          levelLoadingMaxRetry: 4,
-          levelLoadingRetryDelay: 1000,
-          fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6,
-          fragLoadingRetryDelay: 1000,
+    const startWebRTC = async () => {
+      try {
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         })
-        
-        hlsRef.current = hls
-        hls.loadSource(streamUrl)
-        hls.attachMedia(video)
+        pcRef.current = pc
 
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setStatus('playing')
-          video.play().catch(() => setStatus('paused'))
-        })
+        pc.ontrack = (event) => {
+          if (isMounted) {
+            video.srcObject = event.streams[0]
+            setStatus('playing')
+          }
+        }
 
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                setStatus('reconnecting')
-                hls.startLoad()
-                retryTimeoutRef.current = setTimeout(() => {
-                  if (hlsRef.current) {
-                    hlsRef.current.destroy()
-                    hlsRef.current = null
-                  }
-                  scheduleRetry(2000)
-                }, 5000)
-                break
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                setStatus('reconnecting')
-                hls.recoverMediaError()
-                break
-              default:
-                hls.destroy()
-                hlsRef.current = null
-                setStatus('error')
-                scheduleRetry(3000)
-                break
+        pc.oniceconnectionstatechange = () => {
+          if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+            if (isMounted) {
+              setStatus('reconnecting')
+              scheduleRetry(2000)
             }
+          }
+        }
+
+        // Add transceivers for receiving video/audio
+        pc.addTransceiver('video', { direction: 'recvonly' })
+        pc.addTransceiver('audio', { direction: 'recvonly' })
+
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+
+        // Wait for ICE gathering to complete
+        await new Promise((resolve) => {
+          if (pc.iceGatheringState === 'complete') {
+            resolve()
+          } else {
+            const checkState = () => {
+              if (pc.iceGatheringState === 'complete') {
+                pc.removeEventListener('icegatheringstatechange', checkState)
+                resolve()
+              }
+            }
+            pc.addEventListener('icegatheringstatechange', checkState)
+            // Timeout fallback
+            setTimeout(resolve, 2000)
           }
         })
 
-        video.onplaying = () => {
-          setStatus('playing')
-        }
-
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = streamUrl
-        video.addEventListener('loadedmetadata', () => {
-          setStatus('playing')
-          video.play().catch(() => setStatus('paused'))
+        // Send offer to MediaMTX WHEP endpoint
+        const response = await fetch(streamUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: pc.localDescription.sdp
         })
-        video.addEventListener('error', () => {
+
+        if (!response.ok) throw new Error('WHEP request failed')
+
+        const answerSdp = await response.text()
+        await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+
+      } catch (error) {
+        console.error('WebRTC error:', error)
+        if (isMounted) {
           setStatus('error')
           scheduleRetry(3000)
-        })
-      } else {
-        setStatus('error')
+        }
       }
-    }).catch(() => {
-      if (isMounted) setStatus('error')
-    })
+    }
+
+    startWebRTC()
 
     return () => {
       isMounted = false
       if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current)
-      if (hlsRef.current) {
-        hlsRef.current.destroy()
-        hlsRef.current = null
+      if (pcRef.current) {
+        pcRef.current.close()
+        pcRef.current = null
       }
     }
   }, [streamUrl, retryKey])
@@ -145,8 +137,3 @@ function CameraFeed({ streamUrl, variant = "main" }) {
 }
 
 export default CameraFeed
-
-
-
-
-

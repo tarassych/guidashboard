@@ -161,27 +161,16 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   }
   
   const handleSaveAssignments = async () => {
-    // Generate HLS URL: http://{mediamtx_server}:8888/cam{serial_number}/index.m3u8
-    // MediaMTX runs on Orange Pi (same as API server), so use that host
-    const getMediamtxHost = () => {
-      // Extract host from API_BASE_URL or use current window location
-      try {
-        const apiUrl = new URL(API_BASE_URL)
-        return apiUrl.hostname
-      } catch {
-        return window.location.hostname
-      }
-    }
-    
-    const generateHlsUrl = (camera) => {
+    // Generate WebRTC WHEP URL: /webrtc/cam{serial_number}/whep
+    // Uses nginx proxy to MediaMTX WebRTC endpoint on port 8889
+    const generateWebrtcUrl = (camera) => {
       const serialNumber = camera.onvif?.serial_number || camera.ip.replace(/\./g, '')
-      const mmtxHost = getMediamtxHost()
-      return `http://${mmtxHost}:8888/cam${serialNumber}/index.m3u8`
+      return `/webrtc/cam${serialNumber}/whep`
     }
     
     const frontCamera = selectedFront ? {
       ip: selectedFront.ip,
-      hlsUrl: generateHlsUrl(selectedFront),
+      webrtcUrl: generateWebrtcUrl(selectedFront),
       snapshotUrl: selectedFront.snapshot?.url || '',
       rtspUrl: `rtsp://${selectedFront.login}:${selectedFront.password}@${selectedFront.ip}:${selectedFront.rtsp?.port || 554}${selectedFront.rtsp?.path || '/stream0'}`,
       rtspPort: selectedFront.rtsp?.port || 554,
@@ -194,7 +183,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     
     const rearCamera = selectedRear ? {
       ip: selectedRear.ip,
-      hlsUrl: generateHlsUrl(selectedRear),
+      webrtcUrl: generateWebrtcUrl(selectedRear),
       snapshotUrl: selectedRear.snapshot?.url || '',
       rtspUrl: `rtsp://${selectedRear.login}:${selectedRear.password}@${selectedRear.ip}:${selectedRear.rtsp?.port || 554}${selectedRear.rtsp?.path || '/stream0'}`,
       rtspPort: selectedRear.rtsp?.port || 554,
@@ -554,11 +543,11 @@ function MediaMTXPanel({ profiles = {} }) {
     const usage = []
     Object.entries(profiles).forEach(([droneId, profile]) => {
       // Check front camera
-      if (profile.frontCamera?.hlsUrl?.includes(streamName)) {
+      if (profile.frontCamera?.webrtcUrl?.includes(streamName) || profile.frontCameraUrl?.includes(streamName)) {
         usage.push({ droneId, name: profile.name, camera: 'Front' })
       }
       // Check rear camera
-      if (profile.rearCamera?.hlsUrl?.includes(streamName)) {
+      if (profile.rearCamera?.webrtcUrl?.includes(streamName) || profile.rearCameraUrl?.includes(streamName)) {
         usage.push({ droneId, name: profile.name, camera: 'Rear' })
       }
     })
@@ -708,8 +697,8 @@ function MediaMTXPanel({ profiles = {} }) {
           <span className="stat-label">{t('mediamtx.connectedViewers')}</span>
         </div>
         <div className="stat-card">
-          <span className="stat-value">{status?.stats?.hlsMuxers || 0}</span>
-          <span className="stat-label">{t('mediamtx.hlsMuxers')}</span>
+          <span className="stat-value">{status?.stats?.webrtcSessions || 0}</span>
+          <span className="stat-label">{t('mediamtx.webrtcSessions')}</span>
         </div>
         <div className="stat-card bytes">
           <span className="stat-value">{formatBytes(status?.stats?.bytesReceived)}</span>
@@ -734,7 +723,7 @@ function MediaMTXPanel({ profiles = {} }) {
                 <th>{t('mediamtx.source')}</th>
                 <th>{t('mediamtx.tracks')}</th>
                 <th>{t('mediamtx.viewers')}</th>
-                <th>{t('mediamtx.hlsUrl')}</th>
+                <th>{t('mediamtx.webrtcUrl')}</th>
               </tr>
             </thead>
             <tbody>
@@ -764,8 +753,8 @@ function MediaMTXPanel({ profiles = {} }) {
                     <td className="source-type">{path.sourceType}</td>
                     <td>{path.tracks}</td>
                     <td>{path.readers}</td>
-                    <td className="hls-url">
-                      <code>:8888/{path.name}/index.m3u8</code>
+                    <td className="webrtc-url">
+                      <code>/webrtc/{path.name}/whep</code>
                     </td>
                   </tr>
                 )
@@ -966,9 +955,9 @@ function DroneProfileEditor() {
           ...existingProfile,
           frontCamera,
           rearCamera,
-          // Set HLS URL fields (format: http://{camera_ip}:8888/cam{serial_number}/index.m3u8)
-          frontCameraUrl: frontCamera?.hlsUrl || existingProfile.frontCameraUrl || '',
-          rearCameraUrl: rearCamera?.hlsUrl || existingProfile.rearCameraUrl || ''
+          // Set WebRTC URL fields (format: /webrtc/cam{serial_number}/whep)
+          frontCameraUrl: frontCamera?.webrtcUrl || existingProfile.frontCameraUrl || '',
+          rearCameraUrl: rearCamera?.webrtcUrl || existingProfile.rearCameraUrl || ''
         })
       })
       

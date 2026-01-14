@@ -197,8 +197,8 @@ function App() {
   const directionIndex = Math.round(telemetry.heading / 45) % 8
 
   // Get camera URLs from profile or use defaults
-  const frontCameraUrl = droneProfile?.frontCameraUrl || '/nginxhls/cam1/index.m3u8'
-  const rearCameraUrl = droneProfile?.rearCameraUrl || '/nginxhls/cam2/index.m3u8'
+  const frontCameraUrl = droneProfile?.frontCameraUrl || '/webrtc/cam1/whep'
+  const rearCameraUrl = droneProfile?.rearCameraUrl || '/webrtc/cam2/whep'
   // Drone number is array index + 1
   const droneNumber = (droneProfile?._index ?? 0) + 1
   const droneName = droneProfile?.name || `Drone #${droneNumber}`
@@ -222,9 +222,10 @@ function App() {
           </div>
           
           <div className="hud-status-center">
-            <span className={`status-mode ${telemetry.connected ? telemetry.md_str.toLowerCase().replace(/\s+/g, '-') : 'offline'}`}>
-              {telemetry.connected ? telemetry.md_str : t('common.offline')}
+            <span className={`status-mode ${telemetry.md_str.toLowerCase().replace(/\s+/g, '-')}`}>
+              {telemetry.md_str}
             </span>
+            {!telemetry.connected && <span className="status-offline">{t('common.offline')}</span>}
             {isActive && <span className="status-active">{t('common.active')}</span>}
           </div>
 
@@ -907,6 +908,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
   const [heartbeats, setHeartbeats] = useState([]) // Track heartbeat events with timestamps
   const lastIdRef = useRef(0)
   const isFirstFetch = useRef(true) // Skip heartbeat on initial historical data load
+  const lastFreshDataTime = useRef(0) // Track when we last received fresh telemetry
 
   const formatTimestamp = useCallback((timestamp) => {
     const date = new Date(timestamp)
@@ -983,30 +985,48 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
         if (!isMounted) return
 
         if (data.success) {
-          setConnectionStatus('connected')
+          const OFFLINE_TIMEOUT = 60000 // 60 seconds - same as dashboard offline detection
+          const now = Date.now()
           
           if (data.records.length > 0) {
             // Update lastId ref first
             lastIdRef.current = data.latestId
             
+            // Check if most recent record is fresh (within 60 seconds)
+            const mostRecentRecord = data.records[0] // Records come newest first
+            const recordAge = now - new Date(mostRecentRecord.timestamp).getTime()
+            const isFresh = recordAge < OFFLINE_TIMEOUT
+            
             // Stack behavior: new on top, limit to 20
             setRecords(prev => [...data.records, ...prev].slice(0, 20))
             
-            // Trigger heartbeat animation only for NEW data (not initial historical load)
-            if (!isFirstFetch.current) {
-              triggerHeartbeat()
+            if (isFresh) {
+              // Fresh data received - mark as connected and update timestamp
+              lastFreshDataTime.current = now
+              setConnectionStatus('connected')
+              
+              // Trigger heartbeat animation only for NEW fresh data (not initial load)
+              if (!isFirstFetch.current) {
+                triggerHeartbeat()
+              }
+              
+              // Only update parent telemetry state when data is fresh
+              if (onTelemetryUpdate) {
+                const recordsToProcess = data.records.slice().reverse()
+                recordsToProcess.forEach(record => {
+                  onTelemetryUpdate(record.data)
+                })
+              }
             }
             isFirstFetch.current = false
-            
-            // Process ALL records (oldest to newest) so each type updates its fields
-            // This ensures batt, gps, and state records all get merged into app state
-            if (onTelemetryUpdate) {
-              // Reverse to process oldest first, newest last (most recent wins)
-              const recordsToProcess = data.records.slice().reverse()
-              recordsToProcess.forEach(record => {
-                onTelemetryUpdate(record.data)
-              })
-            }
+          }
+          
+          // Check if we should mark as disconnected (no fresh data for 60 seconds)
+          if (lastFreshDataTime.current > 0 && now - lastFreshDataTime.current > OFFLINE_TIMEOUT) {
+            setConnectionStatus('disconnected')
+          } else if (lastFreshDataTime.current === 0 && isFirstFetch.current === false) {
+            // Never received fresh data after initial load
+            setConnectionStatus('disconnected')
           }
         }
       } catch (error) {
