@@ -462,8 +462,8 @@ body {
   text-shadow: 0 0 8px var(--theme-accent-primary-glow);
 }
 
-/* Map theme overlay - red tint */
-.map-theme-overlay {
+/* Map theme overlay - red tint (scoped to theme) */
+body.theme-aggressive-red .map-theme-overlay {
   background: rgba(255, 34, 68, 0.25);
 }
 
@@ -621,7 +621,8 @@ body {
 }
 
 /* ========== VIGNETTE OVERLAY ========== */
-.main-camera-bg::after {
+/* Scoped to theme class so animation only runs when this theme is active */
+body.theme-aggressive-red .main-camera-bg::after {
   content: '';
   position: absolute;
   top: 0;

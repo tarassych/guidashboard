@@ -96,7 +96,6 @@
   },
   
   "power": {
-    "off": "OFF",
     "min": "MIN",
     "mid": "MID",
     "max": "MAX"

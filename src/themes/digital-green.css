@@ -447,8 +447,8 @@ body {
   text-shadow: 0 0 8px var(--theme-accent-primary-glow);
 }
 
-/* Map theme overlay - green tint */
-.map-theme-overlay {
+/* Map theme overlay - green tint (scoped to theme) */
+body.theme-digital-green .map-theme-overlay {
   background: rgba(0, 255, 136, 0.25);
 }
 
@@ -601,7 +601,8 @@ body {
 
 /* ========== VIGNETTE OVERLAY ========== */
 /* Subtle static vignette for green theme - no pulsing animation */
-.main-camera-bg::after {
+/* Scoped to theme class so it overrides when this theme is active */
+body.theme-digital-green .main-camera-bg::after {
   content: '';
   position: absolute;
   top: 0;
@@ -619,7 +620,7 @@ body {
     rgba(0, 0, 0, 0.6) 100%
   );
   opacity: 0.5;
-  animation: none; /* Explicitly disable any animation */
+  animation: none !important; /* Explicitly disable any animation */
 }
 
 /* ========== CAMERA FEED THEME ========== */

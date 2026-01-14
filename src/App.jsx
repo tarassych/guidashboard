@@ -501,16 +501,14 @@ function Speedometer({ speed, dist }) {
   )
 }
 
-// Power Indicator (0=OFF, 1=MIN, 2=MID, 3=MAX)
+// Power Indicator (0=MIN, 1=MID, 2=MAX)
 function PowerIndicator({ power }) {
   const { t } = useTranslation()
-  const bars = [1, 2, 3] // Three power bars
   
   // Get label based on power level
   const getLabel = () => {
-    if (power <= 0) return t('power.off')
-    if (power === 1) return t('power.min')
-    if (power === 2) return t('power.mid')
+    if (power <= 0) return t('power.min')
+    if (power === 1) return t('power.mid')
     return t('power.max')
   }
 
@@ -518,14 +516,14 @@ function PowerIndicator({ power }) {
     <div className="power-indicator">
       <div className="power-label">{t('osd.power')}</div>
       <div className="power-bars">
-        {bars.map(level => (
-          <div 
-            key={level} 
-            className={`power-bar ${power >= level ? 'active' : ''} level-${level}`}
-          />
-        ))}
+        {/* Bar 1: Green always (power >= 0) */}
+        <div className={`power-bar ${power >= 0 ? 'active green' : ''}`} />
+        {/* Bar 2: Green when power >= 1 */}
+        <div className={`power-bar ${power >= 1 ? 'active green' : ''}`} />
+        {/* Bar 3: Orange when power >= 2 */}
+        <div className={`power-bar ${power >= 2 ? 'active orange' : ''}`} />
       </div>
-      <div className={`power-mode level-${Math.min(power, 3)}`}>{getLabel()}</div>
+      <div className={`power-mode level-${Math.min(power, 2)}`}>{getLabel()}</div>
     </div>
   )
 }
