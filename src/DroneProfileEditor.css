@@ -1661,6 +1661,200 @@ section h2 {
   gap: 0.5rem;
 }
 
+/* ==================== DIRECT IP PAIRING ==================== */
+.direct-pair-section {
+  background: rgba(255, 170, 0, 0.05);
+  border: none;
+  border-bottom: 1px solid rgba(255, 170, 0, 0.2);
+  border-radius: 0;
+  padding: 1.5rem;
+  margin-top: 0;
+}
+
+.direct-pair-header {
+  margin-bottom: 1rem;
+}
+
+.direct-pair-title h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffaa00;
+  margin: 0 0 0.25rem 0;
+}
+
+.direct-pair-title p {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+
+.direct-pair-form {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.direct-pair-input {
+  flex: 1;
+  max-width: 300px;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.direct-pair-input:focus {
+  outline: none;
+  border-color: rgba(255, 170, 0, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.direct-pair-input::placeholder {
+  color: #666;
+}
+
+.direct-pair-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.direct-pair-btn {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 170, 0, 0.2);
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  border-radius: 6px;
+  color: #ffaa00;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.direct-pair-btn:hover:not(:disabled) {
+  background: rgba(255, 170, 0, 0.3);
+  border-color: rgba(255, 170, 0, 0.6);
+}
+
+.direct-pair-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.direct-pair-btn.pairing {
+  background: rgba(255, 170, 0, 0.3);
+}
+
+.direct-pair-btn.success {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: rgba(0, 255, 136, 0.4);
+  color: #00ff88;
+}
+
+.direct-pair-btn .pair-spinner {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+.direct-pair-message {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.direct-pair-message.success {
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: #00ff88;
+}
+
+.direct-pair-message.failed {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff6666;
+}
+
+.direct-pair-message .success-icon {
+  color: #00ff88;
+}
+
+.direct-pair-message .failed-icon {
+  color: #ff6666;
+}
+
+/* Direct pair terminal */
+.direct-pair-terminal {
+  margin-top: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 170, 0, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.direct-pair-terminal .terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 170, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 170, 0, 0.2);
+}
+
+.direct-pair-terminal .terminal-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  color: #ffaa00;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.direct-pair-terminal .terminal-icon {
+  opacity: 0.7;
+}
+
+.direct-pair-terminal .terminal-clear-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  background: transparent;
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: 3px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.direct-pair-terminal .terminal-clear-btn:hover {
+  background: rgba(255, 170, 0, 0.1);
+  color: #ffaa00;
+}
+
+.direct-pair-terminal .terminal-body {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 0.75rem;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Direct pair terminal entry color */
+.terminal-entry.direct-pair .terminal-command-line .command {
+  color: #ffaa00;
+}
+
 /* ==================== MEDIAMTX PANEL ==================== */
 .cameras-section {
   padding: 1.5rem;

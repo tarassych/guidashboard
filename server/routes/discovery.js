@@ -45,7 +45,8 @@ router.get('/discover', async (req, res) => {
 router.post('/pair', async (req, res) => {
   const { ip, droneId } = req.body;
   
-  if (!ip || !droneId) {
+  // Check ip exists and droneId is defined (0 is valid for unknown drone)
+  if (!ip || droneId === undefined || droneId === null || droneId === '') {
     return res.status(400).json({ error: 'IP and droneId are required' });
   }
   

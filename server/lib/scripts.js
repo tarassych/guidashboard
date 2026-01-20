@@ -102,7 +102,8 @@ export async function discoverDrones() {
  * @returns {Promise<Object>} Result with pairing status
  */
 export async function pairDrone(ip, droneId) {
-  const result = await executeScript('pair.sh', [ip, droneId], { timeout: 30000 });
+  // pair.sh can take up to 60+ seconds to complete
+  const result = await executeScript('pair.sh', [ip, droneId], { timeout: 120000 });
   
   // Determine pairing result
   let pairResult = false;

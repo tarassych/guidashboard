@@ -178,6 +178,19 @@
     "discoveryFailed": "Помилка пошуку"
   },
   
+  "directPair": {
+    "title": "Пряме з'єднання за IP",
+    "subtitle": "З'єднання з дроном за відомою IP адресою",
+    "ipPlaceholder": "Введіть IP адресу дрона",
+    "pairBtn": "З'єднати",
+    "pairing": "З'єднання...",
+    "invalidIp": "Будь ласка, введіть правильну IP адресу",
+    "noDroneIdReturned": "ID дрона не отримано від з'єднання",
+    "pairingFailed": "Помилка з'єднання",
+    "pairingSuccess": "Дрон {{id}} успішно з'єднано!",
+    "parsingDroneId": "Отримання ID дрона з відповіді..."
+  },
+  
   "pairing": {
     "pair": "З'єднати",
     "rePair": "Спарувати ще раз",

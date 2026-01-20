@@ -176,6 +176,19 @@
     "discoveryFailed": "Discovery failed"
   },
   
+  "directPair": {
+    "title": "Direct Pairing by IP",
+    "subtitle": "Pair with a drone using a known IP address",
+    "ipPlaceholder": "Enter drone IP address",
+    "pairBtn": "Pair",
+    "pairing": "Pairing...",
+    "invalidIp": "Please enter a valid IP address",
+    "noDroneIdReturned": "No Drone ID returned from pairing",
+    "pairingFailed": "Pairing failed",
+    "pairingSuccess": "Drone {{id}} paired successfully!",
+    "parsingDroneId": "Parsing Drone ID from response..."
+  },
+  
   "pairing": {
     "pair": "Pair",
     "rePair": "Re-pair",

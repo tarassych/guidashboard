@@ -837,10 +837,59 @@ function DroneProfileEditor() {
   // Pairing state (keyed by drone IP)
   const [pairingStatus, setPairingStatus] = useState({}) // { ip: { status: 'pairing'|'checking'|'success'|'failed', message: '' } }
   
+  // Direct IP pairing state
+  const [directPairIp, setDirectPairIp] = useState('')
+  const [directPairStatus, setDirectPairStatus] = useState(null) // { status: 'pairing'|'success'|'failed', message: '' }
+  const [directPairLogs, setDirectPairLogs] = useState([]) // Dedicated terminal logs for direct pairing
+  const directPairTerminalRef = useRef(null)
+  
+  // Auto-scroll direct pair terminal
+  useEffect(() => {
+    if (directPairTerminalRef.current) {
+      directPairTerminalRef.current.scrollTop = directPairTerminalRef.current.scrollHeight
+    }
+  }, [directPairLogs])
+  
+  // IP address auto-formatting
+  const handleDirectPairIpChange = (e) => {
+    let value = e.target.value
+    
+    // Remove any non-digit and non-dot characters
+    value = value.replace(/[^\d.]/g, '')
+    
+    // Split into octets
+    const parts = value.split('.')
+    
+    // Format each octet
+    const formatted = parts.map((part, index) => {
+      // Remove leading zeros except for single '0'
+      let num = part.replace(/^0+/, '') || (part.length > 0 ? '0' : '')
+      
+      // Limit to 3 digits and max value 255
+      if (num.length > 3) num = num.slice(0, 3)
+      if (parseInt(num) > 255) num = '255'
+      
+      return num
+    }).slice(0, 4) // Max 4 octets
+    
+    // Auto-add dot after complete octet (3 digits or value > 25)
+    let result = formatted.join('.')
+    
+    // If user types a number that completes an octet, don't auto-add dot yet
+    // Let user continue typing or manually add dot
+    
+    setDirectPairIp(result)
+  }
+  
+  // Add log to direct pair terminal
+  const addDirectPairLog = (log) => {
+    setDirectPairLogs(prev => [...prev, { ...log, timestamp: Date.now() }])
+  }
+  
   // Check if any drone is currently pairing (to disable other pair buttons and discover)
   const isPairingAny = Object.values(pairingStatus).some(
     s => s.status === 'pairing' || s.status === 'checking'
-  )
+  ) || directPairStatus?.status === 'pairing'
   
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, onCancel }
@@ -1234,6 +1283,180 @@ function DroneProfileEditor() {
         ...prev,
         [ip]: { status: 'failed', message: error.message }
       }))
+    }
+  }
+  
+  // Direct IP pairing handler
+  const handleDirectPair = async () => {
+    const ip = directPairIp.trim()
+    
+    // Validate IP address format
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/
+    if (!ip || !ipRegex.test(ip)) {
+      setDirectPairStatus({ status: 'failed', message: t('directPair.invalidIp') })
+      return
+    }
+    
+    const pairCommand = `pair.sh ${ip} 0`
+    
+    setDirectPairStatus({ status: 'pairing', message: t('pairing.initiating') })
+    
+    // Add "running" log to direct pair terminal
+    addDirectPairLog({
+      type: 'direct-pair',
+      status: 'running',
+      command: pairCommand,
+      ip
+    })
+    
+    try {
+      // Call pair API with drone_id = 0 (unknown)
+      const pairResponse = await fetch(`${API_BASE_URL}/api/pair`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, droneId: 0 })
+      })
+      
+      const pairData = await pairResponse.json()
+      
+      // Add pair result log
+      addDirectPairLog({
+        type: 'direct-pair',
+        status: pairData.success ? 'success' : 'error',
+        command: pairData.command || pairCommand,
+        stdout: pairData.stdout || '',
+        stderr: pairData.stderr || '',
+        error: pairData.error || null,
+        result: pairData.result,
+        ip
+      })
+      
+      if (!pairData.success || !pairData.result) {
+        setDirectPairStatus({ status: 'failed', message: t('directPair.pairingFailed') })
+        return
+      }
+      
+      // Parse drone ID from stdout
+      // Looking for pattern like "Drone ID: 1234567890" or just the ID number
+      addDirectPairLog({
+        type: 'info',
+        message: t('directPair.parsingDroneId')
+      })
+      
+      const stdout = pairData.stdout || ''
+      // Try to find drone ID in output - look for patterns like "ID: 1234" or "drone_id: 1234" or just a 10-digit number
+      let droneId = null
+      
+      // Try pattern: drone_id=XXXXXX or ID: XXXXXX or id=XXXXXX
+      const idMatch = stdout.match(/(?:drone_id|id)[=:\s]+(\d{6,})/i)
+      if (idMatch) {
+        droneId = idMatch[1]
+      }
+      
+      // If not found, try looking for a standalone 10-digit number (typical drone ID)
+      if (!droneId) {
+        const numberMatch = stdout.match(/\b(\d{10})\b/)
+        if (numberMatch) {
+          droneId = numberMatch[1]
+        }
+      }
+      
+      // If still not found, try any 6+ digit number
+      if (!droneId) {
+        const anyNumberMatch = stdout.match(/\b(\d{6,})\b/)
+        if (anyNumberMatch) {
+          droneId = anyNumberMatch[1]
+        }
+      }
+      
+      if (!droneId) {
+        addDirectPairLog({
+          type: 'direct-pair',
+          status: 'error',
+          message: t('directPair.noDroneIdReturned')
+        })
+        setDirectPairStatus({ status: 'failed', message: t('directPair.noDroneIdReturned') })
+        return
+      }
+      
+      addDirectPairLog({
+        type: 'info',
+        message: `Drone ID detected: ${droneId}`
+      })
+      
+      // Update status to checking telemetry
+      setDirectPairStatus({ status: 'pairing', message: t('pairing.waitingTelemetry') })
+      
+      // Add waiting log
+      addDirectPairLog({
+        type: 'info',
+        message: t('pairing.waitingForTelemetry', { id: droneId })
+      })
+      
+      // Wait at least 10 seconds, then check for telemetry
+      await new Promise(resolve => setTimeout(resolve, 10000))
+      
+      // Check if telemetry appeared
+      const telemetryResponse = await fetch(`${API_BASE_URL}/api/drone/${droneId}/has-telemetry`)
+      const telemetryData = await telemetryResponse.json()
+      
+      // Add telemetry check result log
+      addDirectPairLog({
+        type: 'telemetry-check',
+        status: telemetryData.hasTelemetry ? 'success' : 'failed',
+        droneId,
+        hasTelemetry: telemetryData.hasTelemetry
+      })
+      
+      if (telemetryData.success && telemetryData.hasTelemetry) {
+        // Success! Save profile with IP address
+        setDirectPairStatus({ status: 'success', message: t('directPair.pairingSuccess', { id: droneId }) })
+        
+        // Create profile
+        try {
+          const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${droneId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...defaultProfile,
+              ipAddress: ip
+            })
+          })
+          
+          const profileData = await profileResponse.json()
+          
+          if (profileData.success) {
+            setProfiles(prev => ({
+              ...prev,
+              [droneId]: profileData.profile
+            }))
+            // Remove from detected drones if present
+            setDetectedDrones(prev => prev.filter(d => String(d.droneId) !== String(droneId)))
+            // Clear input
+            setDirectPairIp('')
+          }
+        } catch (profileError) {
+          console.error('Failed to save profile with IP:', profileError)
+        }
+        
+        // Clear success status after a moment
+        setTimeout(() => {
+          setDirectPairStatus(null)
+        }, 5000)
+      } else {
+        // No telemetry found
+        setDirectPairStatus({ status: 'failed', message: t('pairing.noTelemetry') })
+      }
+    } catch (error) {
+      console.error('Direct pairing error:', error)
+      addDirectPairLog({
+        type: 'direct-pair',
+        status: 'error',
+        command: pairCommand,
+        error: error.message,
+        ip
+      })
+      setDirectPairStatus({ status: 'failed', message: error.message })
     }
   }
   
@@ -1708,6 +1931,136 @@ function DroneProfileEditor() {
               <div className="discover-empty">
                 <span className="empty-icon">◇</span>
                 <span>{t('discover.emptyHint')}</span>
+              </div>
+            )}
+          </section>
+          
+          {/* Direct IP Pairing Section */}
+          <section className="direct-pair-section">
+            <div className="direct-pair-header">
+              <div className="direct-pair-title">
+                <h2>{t('directPair.title')}</h2>
+                <p>{t('directPair.subtitle')}</p>
+              </div>
+            </div>
+            
+            <div className="direct-pair-form">
+              <input
+                type="text"
+                className="direct-pair-input"
+                placeholder={t('directPair.ipPlaceholder')}
+                value={directPairIp}
+                onChange={handleDirectPairIpChange}
+                disabled={isPairingAny}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isPairingAny && directPairIp.trim()) {
+                    handleDirectPair()
+                  }
+                }}
+                maxLength={15}
+              />
+              <button
+                className={`direct-pair-btn ${directPairStatus?.status === 'pairing' ? 'pairing' : ''} ${directPairStatus?.status === 'success' ? 'success' : ''}`}
+                onClick={handleDirectPair}
+                disabled={isPairingAny || !directPairIp.trim()}
+              >
+                {directPairStatus?.status === 'pairing' ? (
+                  <>
+                    <span className="pair-spinner">◌</span>
+                    {t('directPair.pairing')}
+                  </>
+                ) : directPairStatus?.status === 'success' ? (
+                  '✓ ' + t('pairing.paired')
+                ) : (
+                  t('directPair.pairBtn')
+                )}
+              </button>
+            </div>
+            
+            {directPairStatus?.message && directPairStatus.status !== 'pairing' && (
+              <div className={`direct-pair-message ${directPairStatus.status}`}>
+                {directPairStatus.status === 'success' && <span className="success-icon">✓</span>}
+                {directPairStatus.status === 'failed' && <span className="failed-icon">✕</span>}
+                {directPairStatus.message}
+              </div>
+            )}
+            
+            {/* Direct Pair Terminal Output */}
+            {directPairLogs.length > 0 && (
+              <div className="direct-pair-terminal">
+                <div className="terminal-header">
+                  <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
+                  <button 
+                    className="terminal-clear-btn"
+                    onClick={() => setDirectPairLogs([])}
+                  >
+                    {t('terminal.clear')}
+                  </button>
+                </div>
+                <div className="terminal-body" ref={directPairTerminalRef}>
+                  {directPairLogs.map((log, idx) => (
+                    <div key={idx} className={`terminal-entry ${log.type} ${log.status}`}>
+                      {/* Command line */}
+                      {log.command && (
+                        <div className="terminal-command-line">
+                          <span className="prompt">$</span>
+                          <span className="command">{log.command}</span>
+                          {log.status === 'running' && <span className="discover-spinner">◌</span>}
+                        </div>
+                      )}
+                      
+                      {/* Info message */}
+                      {log.type === 'info' && (
+                        <div className="terminal-info">{log.message}</div>
+                      )}
+                      
+                      {/* Stdout */}
+                      {log.stdout && (
+                        <div className="terminal-section">
+                          <pre className="terminal-content">{log.stdout}</pre>
+                        </div>
+                      )}
+                      
+                      {/* Stderr */}
+                      {log.stderr && (
+                        <div className="terminal-section stderr">
+                          <div className="terminal-label">stderr:</div>
+                          <pre className="terminal-content">{log.stderr}</pre>
+                        </div>
+                      )}
+                      
+                      {/* Error */}
+                      {log.error && (
+                        <div className="terminal-section error">
+                          <div className="terminal-label">✕ Error:</div>
+                          <pre className="terminal-content">{log.error}</pre>
+                        </div>
+                      )}
+                      
+                      {/* Result summary for direct pair */}
+                      {log.type === 'direct-pair' && log.status !== 'running' && log.result !== undefined && (
+                        <div className="terminal-result">
+                          {log.result ? (
+                            <span className="result-success">✓ {t('pairing.pairCommandSent', { id: log.droneId || 'unknown' })}</span>
+                          ) : (
+                            <span className="result-error">✕ {t('pairing.commandFailed')}</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Telemetry check result */}
+                      {log.type === 'telemetry-check' && (
+                        <div className="terminal-result">
+                          {log.hasTelemetry ? (
+                            <span className="result-success">✓ {t('pairing.telemetryReceived', { id: log.droneId })}</span>
+                          ) : (
+                            <span className="result-error">✕ {t('pairing.noTelemetryReceived', { id: log.droneId })}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </section>
