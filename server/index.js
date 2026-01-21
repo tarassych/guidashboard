@@ -16,6 +16,7 @@ import telemetryRouter from './routes/telemetry.js';
 import discoveryRouter from './routes/discovery.js';
 import camerasRouter from './routes/cameras.js';
 import mediamtxRouter from './routes/mediamtx.js';
+import authRouter from './routes/auth.js';
 
 // Initialize Express app
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api', telemetryRouter);
 app.use('/api', discoveryRouter);
 app.use('/api', camerasRouter);
 app.use('/api', mediamtxRouter);
+app.use('/api/auth', authRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

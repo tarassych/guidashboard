@@ -29,7 +29,7 @@
   },
   
   "dashboard": {
-    "title": "RATERA DRONE CONTROL CENTER",
+    "title": "FOXY MISSION CONTROL",
     "loadingDrones": "Loading drones...",
     "dronesCount": "{{count}} drone",
     "dronesCount_one": "{{count}} drone",
@@ -44,8 +44,8 @@
   },
   
   "osd": {
-    "title": "{{name}} OSD",
-    "version": "v3.0",
+    "title": "{{name}}",
+    "version": "v4.1",
     "telemetry": "TELEMETRY",
     "telemetryLog": "TELEMETRY LOG",
     "live": "LIVE",
@@ -272,6 +272,32 @@
     "error": "Error",
     "parseWarning": "Parse Warning",
     "savingCameraSettings": "Saving camera settings..."
+  },
+  
+  "auth": {
+    "title": "Authorization Required",
+    "subtitle": "Enter passkey to access settings",
+    "passkeyPlaceholder": "Enter passkey",
+    "passkeyRequired": "Passkey is required",
+    "invalidPasskey": "Invalid passkey",
+    "authError": "Authentication failed. Try again.",
+    "unlock": "Unlock",
+    "verifying": "Verifying...",
+    "logout": "Lock Settings"
+  },
+  
+  "share": {
+    "title": "Drone Info",
+    "droneId": "Drone ID",
+    "ipAddress": "IP Address",
+    "frontCameraWebrtc": "Front Camera (WebRTC)",
+    "frontCameraWebrtcHd": "Front Camera HD (WebRTC)",
+    "frontCameraRtsp": "Front Camera (RTSP)",
+    "frontCameraRtspHd": "Front Camera HD (RTSP)",
+    "rearCameraWebrtc": "Rear Camera (WebRTC)",
+    "rearCameraRtsp": "Rear Camera (RTSP)",
+    "copy": "Copy",
+    "copied": "Copied!"
   }
 }
 

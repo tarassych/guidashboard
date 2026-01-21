@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import config from './config'
 import CameraFeed from './components/CameraFeed'
 import LanguageSwitcher from './components/LanguageSwitcher'
+import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
+import FoxyLogo from './components/FoxyLogo'
 import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
@@ -41,13 +43,18 @@ function JoystickIcon() {
 }
 
 // Mini drone preview card with live telemetry and camera feed
-function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick }) {
+function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick, onShare }) {
   const { t } = useTranslation()
   const isOnline = telemetry?.connected
   // Use front camera for dashboard preview
   const previewCameraUrl = profile?.frontCameraUrl
   // Display name if available, otherwise fall back to generic label (no IP in title)
   const displayName = profile?.name || ''
+  
+  const handleShare = (e) => {
+    e.stopPropagation() // Prevent card click
+    onShare()
+  }
   
   return (
     <div 
@@ -59,6 +66,7 @@ function DroneCard({ droneId, profile, telemetry, isActive, droneNumber, onClick
         <span className="drone-title">
           {displayName || `Drone #${droneNumber}`}
         </span>
+        <ShareButton onClick={handleShare} variant="card" />
         <span className={`drone-status ${isOnline ? 'online' : 'offline'}`}>
           {isOnline ? `● ${t('common.online')}` : `○ ${t('common.offline')}`}
         </span>
@@ -137,7 +145,7 @@ function DetectedDroneAlert({ detectedDrones, onAddProfile }) {
   
   return (
     <div className="detected-drone-alert">
-      <div className="alert-icon">◈</div>
+      <div className="alert-icon"><FoxyLogo size={28} /></div>
       <div className="alert-content">
         <span className="alert-title">{t('dashboard.detectedDrones', { count: detectedDrones.length })}</span>
         <div className="alert-drone-list">
@@ -163,6 +171,9 @@ function Dashboard() {
   const [activeDrones, setActiveDrones] = useState({}) // Track which drones are actively controlled
   const [loading, setLoading] = useState(true)
   const lastIdsRef = useRef({}) // Track last ID per drone
+  
+  // Share modal state
+  const [shareModalDrone, setShareModalDrone] = useState(null) // { droneId, profile, droneNumber }
   
   // Fetch profiles and drone list
   useEffect(() => {
@@ -346,7 +357,7 @@ function Dashboard() {
     <div className="dashboard">
       <header className="dashboard-header">
         <div className="header-left">
-          <span className="logo-icon">◈</span>
+          <FoxyLogo className="logo-icon" size={32} />
           <h1>{t('dashboard.title')}</h1>
         </div>
         <div className="header-right">
@@ -383,6 +394,7 @@ function Dashboard() {
                 isActive={activeDrones[droneId]?.active === true}
                 droneNumber={slotNumber}
                 onClick={() => handleDroneClick(droneId)}
+                onShare={() => setShareModalDrone({ droneId, profile, droneNumber: slotNumber })}
               />
             )
           }
@@ -393,11 +405,33 @@ function Dashboard() {
       </main>
       
       <footer className="dashboard-footer">
+        <span className="footer-version">{t('osd.version')}</span>
         <span className="footer-text">
           {t('dashboard.dronesCount', { count: connectedDroneIds.length })} • 
           {t('dashboard.onlineCount', { count: Object.values(droneTelemetry).filter(tel => tel?.connected).length })}
         </span>
       </footer>
+      
+      {/* Share Info Modal */}
+      {shareModalDrone && (
+        <ShareInfoModal
+          isOpen={true}
+          onClose={() => setShareModalDrone(null)}
+          droneInfo={{
+            droneNumber: shareModalDrone.droneNumber,
+            droneName: shareModalDrone.profile?.name,
+            droneId: shareModalDrone.droneId,
+            ipAddress: shareModalDrone.profile?.ipAddress,
+            frontCameraUrl: shareModalDrone.profile?.frontCameraUrl,
+            frontCameraUrlHd: shareModalDrone.profile?.frontCameraUrlHd,
+            rearCameraUrl: shareModalDrone.profile?.rearCameraUrl,
+            frontCameraRtsp: shareModalDrone.profile?.frontCamera?.rtspUrl,
+            frontCameraRtspHd: shareModalDrone.profile?.frontCamera?.rtspPathHd ? 
+              shareModalDrone.profile.frontCamera.rtspUrl?.replace(shareModalDrone.profile.frontCamera.rtspPath, shareModalDrone.profile.frontCamera.rtspPathHd) : null,
+            rearCameraRtsp: shareModalDrone.profile?.rearCamera?.rtspUrl,
+          }}
+        />
+      )}
     </div>
   )
 }

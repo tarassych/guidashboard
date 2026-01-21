@@ -6,6 +6,8 @@ import './App.css'
 import config from './config'
 import { useTheme } from './hooks/useTheme'
 import CameraFeed from './components/CameraFeed'
+import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
+import FoxyLogo from './components/FoxyLogo'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
@@ -62,6 +64,9 @@ function App() {
   // Drone profile state
   const [droneProfile, setDroneProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(true)
+  
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false)
   
   // Fetch drone profile
   useEffect(() => {
@@ -222,9 +227,9 @@ function App() {
         <div className="hud-top-bar">
           <div className="hud-logo">
             <Link to="/" className="back-to-dashboard" title={t('nav.backToDashboard')}>←</Link>
-            <span className="logo-icon">◈</span>
+            <ShareButton onClick={() => setShowShareModal(true)} />
+            <FoxyLogo className="logo-icon" size={28} />
             <span className="logo-text">{t('osd.title', { name: droneName.toUpperCase() })}</span>
-            <span className="logo-version">{t('osd.version')}</span>
           </div>
           
           <div className="hud-status-center">
@@ -331,6 +336,25 @@ function App() {
           <TelemetryStrip telemetry={telemetry} />
         </div>
       </div>
+      
+      {/* Share Info Modal */}
+      <ShareInfoModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        droneInfo={{
+          droneNumber,
+          droneName,
+          droneId,
+          ipAddress: droneProfile?.ipAddress,
+          frontCameraUrl,
+          frontCameraUrlHd,
+          rearCameraUrl,
+          frontCameraRtsp: droneProfile?.frontCamera?.rtspUrl,
+          frontCameraRtspHd: droneProfile?.frontCamera?.rtspPathHd ? 
+            droneProfile.frontCamera.rtspUrl?.replace(droneProfile.frontCamera.rtspPath, droneProfile.frontCamera.rtspPathHd) : null,
+          rearCameraRtsp: droneProfile?.rearCamera?.rtspUrl,
+        }}
+      />
     </div>
   )
 }

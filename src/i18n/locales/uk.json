@@ -29,7 +29,7 @@
   },
   
   "dashboard": {
-    "title": "ЦЕНТР КЕРУВАННЯ ДРОНАМИ RATERA",
+    "title": "FOXY MISSION CONTROL",
     "loadingDrones": "Завантаження дронів...",
     "dronesCount": "{{count}} дрон",
     "dronesCount_one": "{{count}} дрон",
@@ -46,8 +46,8 @@
   },
   
   "osd": {
-    "title": "{{name}} OSD",
-    "version": "v3.0",
+    "title": "{{name}}",
+    "version": "v4.1",
     "telemetry": "ТЕЛЕМЕТРІЯ",
     "telemetryLog": "ЖУРНАЛ ТЕЛЕМЕТРІЇ",
     "live": "НАЖИВО",
@@ -274,6 +274,32 @@
     "error": "Помилка",
     "parseWarning": "Попередження парсингу",
     "savingCameraSettings": "Збереження налаштувань камери..."
+  },
+  
+  "auth": {
+    "title": "Потрібна авторизація",
+    "subtitle": "Введіть код доступу до налаштувань",
+    "passkeyPlaceholder": "Введіть код",
+    "passkeyRequired": "Код доступу обов'язковий",
+    "invalidPasskey": "Невірний код доступу",
+    "authError": "Помилка авторизації. Спробуйте ще раз.",
+    "unlock": "Розблокувати",
+    "verifying": "Перевірка...",
+    "logout": "Заблокувати налаштування"
+  },
+  
+  "share": {
+    "title": "Інформація про дрон",
+    "droneId": "ID дрона",
+    "ipAddress": "IP адреса",
+    "frontCameraWebrtc": "Передня камера (WebRTC)",
+    "frontCameraWebrtcHd": "Передня камера HD (WebRTC)",
+    "frontCameraRtsp": "Передня камера (RTSP)",
+    "frontCameraRtspHd": "Передня камера HD (RTSP)",
+    "rearCameraWebrtc": "Задня камера (WebRTC)",
+    "rearCameraRtsp": "Задня камера (RTSP)",
+    "copy": "Копіювати",
+    "copied": "Скопійовано!"
   }
 }
 

@@ -23,7 +23,173 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: #0a0a0a;
+  overflow: hidden;
+}
+
+/* TV Noise Effect - Analog style with wave distortion */
+.tv-noise {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Base noise layer - fine grain */
+.tv-noise::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  right: -100%;
+  bottom: -100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  animation: tv-static 0.08s steps(10) infinite;
+  opacity: 0.9;
+}
+
+/* Horizontal wave distortion bands */
+.tv-noise::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 20px,
+      rgba(0, 0, 0, 0.15) 20px,
+      rgba(0, 0, 0, 0.15) 40px
+    );
+  animation: wave-bands 0.3s linear infinite;
+}
+
+/* Green theme noise tint */
+body.theme-digital-green .tv-noise::before {
+  filter: brightness(0.7) contrast(1.5) sepia(100%) hue-rotate(70deg) saturate(0.4);
+}
+
+/* Red theme noise tint */
+body.theme-aggressive-red .tv-noise::before {
+  filter: brightness(0.7) contrast(1.5) sepia(100%) hue-rotate(-30deg) saturate(0.5);
+}
+
+/* Scanlines overlay - CRT effect */
+.tv-noise-scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.4) 0px,
+    rgba(0, 0, 0, 0.4) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: scanline-flicker 0.05s infinite;
+}
+
+/* Rolling band effect */
+.tv-noise-scanlines::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+  animation: rolling-band 4s linear infinite;
+}
+
+/* Green scanline tint */
+body.theme-digital-green .tv-noise-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 15, 8, 0.5) 0px,
+    rgba(0, 15, 8, 0.5) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+/* Red scanline tint */
+body.theme-aggressive-red .tv-noise-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(20, 0, 0, 0.5) 0px,
+    rgba(20, 0, 0, 0.5) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+@keyframes tv-static {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -2%); }
+  20% { transform: translate(2%, 1%); }
+  30% { transform: translate(-1%, 2%); }
+  40% { transform: translate(1%, -1%); }
+  50% { transform: translate(-2%, 2%); }
+  60% { transform: translate(2%, -2%); }
+  70% { transform: translate(-1%, 1%); }
+  80% { transform: translate(1%, 2%); }
+  90% { transform: translate(2%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes wave-bands {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+@keyframes rolling-band {
+  0% { top: -100px; }
+  100% { top: 100%; }
+}
+
+@keyframes scanline-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.98; }
+}
+
+/* Status content layer */
+.status-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--hud-primary, #00ff88);
+  backdrop-filter: blur(4px);
+}
+
+body.theme-aggressive-red .status-content {
+  border-color: rgba(255, 68, 68, 0.5);
 }
 
 .camera-status-overlay .status-text {
@@ -51,6 +217,10 @@
 /* Thumbnail variant - smaller for dashboard cards */
 .camera-thumbnail .status-text {
   font-size: 0.65rem;
+}
+
+.camera-thumbnail .status-content {
+  padding: 0.5rem 1rem;
 }
 
 

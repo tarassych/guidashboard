@@ -9,6 +9,7 @@ function CameraFeed({ streamUrl, variant = "main" }) {
   const pcRef = useRef(null)
   const retryTimeoutRef = useRef(null)
   const [status, setStatus] = useState('connecting')
+  const [hasFrames, setHasFrames] = useState(false) // Track if video actually has visible frames
   const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
@@ -29,6 +30,25 @@ function CameraFeed({ streamUrl, variant = "main" }) {
     }
 
     setStatus('connecting')
+    setHasFrames(false)
+
+    // Listen for actual video frames
+    const handlePlaying = () => {
+      // Video is actually playing with frames
+      if (isMounted && video.videoWidth > 0 && video.videoHeight > 0) {
+        setHasFrames(true)
+      }
+    }
+    
+    const handleLoadedData = () => {
+      // Video has data loaded
+      if (isMounted && video.videoWidth > 0) {
+        setHasFrames(true)
+      }
+    }
+
+    video.addEventListener('playing', handlePlaying)
+    video.addEventListener('loadeddata', handleLoadedData)
 
     const scheduleRetry = (delay = 3000) => {
       retryTimeoutRef.current = setTimeout(() => {
@@ -47,6 +67,7 @@ function CameraFeed({ streamUrl, variant = "main" }) {
           if (isMounted) {
             video.srcObject = event.streams[0]
             setStatus('playing')
+            // Don't set hasFrames here - wait for actual frames via event listeners
           }
         }
 
@@ -108,6 +129,8 @@ function CameraFeed({ streamUrl, variant = "main" }) {
 
     return () => {
       isMounted = false
+      video.removeEventListener('playing', handlePlaying)
+      video.removeEventListener('loadeddata', handleLoadedData)
       if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current)
       if (pcRef.current) {
         pcRef.current.close()
@@ -115,6 +138,9 @@ function CameraFeed({ streamUrl, variant = "main" }) {
       }
     }
   }, [streamUrl, retryKey])
+
+  // Show noise overlay until we have actual video frames
+  const showNoise = !hasFrames
 
   return (
     <div className={`camera-feed camera-${variant}`}>
@@ -125,11 +151,16 @@ function CameraFeed({ streamUrl, variant = "main" }) {
         muted
         playsInline
       />
-      {status !== 'playing' && (
+      {showNoise && (
         <div className="camera-status-overlay">
-          {status === 'connecting' && <span className="status-text">◌ {t('camera.connecting')}</span>}
-          {status === 'reconnecting' && <span className="status-text">↻ {t('camera.reconnecting')}</span>}
-          {status === 'error' && <span className="status-text error">✕ {t('camera.noSignal')}</span>}
+          <div className="tv-noise"></div>
+          <div className="tv-noise-scanlines"></div>
+          <div className="status-content">
+            {status === 'connecting' && <span className="status-text">◌ {t('camera.connecting')}</span>}
+            {status === 'reconnecting' && <span className="status-text">↻ {t('camera.reconnecting')}</span>}
+            {status === 'playing' && <span className="status-text">◌ {t('camera.connecting')}</span>}
+            {status === 'error' && <span className="status-text error">✕ {t('camera.noSignal')}</span>}
+          </div>
         </div>
       )}
     </div>

@@ -812,9 +812,57 @@ function MediaMTXPanel({ profiles = {} }) {
   )
 }
 
+// Auth cookie helpers
+const AUTH_COOKIE_NAME = 'settings_auth'
+const AUTH_COOKIE_MAX_AGE = 24 * 60 * 60 // 24 hours in seconds
+
+function getAuthCookie() {
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === AUTH_COOKIE_NAME) {
+      try {
+        const data = JSON.parse(decodeURIComponent(value))
+        // Check if not expired (timestamp + 24h > now)
+        if (data.timestamp && Date.now() - data.timestamp < AUTH_COOKIE_MAX_AGE * 1000) {
+          return true
+        }
+      } catch (e) {
+        // Invalid cookie, ignore
+      }
+    }
+  }
+  return false
+}
+
+function setAuthCookie() {
+  const data = { authenticated: true, timestamp: Date.now() }
+  document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(data))}; max-age=${AUTH_COOKIE_MAX_AGE}; path=/; SameSite=Strict`
+}
+
+function clearAuthCookie() {
+  document.cookie = `${AUTH_COOKIE_NAME}=; max-age=0; path=/`
+}
+
 function DroneProfileEditor() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  
+  // Authentication state - default to false, check cookie on mount
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [authPasskey, setAuthPasskey] = useState('')
+  const [authError, setAuthError] = useState(null)
+  const [authLoading, setAuthLoading] = useState(false)
+  
+  // Check auth cookie on mount
+  useEffect(() => {
+    const hasAuth = getAuthCookie()
+    console.log('[AUTH] Cookie check:', hasAuth)
+    setIsAuthenticated(hasAuth)
+    setAuthChecked(true)
+  }, [])
+  
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
   const [detectedDrones, setDetectedDrones] = useState([]) // Drones with telemetry but no profile
@@ -1460,6 +1508,106 @@ function DroneProfileEditor() {
     }
   }
   
+  // Authentication handler
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!authPasskey.trim()) {
+      setAuthError(t('auth.passkeyRequired'))
+      return
+    }
+    
+    setAuthLoading(true)
+    setAuthError(null)
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passkey: authPasskey.trim() })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setAuthCookie()
+        setIsAuthenticated(true)
+        setAuthPasskey('')
+        setAuthError(null)
+      } else {
+        setAuthError(t('auth.invalidPasskey'))
+      }
+    } catch (error) {
+      console.error('Auth error:', error)
+      setAuthError(t('auth.authError'))
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+  
+  // Logout handler
+  const handleLogout = () => {
+    clearAuthCookie()
+    setIsAuthenticated(false)
+  }
+  
+  // Wait for auth check to complete
+  if (!authChecked) {
+    return (
+      <div className="profile-editor loading">
+        <div className="loading-spinner">◌</div>
+      </div>
+    )
+  }
+  
+  // Auth check FIRST - before anything else
+  if (!isAuthenticated) {
+    return (
+      <div className="profile-editor">
+        <header className="editor-header">
+          <div className="header-left">
+            <Link to="/" className="back-btn">← {t('nav.backToDashboard')}</Link>
+            <h1>{t('settings.title')}</h1>
+          </div>
+        </header>
+        
+        <div className="auth-container">
+          <div className="auth-card">
+            <div className="auth-icon">🔐</div>
+            <h2>{t('auth.title')}</h2>
+            <p className="auth-subtitle">{t('auth.subtitle')}</p>
+            
+            <form className="auth-form" onSubmit={handleAuthSubmit}>
+              <div className="auth-input-group">
+                <input
+                  type="password"
+                  className="auth-input"
+                  placeholder={t('auth.passkeyPlaceholder')}
+                  value={authPasskey}
+                  onChange={(e) => setAuthPasskey(e.target.value)}
+                  disabled={authLoading}
+                  autoFocus
+                />
+              </div>
+              
+              {authError && (
+                <div className="auth-error">{authError}</div>
+              )}
+              
+              <button 
+                type="submit" 
+                className={`auth-submit-btn ${authLoading ? 'loading' : ''}`}
+                disabled={authLoading || !authPasskey.trim()}
+              >
+                {authLoading ? t('auth.verifying') : t('auth.unlock')}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
   if (loading) {
     return (
       <div className="profile-editor loading">
@@ -1482,6 +1630,11 @@ function DroneProfileEditor() {
         <div className="header-left">
           <Link to="/" className="back-btn">← {t('nav.backToDashboard')}</Link>
           <h1>{t('settings.title')}</h1>
+        </div>
+        <div className="header-right">
+          <button className="logout-btn" onClick={handleLogout} title={t('auth.logout')}>
+            🔓
+          </button>
         </div>
       </header>
       

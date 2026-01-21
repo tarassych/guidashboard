@@ -1,34 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="foxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#00cc6a;stop-opacity:1" />
     </linearGradient>
   </defs>
-  
-  <!-- Background circle -->
-  <circle cx="32" cy="32" r="30" fill="#0a0f0a" stroke="#00ff88" stroke-width="2" opacity="0.9"/>
-  
-  <!-- Outer diamond -->
-  <polygon 
-    points="32,6 58,32 32,58 6,32" 
-    fill="none" 
-    stroke="url(#diamondGradient)" 
-    stroke-width="3"
-    filter="url(#glow)"
-  />
-  
-  <!-- Inner diamond -->
-  <polygon 
-    points="32,18 46,32 32,46 18,32" 
-    fill="url(#diamondGradient)"
-    filter="url(#glow)"
-  />
+  <!-- Square background -->
+  <rect x="0" y="0" width="100" height="100" rx="8" fill="#0a0a0a"/>
+  <!-- Alternative Fox head - scaled and centered -->
+  <g fill="none" stroke="url(#foxGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" transform="translate(10, 8) scale(0.8)">
+    <!-- Left ear - from tip down to outer face -->
+    <path d="M 18 5 L 5 45" />
+    <!-- Left ear - from tip to inner face -->
+    <path d="M 18 5 L 35 40" />
+    
+    <!-- Right ear - from tip down to outer face -->
+    <path d="M 82 5 L 95 45" />
+    <!-- Right ear - from tip to inner face -->
+    <path d="M 82 5 L 65 40" />
+    
+    <!-- Horizontal brow line -->
+    <path d="M 35 40 L 65 40" />
+    
+    <!-- Left face - outer edge down to jaw -->
+    <path d="M 5 45 L 20 75" />
+    <!-- Left jaw to chin -->
+    <path d="M 20 75 L 50 95" />
+    
+    <!-- Right face - outer edge down to jaw -->
+    <path d="M 95 45 L 80 75" />
+    <!-- Right jaw to chin -->
+    <path d="M 80 75 L 50 95" />
+    
+    <!-- Left inner face line -->
+    <path d="M 35 40 L 20 75" />
+    
+    <!-- Right inner face line -->
+    <path d="M 65 40 L 80 75" />
+  </g>
 </svg>
