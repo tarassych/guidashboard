@@ -31,7 +31,20 @@ function ShareInfoModal({ isOpen, onClose, droneInfo }) {
     rearCameraRtsp,
   } = droneInfo
 
-  const baseUrl = window.location.origin
+  // Get hostname from current URL for RTSP construction
+  const hostname = window.location.hostname
+
+  // Convert WebRTC URL to RTSP URL
+  // From: /webrtc/camXXX/whep  To: rtsp://host:8554/camXXX
+  const webrtcToRtsp = (webrtcPath) => {
+    if (!webrtcPath) return null
+    // Extract camera path from WebRTC URL (e.g., /webrtc/camXXX/whep -> camXXX)
+    const match = webrtcPath.match(/\/webrtc\/([^/]+)\/whep/)
+    if (match && match[1]) {
+      return `rtsp://${hostname}:8554/${match[1]}`
+    }
+    return null
+  }
 
   // Display name for heading
   const displayName = droneName || `Drone #${droneNumber}`
@@ -39,12 +52,9 @@ function ShareInfoModal({ isOpen, onClose, droneInfo }) {
   const infoFields = [
     { key: 'id', label: t('share.droneId'), value: droneId || '—' },
     { key: 'ip', label: t('share.ipAddress'), value: ipAddress || '—' },
-    { key: 'frontWebrtc', label: t('share.frontCameraWebrtc'), value: frontCameraUrl ? `${baseUrl}${frontCameraUrl}` : '—' },
-    { key: 'frontWebrtcHd', label: t('share.frontCameraWebrtcHd'), value: frontCameraUrlHd ? `${baseUrl}${frontCameraUrlHd}` : '—', hidden: !frontCameraUrlHd },
-    { key: 'frontRtsp', label: t('share.frontCameraRtsp'), value: frontCameraRtsp || '—' },
-    { key: 'frontRtspHd', label: t('share.frontCameraRtspHd'), value: frontCameraRtspHd || '—', hidden: !frontCameraRtspHd },
-    { key: 'rearWebrtc', label: t('share.rearCameraWebrtc'), value: rearCameraUrl ? `${baseUrl}${rearCameraUrl}` : '—' },
-    { key: 'rearRtsp', label: t('share.rearCameraRtsp'), value: rearCameraRtsp || '—' },
+    { key: 'frontRtsp', label: t('share.frontCameraRtsp'), value: webrtcToRtsp(frontCameraUrl) || frontCameraRtsp || '—' },
+    { key: 'frontRtspHd', label: t('share.frontCameraRtspHd'), value: webrtcToRtsp(frontCameraUrlHd) || frontCameraRtspHd || '—', hidden: !frontCameraUrlHd && !frontCameraRtspHd },
+    { key: 'rearRtsp', label: t('share.rearCameraRtsp'), value: webrtcToRtsp(rearCameraUrl) || rearCameraRtsp || '—' },
   ].filter(f => !f.hidden)
 
   const copyToClipboard = async (text) => {
