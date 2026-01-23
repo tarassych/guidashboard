@@ -49,13 +49,28 @@ function ShareInfoModal({ isOpen, onClose, droneInfo }) {
   // Display name for heading
   const displayName = droneName || `Drone #${droneNumber}`
 
-  const infoFields = [
+  // Basic info fields
+  const basicFields = [
     { key: 'id', label: t('share.droneId'), value: droneId || '—' },
     { key: 'ip', label: t('share.ipAddress'), value: ipAddress || '—' },
-    { key: 'frontRtsp', label: t('share.frontCameraRtsp'), value: webrtcToRtsp(frontCameraUrl) || frontCameraRtsp || '—' },
-    { key: 'frontRtspHd', label: t('share.frontCameraRtspHd'), value: webrtcToRtsp(frontCameraUrlHd) || frontCameraRtspHd || '—', hidden: !frontCameraUrlHd && !frontCameraRtspHd },
-    { key: 'rearRtsp', label: t('share.rearCameraRtsp'), value: webrtcToRtsp(rearCameraUrl) || rearCameraRtsp || '—' },
+  ]
+
+  // MediaMTX streams (converted from WebRTC paths)
+  const mmtxFields = [
+    { key: 'frontRtspMmtx', label: t('share.frontRtspMmtx'), value: webrtcToRtsp(frontCameraUrl) || '—' },
+    { key: 'frontRtspMmtxHd', label: t('share.frontRtspMmtxHd'), value: webrtcToRtsp(frontCameraUrlHd) || '—', hidden: !frontCameraUrlHd },
+    { key: 'rearRtspMmtx', label: t('share.rearRtspMmtx'), value: webrtcToRtsp(rearCameraUrl) || '—' },
   ].filter(f => !f.hidden)
+
+  // Direct camera links (original RTSP URLs from profile)
+  const directFields = [
+    { key: 'frontRtspDirect', label: t('share.frontCameraRtsp'), value: frontCameraRtsp || '—' },
+    { key: 'frontRtspHdDirect', label: t('share.frontCameraRtspHd'), value: frontCameraRtspHd || '—', hidden: !frontCameraRtspHd },
+    { key: 'rearRtspDirect', label: t('share.rearCameraRtsp'), value: rearCameraRtsp || '—' },
+  ].filter(f => !f.hidden)
+
+  // Check if we have any direct camera links
+  const hasDirectLinks = directFields.some(f => f.value !== '—')
 
   const copyToClipboard = async (text) => {
     // Try modern clipboard API first
@@ -108,7 +123,8 @@ function ShareInfoModal({ isOpen, onClose, droneInfo }) {
         </div>
 
         <div className="share-modal-content">
-          {infoFields.map(field => (
+          {/* Basic info */}
+          {basicFields.map(field => (
             <div key={field.key} className="share-info-row">
               <span className="share-info-label">{field.label}</span>
               <div 
@@ -131,6 +147,62 @@ function ShareInfoModal({ isOpen, onClose, droneInfo }) {
               </div>
             </div>
           ))}
+
+          {/* MediaMTX Streams section */}
+          <div className="share-section-header">{t('share.sectionMediamtx')}</div>
+          {mmtxFields.map(field => (
+            <div key={field.key} className="share-info-row">
+              <span className="share-info-label">{field.label}</span>
+              <div 
+                className={`share-info-value-wrapper ${field.value === '—' ? 'empty' : 'copyable'}`}
+                onClick={() => handleFieldClick(field.key, field.value)}
+              >
+                <input
+                  type="text"
+                  className="share-info-input"
+                  value={field.value}
+                  readOnly
+                  onFocus={(e) => {
+                    e.target.select()
+                    handleFieldClick(field.key, field.value)
+                  }}
+                />
+                {copiedField === field.key && (
+                  <span className="copied-notice">{t('share.copied')}</span>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Direct Camera Links section */}
+          {hasDirectLinks && (
+            <>
+              <div className="share-section-header">{t('share.sectionDirect')}</div>
+              {directFields.map(field => (
+                <div key={field.key} className="share-info-row">
+                  <span className="share-info-label">{field.label}</span>
+                  <div 
+                    className={`share-info-value-wrapper ${field.value === '—' ? 'empty' : 'copyable'}`}
+                    onClick={() => handleFieldClick(field.key, field.value)}
+                  >
+                    <input
+                      type="text"
+                      className="share-info-input"
+                      value={field.value}
+                      readOnly
+                      onFocus={(e) => {
+                        e.target.select()
+                        handleFieldClick(field.key, field.value)
+                      }}
+                    />
+                    {copiedField === field.key && (
+                      <span className="copied-notice">{t('share.copied')}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>

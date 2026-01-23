@@ -94,6 +94,22 @@
   gap: 0.5rem;
 }
 
+.share-section-header {
+  font-size: 0.7rem;
+  color: var(--hud-primary, #00ff88);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+  opacity: 0.8;
+}
+
+.share-section-header:first-of-type {
+  margin-top: 0.5rem;
+}
+
 .share-info-row {
   display: flex;
   align-items: center;
@@ -268,4 +284,9 @@ body.theme-aggressive-red .share-btn-card {
 
 body.theme-aggressive-red .share-btn-card:hover {
   border-color: #ff4444;
+}
+
+body.theme-aggressive-red .share-section-header {
+  color: #ff4444;
+  border-bottom-color: rgba(255, 68, 68, 0.3);
 }
