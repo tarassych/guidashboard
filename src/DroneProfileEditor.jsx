@@ -269,6 +269,12 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         <span className="scanner-subtitle">{t('cameraScanner.subtitle', { id: droneId, ip: droneIp || t('cameraScanner.ipNotSet') })}</span>
       </div>
       
+      {/* H264 Codec Notice */}
+      <div className="camera-scanner-notice">
+        <span className="notice-icon">⚠</span>
+        <span className="notice-text">{t('cameraScanner.h264Notice')}</span>
+      </div>
+      
       {/* Terminal Output */}
       {scanLog && (
         <div className="camera-scanner-terminal">

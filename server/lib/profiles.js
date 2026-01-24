@@ -55,6 +55,33 @@ export function loadProfiles() {
         parsed.drones = [];
       }
       
+      // Migrate: ensure all drones have a slot property (1-6)
+      let needsSave = false;
+      const usedSlots = new Set(parsed.drones.filter(d => d.slot).map(d => d.slot));
+      parsed.drones.forEach((drone, index) => {
+        if (!drone.slot || drone.slot < 1 || drone.slot > 6) {
+          // Assign first available slot
+          for (let s = 1; s <= 6; s++) {
+            if (!usedSlots.has(s)) {
+              drone.slot = s;
+              usedSlots.add(s);
+              needsSave = true;
+              break;
+            }
+          }
+        }
+      });
+      
+      // Save if we added slot properties
+      if (needsSave) {
+        try {
+          fs.writeFileSync(profilesPath, JSON.stringify(parsed, null, 2));
+          console.log('Migrated profiles to include slot property');
+        } catch (e) {
+          console.error('Failed to save slot migration:', e.message);
+        }
+      }
+      
       return parsed;
     }
   } catch (error) {
