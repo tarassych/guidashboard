@@ -298,6 +298,315 @@ body {
   stroke-width: 1;
 }
 
+/* ============================================
+   OSD CONTROL ICON INACTIVE STATE
+   ============================================ */
+
+.hud-active-control-icon.inactive .active-control-svg {
+  filter: drop-shadow(0 0 4px rgba(128, 128, 128, 0.5));
+}
+
+.hud-active-control-icon.inactive .signal-wave {
+  stroke: #666;
+  animation: none;
+  opacity: 0.3;
+}
+
+.hud-active-control-icon.inactive .antenna {
+  stroke: #666;
+}
+
+.hud-active-control-icon.inactive .antenna-tip {
+  fill: #666;
+}
+
+.hud-active-control-icon.inactive .controller-body {
+  stroke: #666;
+}
+
+.hud-active-control-icon.inactive .joystick-base-small {
+  fill: rgba(128, 128, 128, 0.2);
+  stroke: #666;
+}
+
+.hud-active-control-icon.inactive .joystick-stick-left,
+.hud-active-control-icon.inactive .joystick-stick-right {
+  fill: #666;
+  animation: none;
+}
+
+.hud-active-control-icon.inactive .controller-indicator {
+  fill: #666;
+  animation: none;
+  opacity: 0.5;
+}
+
+.hud-active-control-icon.inactive .hand {
+  fill: rgba(128, 128, 128, 0.2);
+  stroke: #666;
+}
+
+/* Disconnected state - red, no animations (ELRS not connected) */
+.hud-active-control-icon.disconnected .active-control-svg {
+  filter: drop-shadow(0 0 6px rgba(255, 68, 68, 0.6));
+}
+
+.hud-active-control-icon.disconnected .signal-wave {
+  stroke: #ff4444;
+  animation: none;
+  opacity: 0.3;
+}
+
+.hud-active-control-icon.disconnected .antenna {
+  stroke: #ff4444;
+}
+
+.hud-active-control-icon.disconnected .antenna-tip {
+  fill: #ff4444;
+}
+
+.hud-active-control-icon.disconnected .controller-body {
+  stroke: #ff4444;
+}
+
+.hud-active-control-icon.disconnected .joystick-base-small {
+  fill: rgba(255, 68, 68, 0.2);
+  stroke: #ff4444;
+}
+
+.hud-active-control-icon.disconnected .joystick-stick-left,
+.hud-active-control-icon.disconnected .joystick-stick-right {
+  fill: #ff4444;
+  animation: none;
+}
+
+.hud-active-control-icon.disconnected .controller-indicator {
+  fill: #ff4444;
+  animation: none;
+  opacity: 0.7;
+}
+
+.hud-active-control-icon.disconnected .hand {
+  fill: rgba(255, 68, 68, 0.2);
+  stroke: #ff4444;
+}
+
+/* Clickable inactive control icon - hover effect and tooltip */
+.hud-active-control-icon.clickable {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.hud-active-control-icon.clickable:hover {
+  transform: translateX(-50%) scale(1.15);
+}
+
+.hud-active-control-icon.clickable:hover .active-control-svg {
+  filter: drop-shadow(0 0 8px rgba(128, 128, 128, 0.9));
+}
+
+/* Tooltip for activate hint */
+.control-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
+  margin-bottom: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+}
+
+.hud-active-control-icon.clickable:hover .control-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ============================================
+   ACTIVATION PASSWORD MODAL (OSD)
+   ============================================ */
+
+.activate-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.activate-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.activate-modal-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.activate-modal h2 {
+  color: #fff;
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.activate-modal-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem 0;
+}
+
+.activate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activate-input-group {
+  position: relative;
+}
+
+.activate-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.activate-input:focus {
+  outline: none;
+  border-color: var(--theme-accent-primary, #00ff88);
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.15);
+}
+
+.activate-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.activate-error {
+  color: #ff4444;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  background: rgba(255, 68, 68, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+}
+
+.activate-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.activate-cancel-btn,
+.activate-submit-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.activate-cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.activate-cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.activate-submit-btn {
+  background: linear-gradient(135deg, var(--theme-accent-primary, #00ff88), #00cc6a);
+  color: #000;
+}
+
+.activate-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4);
+}
+
+.activate-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.activate-submit-btn.loading {
+  opacity: 0.7;
+}
+
+/* Activation Progress Bar */
+.activate-progress {
+  text-align: center;
+}
+
+.activate-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.activate-progress-fill {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, var(--theme-accent-primary, #00ff88), #00cc6a, var(--theme-accent-primary, #00ff88));
+  background-size: 200% 100%;
+  border-radius: 3px;
+  animation: activate-progress-slide 1.5s ease-in-out infinite;
+}
+
+@keyframes activate-progress-slide {
+  0% {
+    transform: translateX(-100%);
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    transform: translateX(350%);
+    background-position: 0% 50%;
+  }
+}
+
 @keyframes active-badge-pulse {
   0%, 100% {
     opacity: 1;

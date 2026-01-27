@@ -1,8 +1,12 @@
 /**
  * Drone profiles API routes
- * Profiles are stored as an array where array index determines drone display number
- * - GET /api/profiles - Get all profiles (returns array with index info)
- * - POST /api/profiles/reorder - Reorder/swap drone slots (MUST be before :droneId)
+ * Profiles are stored as a 6-element array where array index = display position - 1
+ * - drones[0] = position 1, drones[1] = position 2, etc.
+ * - null values represent empty slots
+ * 
+ * Routes:
+ * - GET /api/profiles - Get all profiles (returns object with _index)
+ * - POST /api/profiles/reorder - Swap/move drone positions (MUST be before :droneId)
  * - POST /api/profiles/:droneId - Create/update profile
  * - DELETE /api/profiles/:droneId - Delete profile
  */
@@ -14,40 +18,41 @@ const router = express.Router();
 /**
  * GET /api/profiles
  * Get all drone profiles
- * Returns profiles as both array (with index) and object (for backward compatibility)
+ * Returns profiles as object keyed by droneId with _index for position
  */
 router.get('/profiles', (req, res) => {
   const profiles = loadProfiles();
   
-  // Build object keyed by droneId for backward compatibility
-  // Use slot property for position (slot 1 = _index 0, slot 2 = _index 1, etc.)
+  // Build object keyed by droneId
+  // Array index IS the position (_index)
   const profilesObj = {};
-  profiles.drones.forEach((drone) => {
-    profilesObj[drone.droneId] = {
-      ...drone,
-      _index: (drone.slot || 1) - 1 // Convert slot (1-6) to _index (0-5)
-    };
+  profiles.drones.forEach((drone, index) => {
+    if (drone) {
+      profilesObj[drone.droneId] = {
+        ...drone,
+        _index: index // Array index = display position - 1
+      };
+    }
   });
   
   res.json({
     success: true,
     profiles: profilesObj,
-    profilesArray: profiles.drones // Also return the array for new code
+    profilesArray: profiles.drones // Also return the array for reference
   });
 });
 
 /**
  * POST /api/profiles/reorder
- * Reorder drone slots by swapping or moving positions
+ * Reorder drone positions by swapping array elements
  * IMPORTANT: This route MUST be defined BEFORE /profiles/:droneId
  * Body: { sourceSlot: number, targetSlot: number }
- * Slot numbers are 1-indexed (1-6)
- * Each drone has a 'slot' property that determines its display position
+ * Slot numbers are 1-indexed (1-6), converted to array indices (0-5)
  */
 router.post('/profiles/reorder', (req, res) => {
   const { sourceSlot, targetSlot } = req.body;
   
-  console.log(`Reorder request: slot ${sourceSlot} -> slot ${targetSlot}`);
+  console.log(`Reorder request: position ${sourceSlot} -> position ${targetSlot}`);
   
   // Validate slots (1-6)
   if (!sourceSlot || !targetSlot || sourceSlot < 1 || sourceSlot > 6 || targetSlot < 1 || targetSlot > 6) {
@@ -60,25 +65,21 @@ router.post('/profiles/reorder', (req, res) => {
   
   const profiles = loadProfiles();
   
-  // Find drone at source slot (by slot property)
-  const sourceDroneIndex = profiles.drones.findIndex(d => d.slot === sourceSlot);
-  if (sourceDroneIndex < 0) {
-    return res.status(400).json({ error: `No drone at source slot ${sourceSlot}` });
+  // Convert 1-indexed slots to 0-indexed array indices
+  const sourceIndex = sourceSlot - 1;
+  const targetIndex = targetSlot - 1;
+  
+  // Verify source has a drone
+  if (!profiles.drones[sourceIndex]) {
+    return res.status(400).json({ error: `No drone at position ${sourceSlot}` });
   }
   
-  // Find drone at target slot (by slot property) - may not exist
-  const targetDroneIndex = profiles.drones.findIndex(d => d.slot === targetSlot);
+  // Swap array elements (works for both swap and move-to-empty)
+  const temp = profiles.drones[sourceIndex];
+  profiles.drones[sourceIndex] = profiles.drones[targetIndex];
+  profiles.drones[targetIndex] = temp;
   
-  if (targetDroneIndex >= 0) {
-    // Swap: both slots have drones, exchange their slot values
-    profiles.drones[sourceDroneIndex].slot = targetSlot;
-    profiles.drones[targetDroneIndex].slot = sourceSlot;
-    console.log(`Swapped drones: slot ${sourceSlot} <-> slot ${targetSlot}`);
-  } else {
-    // Move: target slot is empty, just update source drone's slot
-    profiles.drones[sourceDroneIndex].slot = targetSlot;
-    console.log(`Moved drone from slot ${sourceSlot} to slot ${targetSlot}`);
-  }
+  console.log(`Swapped positions: ${sourceSlot} <-> ${targetSlot}`);
   
   if (saveProfiles(profiles)) {
     res.json({ success: true });
@@ -104,7 +105,7 @@ router.post('/profiles/:droneId', (req, res) => {
   const profiles = loadProfiles();
   
   // Find existing profile by droneId
-  const existingIndex = profiles.drones.findIndex(d => String(d.droneId) === String(droneId));
+  const existingIndex = profiles.drones.findIndex(d => d && String(d.droneId) === String(droneId));
   
   const updatedProfile = {
     ...(existingIndex >= 0 ? profiles.drones[existingIndex] : {}),
@@ -113,32 +114,32 @@ router.post('/profiles/:droneId', (req, res) => {
     updatedAt: Date.now()
   };
   
+  // Remove slot property if it exists (cleanup from old format)
+  delete updatedProfile.slot;
+  
+  let savedIndex;
   if (existingIndex >= 0) {
-    // Update existing profile, keep existing slot
+    // Update existing profile at same index
     profiles.drones[existingIndex] = updatedProfile;
+    savedIndex = existingIndex;
   } else {
-    // Add new profile - assign first available slot (1-6)
-    const usedSlots = new Set(profiles.drones.map(d => d.slot).filter(s => s));
-    for (let s = 1; s <= 6; s++) {
-      if (!usedSlots.has(s)) {
-        updatedProfile.slot = s;
-        break;
-      }
-    }
-    if (!updatedProfile.slot) {
+    // Add new profile to first empty slot (null)
+    const emptyIndex = profiles.drones.findIndex(d => d === null);
+    if (emptyIndex < 0) {
       return res.status(400).json({ error: 'No available slots (max 6 drones)' });
     }
-    profiles.drones.push(updatedProfile);
+    profiles.drones[emptyIndex] = updatedProfile;
+    savedIndex = emptyIndex;
   }
   
-  console.log(`Final profile for drone ${droneId} at slot ${updatedProfile.slot}:`, JSON.stringify(updatedProfile));
+  console.log(`Final profile for drone ${droneId} at index ${savedIndex} (position ${savedIndex + 1})`);
 
   if (saveProfiles(profiles)) {
     res.json({
       success: true,
       profile: {
         ...updatedProfile,
-        _index: (updatedProfile.slot || 1) - 1
+        _index: savedIndex
       }
     });
   } else {
@@ -148,16 +149,16 @@ router.post('/profiles/:droneId', (req, res) => {
 
 /**
  * DELETE /api/profiles/:droneId
- * Delete a drone profile
+ * Delete a drone profile (sets slot to null)
  */
 router.delete('/profiles/:droneId', (req, res) => {
   const droneId = req.params.droneId;
   
   const profiles = loadProfiles();
-  const index = profiles.drones.findIndex(d => String(d.droneId) === String(droneId));
+  const index = profiles.drones.findIndex(d => d && String(d.droneId) === String(droneId));
   
   if (index >= 0) {
-    profiles.drones.splice(index, 1);
+    profiles.drones[index] = null; // Set to null, keeping array structure
     if (saveProfiles(profiles)) {
       res.json({ success: true });
     } else {

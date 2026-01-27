@@ -149,6 +149,14 @@
   padding-bottom: 2rem;
 }
 
+/* Connected tab needs to fill height for dashboard grid */
+.tab-content.connected-tab-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 /* Sections */
 section {
   padding: 2rem;
@@ -168,11 +176,7 @@ section h2 {
   border-bottom-color: rgba(0, 200, 150, 0.2);
 }
 
-.detected-section h2 {
-  color: #00c896;
-}
-
-.detected-section p {
+.detected-subtitle {
   font-size: 0.85rem;
   opacity: 0.6;
   margin: 0 0 1rem 0;
@@ -273,7 +277,110 @@ section h2 {
   font-size: 0.75rem;
 }
 
-/* Profiles grid */
+/* Settings page grid - reuses dashboard-grid but in settings context */
+.settings-grid {
+  flex: 1;
+  min-height: 0;
+  padding: 1rem;
+}
+
+/* Profile slot - drone card with profile content instead of video */
+.drone-card.profile-slot {
+  transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s;
+  cursor: grab;
+}
+
+.drone-card.profile-slot:active {
+  cursor: grabbing;
+}
+
+.drone-card.profile-slot:hover {
+  transform: none;
+  border-color: var(--accent-color, var(--hud-primary, #00ff88));
+  box-shadow: 0 0 15px rgba(var(--accent-color-rgb, 0, 255, 136), 0.3),
+              0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Dragging state for profile slots */
+.drone-card.profile-slot.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+.drone-card.profile-slot .drone-card-header {
+  gap: 0.5rem;
+}
+
+/* Status dot indicator */
+.profile-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--accent-color, var(--hud-primary, #00ff88));
+  box-shadow: 0 0 8px var(--accent-color, var(--hud-primary, #00ff88));
+  flex-shrink: 0;
+}
+
+.drone-card.profile-slot .drone-number-badge {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: auto;
+}
+
+.drone-card.profile-slot .drone-title {
+  flex: 1;
+}
+
+.drone-card.profile-slot .edit-btn {
+  margin-left: auto;
+}
+
+/* Profile content inside drone-card-video area */
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.profile-content .profile-details {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-content .profile-actions {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-content .view-osd-btn {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: rgba(var(--hud-primary-rgb, 0, 255, 136), 0.15);
+  border: 1px solid var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profile-content .view-osd-btn:hover {
+  background: rgba(var(--hud-primary-rgb, 0, 255, 136), 0.25);
+  box-shadow: 0 0 15px rgba(var(--hud-primary-rgb, 0, 255, 136), 0.3);
+}
+
+/* Profiles grid - legacy, kept for reference */
 .profiles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -286,7 +393,7 @@ section h2 {
   opacity: 0.5;
 }
 
-/* Profile card */
+/* Profile card - legacy styles */
 .profile-card {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);

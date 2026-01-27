@@ -10,10 +10,28 @@ import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
 
-// Animated Remote Control Icon for active drone
-function JoystickIcon() {
+// Remote Control Icon - shows active (green), inactive (grey), or disconnected (red) state
+// Priority: disconnected (red) > active (green) > inactive (grey)
+// Inactive state is clickable to activate control
+function JoystickIcon({ isActive, elrsConnected, onActivateClick }) {
+  const { t } = useTranslation()
+  // Determine state: disconnected takes priority over active/inactive
+  const state = !elrsConnected ? 'disconnected' : (isActive ? 'active' : 'inactive')
+  const isClickable = state === 'inactive'
+  
+  const handleClick = (e) => {
+    if (isClickable && onActivateClick) {
+      e.stopPropagation()
+      onActivateClick()
+    }
+  }
+  
   return (
-    <div className="joystick-icon">
+    <div 
+      className={`joystick-icon ${state} ${isClickable ? 'clickable' : ''}`}
+      onClick={handleClick}
+      title={isClickable ? t('control.activate') : undefined}
+    >
       <svg viewBox="0 0 50 50" className="joystick-svg">
         {/* Signal waves from antenna */}
         <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
@@ -38,6 +56,7 @@ function JoystickIcon() {
         {/* Center indicator */}
         <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
       </svg>
+      {isClickable && <span className="joystick-tooltip">{t('control.activate')}</span>}
     </div>
   )
 }
@@ -48,18 +67,11 @@ function DroneCard({
   profile, 
   telemetry, 
   isActive, 
+  elrsConnected,
   droneNumber, 
   onClick, 
   onShare,
-  // Drag and drop props
-  isDragging,
-  isDragOver,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDragEnter,
-  onDragLeave,
-  onDrop
+  onActivateClick
 }) {
   const { t } = useTranslation()
   const isOnline = telemetry?.connected
@@ -67,35 +79,16 @@ function DroneCard({
   const previewCameraUrl = profile?.frontCameraUrl
   // Display name if available, otherwise fall back to generic label (no IP in title)
   const displayName = profile?.name || ''
-  // Only cards with cameras can be dragged
-  const canDrag = !!previewCameraUrl
   
   const handleShare = (e) => {
     e.stopPropagation() // Prevent card click
     onShare()
   }
-
-  const handleDragStart = (e) => {
-    if (!canDrag) {
-      e.preventDefault()
-      return
-    }
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', droneNumber.toString())
-    onDragStart?.(e, droneId, droneNumber)
-  }
   
   return (
     <div 
-      className={`drone-card ${isOnline ? 'online' : 'offline'} ${isActive ? 'active-control' : 'inactive-control'} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+      className={`drone-card ${isOnline ? 'online' : 'offline'} ${isActive ? 'active-control' : 'inactive-control'}`}
       onClick={onClick}
-      draggable={canDrag}
-      onDragStart={handleDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
     >
       {/* Title bar */}
       <div className="drone-card-header">
@@ -146,32 +139,18 @@ function DroneCard({
           <span className="preview-hint">▶ {t('dashboard.fullScreen')}</span>
         </div>
         
-        {/* Joystick icon for active drone */}
-        {isActive && <JoystickIcon />}
+        {/* Joystick icon - shows active/inactive/disconnected state */}
+        <JoystickIcon isActive={isActive} elrsConnected={elrsConnected} onActivateClick={onActivateClick} />
       </div>
     </div>
   )
 }
 
 // Empty slot placeholder for unfilled drone positions
-function EmptySlot({ 
-  slotNumber,
-  // Drag and drop props
-  isDragOver,
-  onDragOver,
-  onDragEnter,
-  onDragLeave,
-  onDrop
-}) {
+function EmptySlot({ slotNumber }) {
   const { t } = useTranslation()
   return (
-    <div 
-      className={`drone-card empty-slot ${isDragOver ? 'drag-over' : ''}`}
-      onDragOver={onDragOver}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
+    <div className="drone-card empty-slot">
       <div className="drone-card-header">
         <span className="drone-title">{t('dashboard.emptySlot')}</span>
       </div>
@@ -219,28 +198,110 @@ function Dashboard() {
   const [detectedDrones, setDetectedDrones] = useState([])
   const [droneTelemetry, setDroneTelemetry] = useState({})
   const [activeDrones, setActiveDrones] = useState({}) // Track which drones are actively controlled
+  const [elrsConnected, setElrsConnected] = useState(true) // ELRS connection status
   const [loading, setLoading] = useState(true)
   const lastIdsRef = useRef({}) // Track last ID per drone
   
   // Share modal state
   const [shareModalDrone, setShareModalDrone] = useState(null) // { droneId, profile, droneNumber }
   
-  // Drag and drop state
-  const [draggedDrone, setDraggedDrone] = useState(null) // { droneId, sourceSlot }
-  const [dragOverSlot, setDragOverSlot] = useState(null)
+  // Activation modal state
+  const [activateModalDrone, setActivateModalDrone] = useState(null) // droneId to activate
+  const [activatePasskey, setActivatePasskey] = useState('')
+  const [activateError, setActivateError] = useState(null)
+  const [activateLoading, setActivateLoading] = useState(false)
+  const [activating, setActivating] = useState(false) // Progress bar phase
   
-  // Fetch profiles helper (reusable)
-  const fetchProfiles = useCallback(async () => {
+  // Handle activation password submit
+  const handleActivateSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!activatePasskey.trim()) {
+      setActivateError(t('auth.passkeyRequired'))
+      return
+    }
+    
+    setActivateLoading(true)
+    setActivateError(null)
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/api/profiles`)
+      // Step 1: Verify password
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passkey: activatePasskey.trim() })
+      })
+      
       const data = await response.json()
+      
       if (data.success) {
-        setProfiles(data.profiles)
+        console.log('[ACTIVATE] Password valid for drone:', activateModalDrone)
+        setActivateLoading(false)
+        setActivating(true) // Start progress bar phase
+        
+        // Step 2: Call activate endpoint to write droneId to /dev/shm/active
+        try {
+          await fetch(`${API_BASE_URL}/api/drones/activate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ droneId: activateModalDrone })
+          })
+        } catch (err) {
+          console.error('Activate endpoint error:', err)
+        }
+        
+        // Step 3: Wait for telemetry (min 1s, max 3s)
+        const startTime = Date.now()
+        const MIN_WAIT = 1000
+        const MAX_WAIT = 3000
+        const droneToActivate = activateModalDrone
+        
+        const checkActive = () => {
+          return new Promise((resolve) => {
+            const checkInterval = setInterval(async () => {
+              const elapsed = Date.now() - startTime
+              
+              // Check if drone is now active
+              const isNowActive = activeDrones[droneToActivate]?.active === true
+              
+              if (elapsed >= MIN_WAIT && isNowActive) {
+                // Telemetry received and min time passed
+                clearInterval(checkInterval)
+                resolve(true)
+              } else if (elapsed >= MAX_WAIT) {
+                // Max time reached
+                clearInterval(checkInterval)
+                resolve(false)
+              }
+            }, 200) // Check every 200ms
+          })
+        }
+        
+        await checkActive()
+        
+        // Close modal and reset state
+        setActivating(false)
+        setActivateModalDrone(null)
+        setActivatePasskey('')
+        setActivateError(null)
+      } else {
+        setActivateError(t('auth.invalidPasskey'))
+        setActivateLoading(false)
       }
     } catch (error) {
-      console.error('Failed to fetch profiles:', error)
+      console.error('Activation auth error:', error)
+      setActivateError(t('auth.authError'))
+      setActivateLoading(false)
     }
-  }, [])
+  }
+  
+  // Close activation modal (only if not in activating phase)
+  const handleActivateModalClose = () => {
+    if (activating) return // Don't close during activation
+    setActivateModalDrone(null)
+    setActivatePasskey('')
+    setActivateError(null)
+  }
   
   // Fetch profiles and drone list
   useEffect(() => {
@@ -404,70 +465,44 @@ function Dashboard() {
     }
   }, [])
   
+  // Poll ELRS connection status every 3 seconds
+  useEffect(() => {
+    let isMounted = true
+    let controller = new AbortController()
+    
+    const fetchElrsStatus = async () => {
+      controller.abort()
+      controller = new AbortController()
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/elrs/status`, { signal: controller.signal })
+        if (!response.ok) throw new Error('Failed to fetch')
+        
+        const data = await response.json()
+        if (!isMounted) return
+        
+        setElrsConnected(data.connected)
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          // On error, assume disconnected
+          setElrsConnected(false)
+        }
+      }
+    }
+    
+    fetchElrsStatus()
+    const interval = setInterval(fetchElrsStatus, 3000) // Poll every 3 seconds
+    
+    return () => {
+      isMounted = false
+      controller.abort()
+      clearInterval(interval)
+    }
+  }, [])
+  
   const handleDroneClick = useCallback((droneId) => {
     navigate(`/drone/${droneId}`)
   }, [navigate])
-  
-  // Drag and drop handlers
-  const handleDragStart = useCallback((e, droneId, sourceSlot) => {
-    setDraggedDrone({ droneId, sourceSlot })
-  }, [])
-  
-  const handleDragEnd = useCallback(() => {
-    setDraggedDrone(null)
-    setDragOverSlot(null)
-  }, [])
-  
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-  }, [])
-  
-  const handleDragEnter = useCallback((e, slotNumber) => {
-    e.preventDefault()
-    if (draggedDrone && draggedDrone.sourceSlot !== slotNumber) {
-      setDragOverSlot(slotNumber)
-    }
-  }, [draggedDrone])
-  
-  const handleDragLeave = useCallback((e) => {
-    // Only clear if leaving the card entirely (not entering a child)
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setDragOverSlot(null)
-    }
-  }, [])
-  
-  const handleDrop = useCallback(async (e, targetSlot) => {
-    e.preventDefault()
-    
-    if (!draggedDrone || draggedDrone.sourceSlot === targetSlot) {
-      setDraggedDrone(null)
-      setDragOverSlot(null)
-      return
-    }
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/profiles/reorder`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceSlot: draggedDrone.sourceSlot,
-          targetSlot: targetSlot
-        })
-      })
-      
-      const data = await response.json()
-      if (data.success) {
-        // Refresh profiles to reflect new order
-        await fetchProfiles()
-      }
-    } catch (error) {
-      console.error('Failed to reorder drones:', error)
-    }
-    
-    setDraggedDrone(null)
-    setDragOverSlot(null)
-  }, [draggedDrone, fetchProfiles])
   
   // Only show drones with profiles (connected drones)
   const connectedDroneIds = Object.keys(profiles)
@@ -503,7 +538,7 @@ function Dashboard() {
         />
       )}
       
-      <main className={`dashboard-grid ${draggedDrone ? 'is-dragging' : ''}`}>
+      <main className="dashboard-grid">
         {/* Always render exactly 6 slots */}
         {[1, 2, 3, 4, 5, 6].map(slotNumber => {
           // Find drone at this slot position (by _index)
@@ -520,18 +555,11 @@ function Dashboard() {
                 profile={profile}
                 telemetry={droneTelemetry[droneId]}
                 isActive={activeDrones[droneId]?.active === true}
+                elrsConnected={elrsConnected}
                 droneNumber={slotNumber}
-                onClick={() => !draggedDrone && handleDroneClick(droneId)}
+                onClick={() => handleDroneClick(droneId)}
                 onShare={() => setShareModalDrone({ droneId, profile, droneNumber: slotNumber })}
-                // Drag and drop props
-                isDragging={draggedDrone?.sourceSlot === slotNumber}
-                isDragOver={dragOverSlot === slotNumber}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDragOver={handleDragOver}
-                onDragEnter={(e) => handleDragEnter(e, slotNumber)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, slotNumber)}
+                onActivateClick={() => setActivateModalDrone(droneId)}
               />
             )
           }
@@ -541,12 +569,6 @@ function Dashboard() {
             <EmptySlot 
               key={slotNumber} 
               slotNumber={slotNumber}
-              // Drag and drop props
-              isDragOver={dragOverSlot === slotNumber}
-              onDragOver={handleDragOver}
-              onDragEnter={(e) => handleDragEnter(e, slotNumber)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, slotNumber)}
             />
           )
         })}
@@ -579,6 +601,66 @@ function Dashboard() {
             rearCameraRtsp: shareModalDrone.profile?.rearCamera?.rtspUrl,
           }}
         />
+      )}
+      
+      {/* Activation Password Modal */}
+      {activateModalDrone && (
+        <div className="modal-overlay activate-modal-overlay" onClick={handleActivateModalClose}>
+          <div className="activate-modal" onClick={(e) => e.stopPropagation()}>
+            {!activating ? (
+              <>
+                <div className="activate-modal-icon">🎮</div>
+                <h2>{t('control.activateTitle')}</h2>
+                <p className="activate-modal-subtitle">{t('control.activateSubtitle')}</p>
+                
+                <form className="activate-form" onSubmit={handleActivateSubmit}>
+                  <div className="activate-input-group">
+                    <input
+                      type="password"
+                      className="activate-input"
+                      placeholder={t('auth.passkeyPlaceholder')}
+                      value={activatePasskey}
+                      onChange={(e) => setActivatePasskey(e.target.value)}
+                      disabled={activateLoading}
+                      autoFocus
+                    />
+                  </div>
+                  
+                  {activateError && (
+                    <div className="activate-error">{activateError}</div>
+                  )}
+                  
+                  <div className="activate-buttons">
+                    <button 
+                      type="button" 
+                      className="activate-cancel-btn"
+                      onClick={handleActivateModalClose}
+                      disabled={activateLoading}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button 
+                      type="submit" 
+                      className={`activate-submit-btn ${activateLoading ? 'loading' : ''}`}
+                      disabled={activateLoading || !activatePasskey.trim()}
+                    >
+                      {activateLoading ? t('auth.verifying') : t('control.activate')}
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="activate-progress">
+                <div className="activate-modal-icon">🎮</div>
+                <h2>{t('control.activating')}</h2>
+                <p className="activate-modal-subtitle">{t('control.waitingTelemetry')}</p>
+                <div className="activate-progress-bar">
+                  <div className="activate-progress-fill"></div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

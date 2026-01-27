@@ -129,6 +129,7 @@
   "settings": {
     "title": "Settings",
     "connectedTab": "Connected",
+    "detectedTab": "Detected",
     "discoverTab": "Discover & Pair",
     "camerasTab": "MMTX Cameras",
     "connectedDrones": "Connected Drones",
@@ -285,6 +286,14 @@
     "unlock": "Unlock",
     "verifying": "Verifying...",
     "logout": "Lock Settings"
+  },
+  
+  "control": {
+    "activate": "ACTIVATE",
+    "activateTitle": "Activate Control",
+    "activateSubtitle": "Enter passkey to take control of this drone",
+    "activating": "Activating...",
+    "waitingTelemetry": "Waiting for drone response"
   },
   
   "share": {

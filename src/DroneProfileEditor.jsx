@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import { useTranslation } from 'react-i18next'
 import config from './config'
 import './DroneProfileEditor.css'
+import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
 
@@ -954,6 +955,10 @@ function DroneProfileEditor() {
   // MediaMTX status for tab indicator
   const [mmtxStatus, setMmtxStatus] = useState('unknown') // 'running' | 'stopped' | 'restarting' | 'unknown'
   
+  // Drag and drop state for Connected tab reordering
+  const [draggedDrone, setDraggedDrone] = useState(null) // { droneId, sourceSlot }
+  const [dragOverSlot, setDragOverSlot] = useState(null)
+  
   // Auto-scroll terminal to bottom when logs change
   useEffect(() => {
     if (terminalRef.current) {
@@ -1024,6 +1029,87 @@ function DroneProfileEditor() {
       clearInterval(interval)
     }
   }, [])
+  
+  // Redirect to 'connected' tab if detected drones become empty while on 'detected' tab
+  useEffect(() => {
+    if (activeTab === 'detected' && detectedDrones.length === 0) {
+      setActiveTab('connected')
+    }
+  }, [activeTab, detectedDrones.length])
+  
+  // Fetch profiles helper (for refreshing after reorder)
+  const fetchProfiles = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/profiles`)
+      const data = await response.json()
+      if (data.success) {
+        setProfiles(data.profiles)
+      }
+    } catch (error) {
+      console.error('Failed to fetch profiles:', error)
+    }
+  }, [])
+  
+  // Drag and drop handlers for Connected tab
+  const handleDragStart = useCallback((e, droneId, sourceSlot) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', sourceSlot.toString())
+    setDraggedDrone({ droneId, sourceSlot })
+  }, [])
+  
+  const handleDragEnd = useCallback(() => {
+    setDraggedDrone(null)
+    setDragOverSlot(null)
+  }, [])
+  
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }, [])
+  
+  const handleDragEnter = useCallback((e, slotNumber) => {
+    e.preventDefault()
+    if (draggedDrone && draggedDrone.sourceSlot !== slotNumber) {
+      setDragOverSlot(slotNumber)
+    }
+  }, [draggedDrone])
+  
+  const handleDragLeave = useCallback((e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverSlot(null)
+    }
+  }, [])
+  
+  const handleDrop = useCallback(async (e, targetSlot) => {
+    e.preventDefault()
+    
+    if (!draggedDrone || draggedDrone.sourceSlot === targetSlot) {
+      setDraggedDrone(null)
+      setDragOverSlot(null)
+      return
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/profiles/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceSlot: draggedDrone.sourceSlot,
+          targetSlot: targetSlot
+        })
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        await fetchProfiles()
+      }
+    } catch (error) {
+      console.error('Failed to reorder drones:', error)
+    }
+    
+    setDraggedDrone(null)
+    setDragOverSlot(null)
+  }, [draggedDrone, fetchProfiles])
   
   const handleSaveProfile = async (droneId, profileData) => {
     try {
@@ -1652,6 +1738,14 @@ function DroneProfileEditor() {
         >
           {t('settings.connectedTab')} ({connectedDroneIds.length})
         </button>
+        {detectedDrones.length > 0 && (
+          <button 
+            className={`tab-btn ${activeTab === 'detected' ? 'active' : ''}`}
+            onClick={() => setActiveTab('detected')}
+          >
+            {t('settings.detectedTab')} ({detectedDrones.length})
+          </button>
+        )}
         <button 
           className={`tab-btn ${activeTab === 'discover' ? 'active' : ''}`}
           onClick={() => setActiveTab('discover')}
@@ -1685,38 +1779,46 @@ function DroneProfileEditor() {
       
       {/* TAB: Connected Drones */}
       {activeTab === 'connected' && (
-        <div className="tab-content">
-          {/* Connected drone profiles */}
-          <section className="profiles-section">
-            <h2>{t('settings.connectedDrones')} ({connectedDroneIds.length})</h2>
-            
-            {connectedDroneIds.length === 0 ? (
-              <div className="no-profiles">
-                <p>{t('settings.noDronesYet')}</p>
-              </div>
-            ) : (
-              <div className="profiles-grid">
-                {connectedDroneIds.map(droneId => {
-                  const profile = profiles[droneId]
-                  // Drone number is array index + 1
-                  const droneNumber = (profile?._index ?? 0) + 1
-                  return (
-                    <div
-                      key={droneId}
-                      className="profile-card"
-                      style={{ '--accent-color': profile.color }}
-                    >
-                      <div className="profile-card-header">
-                        <span className="profile-drone-number">#{droneNumber}</span>
-                        {profile.name && <span className="profile-name">{profile.name}</span>}
-                        <button 
-                          className="edit-btn"
-                          onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
-                        >
-                          {t('common.edit')}
-                        </button>
-                      </div>
-                      
+        <div className="tab-content connected-tab-content">
+          {/* Dashboard-style grid with 6 slots - supports drag and drop reordering */}
+          <div className={`dashboard-grid settings-grid ${draggedDrone ? 'is-dragging' : ''}`}>
+            {[1, 2, 3, 4, 5, 6].map(slotNumber => {
+              // Find drone at this slot position (by _index)
+              const droneEntry = Object.entries(profiles).find(
+                ([, profile]) => (profile?._index ?? -1) + 1 === slotNumber
+              )
+              
+              if (droneEntry) {
+                const [droneId, profile] = droneEntry
+                const isDragging = draggedDrone?.sourceSlot === slotNumber
+                const isDragOver = dragOverSlot === slotNumber
+                
+                return (
+                  <div
+                    key={slotNumber}
+                    className={`drone-card profile-slot ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                    style={{ '--accent-color': profile.color }}
+                    draggable={true}
+                    onDragStart={(e) => handleDragStart(e, droneId, slotNumber)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => handleDragEnter(e, slotNumber)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, slotNumber)}
+                  >
+                    <div className="drone-card-header">
+                      <span className="profile-status-dot"></span>
+                      <span className="drone-number-badge">#{slotNumber}</span>
+                      <span className="drone-title">{profile.name || `Drone ${slotNumber}`}</span>
+                      <button 
+                        className="edit-btn"
+                        onClick={() => { setEditingDrone(droneId); setShowNewForm(true); }}
+                      >
+                        {t('common.edit')}
+                      </button>
+                    </div>
+                    
+                    <div className="drone-card-video profile-content">
                       <div className="profile-details">
                         <div className="detail-row">
                           <span className="detail-label">{t('profile.ipAddress')}:</span>
@@ -1803,56 +1905,80 @@ function DroneProfileEditor() {
                         </Link>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-          
-          {/* Detected drones - telemetry but no profile */}
-          {detectedDrones.length > 0 && (
-            <section className="detected-section">
-              <h2>{t('settings.detectedDrones')} ({detectedDrones.length})</h2>
-              <p>{t('settings.telemetryActive')}</p>
-              <div className="detected-drones-grid">
-                {detectedDrones.map(drone => (
-                  <div
-                    key={drone.droneId}
-                    className="detected-drone-card"
-                    onClick={() => {
-                      setEditingDrone(drone.droneId)
-                      setShowNewForm(true)
-                    }}
-                  >
-                    <div className="detected-drone-header">
-                      <span className="drone-id-badge">ID: {drone.droneId}</span>
-                      <span className="add-profile-hint">{t('settings.connectDrone')}</span>
-                    </div>
-                    <div className="detected-drone-map">
-                      <DroneLocationMap 
-                        latitude={drone.latitude} 
-                        longitude={drone.longitude} 
-                      />
-                    </div>
-                    <div className="detected-drone-info">
-                      {drone.latitude && drone.longitude ? (
-                        <span className="coords">
-                          {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}
-                        </span>
-                      ) : (
-                        <span className="no-coords">{t('settings.noGpsCoords')}</span>
-                      )}
-                      {drone.lastSeen && (
-                        <span className="last-seen">
-                          {t('settings.lastSeen', { time: new Date(drone.lastSeen).toLocaleString() })}
-                        </span>
-                      )}
+                  </div>
+                )
+              }
+              
+              // Empty slot - also a drop target
+              const isDragOver = dragOverSlot === slotNumber
+              return (
+                <div 
+                  key={slotNumber} 
+                  className={`drone-card empty-slot ${isDragOver ? 'drag-over' : ''}`}
+                  onDragOver={handleDragOver}
+                  onDragEnter={(e) => handleDragEnter(e, slotNumber)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, slotNumber)}
+                >
+                  <div className="drone-card-header">
+                    <span className="drone-title">{t('dashboard.emptySlot')}</span>
+                  </div>
+                  <div className="drone-card-video">
+                    <div className="empty-slot-content">
+                      <span className="empty-slot-number">#{slotNumber}</span>
+                      <span className="empty-slot-hint">{t('dashboard.noDroneAssigned')}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* TAB: Detected Drones */}
+      {activeTab === 'detected' && detectedDrones.length > 0 && (
+        <div className="tab-content">
+          <section className="detected-section">
+            <p className="detected-subtitle">{t('settings.telemetryActive')}</p>
+            <div className="detected-drones-grid">
+              {detectedDrones.map(drone => (
+                <div
+                  key={drone.droneId}
+                  className="detected-drone-card"
+                  onClick={() => {
+                    setEditingDrone(drone.droneId)
+                    setShowNewForm(true)
+                  }}
+                >
+                  <div className="detected-drone-header">
+                    <span className="drone-id-badge">ID: {drone.droneId}</span>
+                    <span className="add-profile-hint">{t('settings.connectDrone')}</span>
+                  </div>
+                  <div className="detected-drone-map">
+                    <DroneLocationMap 
+                      latitude={drone.latitude} 
+                      longitude={drone.longitude} 
+                    />
+                  </div>
+                  <div className="detected-drone-info">
+                    {drone.latitude && drone.longitude ? (
+                      <span className="coords">
+                        {drone.latitude.toFixed(5)}, {drone.longitude.toFixed(5)}
+                      </span>
+                    ) : (
+                      <span className="no-coords">{t('settings.noGpsCoords')}</span>
+                    )}
+                    {drone.lastSeen && (
+                      <span className="last-seen">
+                        {t('settings.lastSeen', { time: new Date(drone.lastSeen).toLocaleString() })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       )}
       

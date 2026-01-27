@@ -131,6 +131,7 @@
   "settings": {
     "title": "Налаштування",
     "connectedTab": "Підключені",
+    "detectedTab": "Виявлені",
     "discoverTab": "Пошук та з'єднання",
     "camerasTab": "MMTX Камери",
     "connectedDrones": "Підключені дрони",
@@ -287,6 +288,14 @@
     "unlock": "Розблокувати",
     "verifying": "Перевірка...",
     "logout": "Заблокувати налаштування"
+  },
+  
+  "control": {
+    "activate": "АКТИВУВАТИ",
+    "activateTitle": "Активація керування",
+    "activateSubtitle": "Введіть код доступу для керування цим дроном",
+    "activating": "Активація...",
+    "waitingTelemetry": "Очікування відповіді від дрона"
   },
   
   "share": {

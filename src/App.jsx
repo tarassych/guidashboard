@@ -89,7 +89,15 @@ function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   const [isActive, setIsActive] = useState(false) // Whether this drone is actively controlled
+  const [elrsConnected, setElrsConnected] = useState(true) // ELRS connection status
   const [hdMode, setHdMode] = useState(true) // HD quality mode for main camera (default: HD)
+  
+  // Activation modal state
+  const [showActivateModal, setShowActivateModal] = useState(false)
+  const [activatePasskey, setActivatePasskey] = useState('')
+  const [activateError, setActivateError] = useState(null)
+  const [activateLoading, setActivateLoading] = useState(false)
+  const [activating, setActivating] = useState(false) // Progress bar phase
   
   // Theme management - reacts to telemetry data
   const { currentTheme } = useTheme(latestTelemetryData)
@@ -130,6 +138,132 @@ function App() {
       clearInterval(interval)
     }
   }, [droneId])
+  
+  // Poll ELRS connection status every 3 seconds
+  useEffect(() => {
+    let isMounted = true
+    let controller = new AbortController()
+    
+    const fetchElrsStatus = async () => {
+      controller.abort()
+      controller = new AbortController()
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/elrs/status`, { signal: controller.signal })
+        if (!response.ok) throw new Error('Failed to fetch')
+        
+        const data = await response.json()
+        if (!isMounted) return
+        
+        setElrsConnected(data.connected)
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          // On error, assume disconnected
+          setElrsConnected(false)
+        }
+      }
+    }
+    
+    fetchElrsStatus()
+    const interval = setInterval(fetchElrsStatus, 3000) // Poll every 3 seconds
+    
+    return () => {
+      isMounted = false
+      controller.abort()
+      clearInterval(interval)
+    }
+  }, [])
+  
+  // Handle activation password submit
+  const handleActivateSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!activatePasskey.trim()) {
+      setActivateError(t('auth.passkeyRequired'))
+      return
+    }
+    
+    setActivateLoading(true)
+    setActivateError(null)
+    
+    try {
+      // Step 1: Verify password
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passkey: activatePasskey.trim() })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        console.log('[ACTIVATE] Password valid for drone:', droneId)
+        setActivateLoading(false)
+        setActivating(true) // Start progress bar phase
+        
+        // Step 2: Call activate endpoint to write droneId to /dev/shm/active
+        try {
+          await fetch(`${API_BASE_URL}/api/drones/activate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ droneId })
+          })
+        } catch (err) {
+          console.error('Activate endpoint error:', err)
+        }
+        
+        // Step 3: Wait for telemetry (min 1s, max 3s)
+        const startTime = Date.now()
+        const MIN_WAIT = 1000
+        const MAX_WAIT = 3000
+        
+        await new Promise((resolve) => {
+          const checkInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime
+            
+            // isActive is updated by polling, check current state
+            if (elapsed >= MIN_WAIT && isActive) {
+              // Telemetry received and min time passed
+              clearInterval(checkInterval)
+              resolve()
+            } else if (elapsed >= MAX_WAIT) {
+              // Max time reached
+              clearInterval(checkInterval)
+              resolve()
+            }
+          }, 200) // Check every 200ms
+        })
+        
+        // Close modal and reset state
+        setActivating(false)
+        setShowActivateModal(false)
+        setActivatePasskey('')
+        setActivateError(null)
+      } else {
+        setActivateError(t('auth.invalidPasskey'))
+        setActivateLoading(false)
+      }
+    } catch (error) {
+      console.error('Activation auth error:', error)
+      setActivateError(t('auth.authError'))
+      setActivateLoading(false)
+    }
+  }
+  
+  // Close activation modal (only if not in activating phase)
+  const handleActivateModalClose = () => {
+    if (activating) return // Don't close during activation
+    setShowActivateModal(false)
+    setActivatePasskey('')
+    setActivateError(null)
+  }
+  
+  // Handle click on inactive control icon
+  const handleControlIconClick = () => {
+    if (elrsConnected && !isActive) {
+      setShowActivateModal(true)
+    }
+  }
   
   // Check for stale telemetry data - mark offline if no data in 1 minute
   useEffect(() => {
@@ -307,29 +441,33 @@ function App() {
           <TelemetryLog droneId={droneId} onTelemetryUpdate={handleTelemetryUpdate} />
         </div>
 
-        {/* Active Control Icon - above telemetry strip */}
-        {isActive && (
-          <div className="hud-active-control-icon">
-            <svg viewBox="0 0 50 50" className="active-control-svg">
-              {/* Signal waves */}
-              <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
-              <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
-              <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
-              {/* Antenna */}
-              <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
-              <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
-              {/* Controller */}
-              <rect x="12" y="14" width="26" height="18" rx="3" className="controller-body" />
-              {/* Joysticks */}
-              <circle cx="19" cy="23" r="4" className="joystick-base-small" />
-              <circle cx="19" cy="23" r="2" className="joystick-stick-left" />
-              <circle cx="31" cy="23" r="4" className="joystick-base-small" />
-              <circle cx="31" cy="23" r="2" className="joystick-stick-right" />
-              {/* Indicator */}
-              <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
-            </svg>
-          </div>
-        )}
+        {/* Control Icon - shows active (green), inactive (grey), or disconnected (red) state */}
+        {/* Inactive state is clickable to activate control */}
+        <div 
+          className={`hud-active-control-icon ${!elrsConnected ? 'disconnected' : (isActive ? 'active' : 'inactive')} ${elrsConnected && !isActive ? 'clickable' : ''}`}
+          onClick={handleControlIconClick}
+          title={elrsConnected && !isActive ? t('control.activate') : undefined}
+        >
+          <svg viewBox="0 0 50 50" className="active-control-svg">
+            {/* Signal waves */}
+            <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
+            <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
+            <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
+            {/* Antenna */}
+            <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
+            <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
+            {/* Controller */}
+            <rect x="12" y="14" width="26" height="18" rx="3" className="controller-body" />
+            {/* Joysticks */}
+            <circle cx="19" cy="23" r="4" className="joystick-base-small" />
+            <circle cx="19" cy="23" r="2" className="joystick-stick-left" />
+            <circle cx="31" cy="23" r="4" className="joystick-base-small" />
+            <circle cx="31" cy="23" r="2" className="joystick-stick-right" />
+            {/* Indicator */}
+            <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
+          </svg>
+          {elrsConnected && !isActive && <span className="control-tooltip">{t('control.activate')}</span>}
+        </div>
 
         {/* Bottom Telemetry Strip */}
         <div className="hud-bottom-strip">
@@ -355,6 +493,66 @@ function App() {
           rearCameraRtsp: droneProfile?.rearCamera?.rtspUrl,
         }}
       />
+      
+      {/* Activation Password Modal */}
+      {showActivateModal && (
+        <div className="modal-overlay activate-modal-overlay" onClick={handleActivateModalClose}>
+          <div className="activate-modal" onClick={(e) => e.stopPropagation()}>
+            {!activating ? (
+              <>
+                <div className="activate-modal-icon">🎮</div>
+                <h2>{t('control.activateTitle')}</h2>
+                <p className="activate-modal-subtitle">{t('control.activateSubtitle')}</p>
+                
+                <form className="activate-form" onSubmit={handleActivateSubmit}>
+                  <div className="activate-input-group">
+                    <input
+                      type="password"
+                      className="activate-input"
+                      placeholder={t('auth.passkeyPlaceholder')}
+                      value={activatePasskey}
+                      onChange={(e) => setActivatePasskey(e.target.value)}
+                      disabled={activateLoading}
+                      autoFocus
+                    />
+                  </div>
+                  
+                  {activateError && (
+                    <div className="activate-error">{activateError}</div>
+                  )}
+                  
+                  <div className="activate-buttons">
+                    <button 
+                      type="button" 
+                      className="activate-cancel-btn"
+                      onClick={handleActivateModalClose}
+                      disabled={activateLoading}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button 
+                      type="submit" 
+                      className={`activate-submit-btn ${activateLoading ? 'loading' : ''}`}
+                      disabled={activateLoading || !activatePasskey.trim()}
+                    >
+                      {activateLoading ? t('auth.verifying') : t('control.activate')}
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="activate-progress">
+                <div className="activate-modal-icon">🎮</div>
+                <h2>{t('control.activating')}</h2>
+                <p className="activate-modal-subtitle">{t('control.waitingTelemetry')}</p>
+                <div className="activate-progress-bar">
+                  <div className="activate-progress-fill"></div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
