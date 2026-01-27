@@ -215,7 +215,7 @@ function App() {
         // Step 3: Wait for telemetry (min 1s, max 3s)
         const startTime = Date.now()
         const MIN_WAIT = 1000
-        const MAX_WAIT = 3000
+        const MAX_WAIT = 5000
         
         await new Promise((resolve) => {
           const checkInterval = setInterval(() => {
