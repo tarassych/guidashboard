@@ -88,7 +88,7 @@ export async function executeScript(scriptName, args = [], options = {}) {
  * @returns {Promise<Object>} Result with drones array
  */
 export async function discoverDrones() {
-  const result = await executeScript('discover.sh', [], { timeout: 30000 });
+  const result = await executeScript('discover.sh', [], { timeout: 120000 });
   return {
     ...result,
     drones: Array.isArray(result.data) ? result.data : []
@@ -128,7 +128,7 @@ export async function pairDrone(ip, droneId) {
  * @returns {Promise<Object>} Result with cameras array
  */
 export async function scanCameras(ip) {
-  const result = await executeScript('scan_cam.sh', [ip], { timeout: 60000 });
+  const result = await executeScript('scan_cam.sh', [ip], { timeout: 120000 });
   return {
     ...result,
     cameras: Array.isArray(result.data) ? result.data : []
