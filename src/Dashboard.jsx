@@ -6,6 +6,7 @@ import CameraFeed from './components/CameraFeed'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
 import FoxyLogo from './components/FoxyLogo'
+import { isAuthenticated, setAuthCookie } from './utils/auth'
 import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
@@ -211,6 +212,67 @@ function Dashboard() {
   const [activateError, setActivateError] = useState(null)
   const [activateLoading, setActivateLoading] = useState(false)
   const [activating, setActivating] = useState(false) // Progress bar phase
+  const [skipPasswordForm, setSkipPasswordForm] = useState(false) // Skip password if already authenticated
+  
+  // Start activation process (called after auth verified or if already authenticated)
+  const startActivation = async (droneId) => {
+    setActivating(true)
+    
+    // Call activate endpoint to write droneId to /dev/shm/active
+    try {
+      await fetch(`${API_BASE_URL}/api/drones/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ droneId })
+      })
+    } catch (err) {
+      console.error('Activate endpoint error:', err)
+    }
+    
+    // Wait for telemetry (min 1s, max 5s)
+    const startTime = Date.now()
+    const MIN_WAIT = 1000
+    const MAX_WAIT = 5000
+    
+    await new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime
+        const isNowActive = activeDrones[droneId]?.active === true
+        
+        if (elapsed >= MIN_WAIT && isNowActive) {
+          clearInterval(checkInterval)
+          resolve()
+        } else if (elapsed >= MAX_WAIT) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 200)
+    })
+    
+    // Close modal and reset state
+    setActivating(false)
+    setActivateModalDrone(null)
+    setActivatePasskey('')
+    setActivateError(null)
+    setSkipPasswordForm(false)
+  }
+  
+  // Open activation modal - check if already authenticated
+  const openActivateModal = (droneId) => {
+    setActivateModalDrone(droneId)
+    setActivatePasskey('')
+    setActivateError(null)
+    
+    // If already authenticated, skip password and start activation immediately
+    if (isAuthenticated()) {
+      console.log('[ACTIVATE] Already authenticated, skipping password')
+      setSkipPasswordForm(true)
+      // Start activation after a brief delay to show modal
+      setTimeout(() => startActivation(droneId), 100)
+    } else {
+      setSkipPasswordForm(false)
+    }
+  }
   
   // Handle activation password submit
   const handleActivateSubmit = async (e) => {
@@ -225,7 +287,6 @@ function Dashboard() {
     setActivateError(null)
     
     try {
-      // Step 1: Verify password
       const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -236,54 +297,9 @@ function Dashboard() {
       
       if (data.success) {
         console.log('[ACTIVATE] Password valid for drone:', activateModalDrone)
+        setAuthCookie() // Save authentication for 1 hour
         setActivateLoading(false)
-        setActivating(true) // Start progress bar phase
-        
-        // Step 2: Call activate endpoint to write droneId to /dev/shm/active
-        try {
-          await fetch(`${API_BASE_URL}/api/drones/activate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ droneId: activateModalDrone })
-          })
-        } catch (err) {
-          console.error('Activate endpoint error:', err)
-        }
-        
-        // Step 3: Wait for telemetry (min 1s, max 3s)
-        const startTime = Date.now()
-        const MIN_WAIT = 1000
-        const MAX_WAIT = 5000
-        const droneToActivate = activateModalDrone
-        
-        const checkActive = () => {
-          return new Promise((resolve) => {
-            const checkInterval = setInterval(async () => {
-              const elapsed = Date.now() - startTime
-              
-              // Check if drone is now active
-              const isNowActive = activeDrones[droneToActivate]?.active === true
-              
-              if (elapsed >= MIN_WAIT && isNowActive) {
-                // Telemetry received and min time passed
-                clearInterval(checkInterval)
-                resolve(true)
-              } else if (elapsed >= MAX_WAIT) {
-                // Max time reached
-                clearInterval(checkInterval)
-                resolve(false)
-              }
-            }, 200) // Check every 200ms
-          })
-        }
-        
-        await checkActive()
-        
-        // Close modal and reset state
-        setActivating(false)
-        setActivateModalDrone(null)
-        setActivatePasskey('')
-        setActivateError(null)
+        await startActivation(activateModalDrone)
       } else {
         setActivateError(t('auth.invalidPasskey'))
         setActivateLoading(false)
@@ -301,6 +317,7 @@ function Dashboard() {
     setActivateModalDrone(null)
     setActivatePasskey('')
     setActivateError(null)
+    setSkipPasswordForm(false)
   }
   
   // Fetch profiles and drone list
@@ -559,7 +576,7 @@ function Dashboard() {
                 droneNumber={slotNumber}
                 onClick={() => handleDroneClick(droneId)}
                 onShare={() => setShareModalDrone({ droneId, profile, droneNumber: slotNumber })}
-                onActivateClick={() => setActivateModalDrone(droneId)}
+                onActivateClick={() => openActivateModal(droneId)}
               />
             )
           }
@@ -607,7 +624,7 @@ function Dashboard() {
       {activateModalDrone && (
         <div className="modal-overlay activate-modal-overlay" onClick={handleActivateModalClose}>
           <div className="activate-modal" onClick={(e) => e.stopPropagation()}>
-            {!activating ? (
+            {!activating && !skipPasswordForm ? (
               <>
                 <div className="activate-modal-icon">🎮</div>
                 <h2>{t('control.activateTitle')}</h2>

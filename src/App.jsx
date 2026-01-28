@@ -8,6 +8,7 @@ import { useTheme } from './hooks/useTheme'
 import CameraFeed from './components/CameraFeed'
 import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
 import FoxyLogo from './components/FoxyLogo'
+import { isAuthenticated, setAuthCookie } from './utils/auth'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
@@ -98,6 +99,7 @@ function App() {
   const [activateError, setActivateError] = useState(null)
   const [activateLoading, setActivateLoading] = useState(false)
   const [activating, setActivating] = useState(false) // Progress bar phase
+  const [skipPasswordForm, setSkipPasswordForm] = useState(false) // Skip password if already authenticated
   
   // Theme management - reacts to telemetry data
   const { currentTheme } = useTheme(latestTelemetryData)
@@ -174,6 +176,48 @@ function App() {
     }
   }, [])
   
+  // Start activation process (called after auth verified or if already authenticated)
+  const startActivation = async () => {
+    setActivating(true)
+    
+    // Call activate endpoint to write droneId to /dev/shm/active
+    try {
+      await fetch(`${API_BASE_URL}/api/drones/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ droneId })
+      })
+    } catch (err) {
+      console.error('Activate endpoint error:', err)
+    }
+    
+    // Wait for telemetry (min 1s, max 5s)
+    const startTime = Date.now()
+    const MIN_WAIT = 1000
+    const MAX_WAIT = 5000
+    
+    await new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime
+        
+        if (elapsed >= MIN_WAIT && isActive) {
+          clearInterval(checkInterval)
+          resolve()
+        } else if (elapsed >= MAX_WAIT) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 200)
+    })
+    
+    // Close modal and reset state
+    setActivating(false)
+    setShowActivateModal(false)
+    setActivatePasskey('')
+    setActivateError(null)
+    setSkipPasswordForm(false)
+  }
+  
   // Handle activation password submit
   const handleActivateSubmit = async (e) => {
     e.preventDefault()
@@ -187,7 +231,6 @@ function App() {
     setActivateError(null)
     
     try {
-      // Step 1: Verify password
       const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,47 +241,9 @@ function App() {
       
       if (data.success) {
         console.log('[ACTIVATE] Password valid for drone:', droneId)
+        setAuthCookie() // Save authentication for 1 hour
         setActivateLoading(false)
-        setActivating(true) // Start progress bar phase
-        
-        // Step 2: Call activate endpoint to write droneId to /dev/shm/active
-        try {
-          await fetch(`${API_BASE_URL}/api/drones/activate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ droneId })
-          })
-        } catch (err) {
-          console.error('Activate endpoint error:', err)
-        }
-        
-        // Step 3: Wait for telemetry (min 1s, max 3s)
-        const startTime = Date.now()
-        const MIN_WAIT = 1000
-        const MAX_WAIT = 5000
-        
-        await new Promise((resolve) => {
-          const checkInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime
-            
-            // isActive is updated by polling, check current state
-            if (elapsed >= MIN_WAIT && isActive) {
-              // Telemetry received and min time passed
-              clearInterval(checkInterval)
-              resolve()
-            } else if (elapsed >= MAX_WAIT) {
-              // Max time reached
-              clearInterval(checkInterval)
-              resolve()
-            }
-          }, 200) // Check every 200ms
-        })
-        
-        // Close modal and reset state
-        setActivating(false)
-        setShowActivateModal(false)
-        setActivatePasskey('')
-        setActivateError(null)
+        await startActivation()
       } else {
         setActivateError(t('auth.invalidPasskey'))
         setActivateLoading(false)
@@ -256,12 +261,24 @@ function App() {
     setShowActivateModal(false)
     setActivatePasskey('')
     setActivateError(null)
+    setSkipPasswordForm(false)
   }
   
   // Handle click on inactive control icon
   const handleControlIconClick = () => {
     if (elrsConnected && !isActive) {
       setShowActivateModal(true)
+      setActivatePasskey('')
+      setActivateError(null)
+      
+      // If already authenticated, skip password and start activation immediately
+      if (isAuthenticated()) {
+        console.log('[ACTIVATE] Already authenticated, skipping password')
+        setSkipPasswordForm(true)
+        setTimeout(() => startActivation(), 100)
+      } else {
+        setSkipPasswordForm(false)
+      }
     }
   }
   
@@ -498,7 +515,7 @@ function App() {
       {showActivateModal && (
         <div className="modal-overlay activate-modal-overlay" onClick={handleActivateModalClose}>
           <div className="activate-modal" onClick={(e) => e.stopPropagation()}>
-            {!activating ? (
+            {!activating && !skipPasswordForm ? (
               <>
                 <div className="activate-modal-icon">🎮</div>
                 <h2>{t('control.activateTitle')}</h2>

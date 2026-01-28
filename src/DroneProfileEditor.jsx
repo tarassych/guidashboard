@@ -819,37 +819,8 @@ function MediaMTXPanel({ profiles = {} }) {
   )
 }
 
-// Auth cookie helpers
-const AUTH_COOKIE_NAME = 'settings_auth'
-const AUTH_COOKIE_MAX_AGE = 24 * 60 * 60 // 24 hours in seconds
-
-function getAuthCookie() {
-  const cookies = document.cookie.split(';')
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=')
-    if (name === AUTH_COOKIE_NAME) {
-      try {
-        const data = JSON.parse(decodeURIComponent(value))
-        // Check if not expired (timestamp + 24h > now)
-        if (data.timestamp && Date.now() - data.timestamp < AUTH_COOKIE_MAX_AGE * 1000) {
-          return true
-        }
-      } catch (e) {
-        // Invalid cookie, ignore
-      }
-    }
-  }
-  return false
-}
-
-function setAuthCookie() {
-  const data = { authenticated: true, timestamp: Date.now() }
-  document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(data))}; max-age=${AUTH_COOKIE_MAX_AGE}; path=/; SameSite=Strict`
-}
-
-function clearAuthCookie() {
-  document.cookie = `${AUTH_COOKIE_NAME}=; max-age=0; path=/`
-}
+// Import shared auth utilities
+import { isAuthenticated as checkAuthCookie, setAuthCookie, clearAuthCookie } from './utils/auth'
 
 function DroneProfileEditor() {
   const { t } = useTranslation()
@@ -864,7 +835,7 @@ function DroneProfileEditor() {
   
   // Check auth cookie on mount
   useEffect(() => {
-    const hasAuth = getAuthCookie()
+    const hasAuth = checkAuthCookie()
     console.log('[AUTH] Cookie check:', hasAuth)
     setIsAuthenticated(hasAuth)
     setAuthChecked(true)
