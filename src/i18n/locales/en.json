@@ -215,7 +215,8 @@
   "cameraScanner": {
     "title": "Camera Scanner",
     "subtitle": "Drone #{{id}} • IP: {{ip}}",
-    "h264Notice": "Only cameras with H.264 video codec are supported",
+    "h265Notice": "Only cameras with H.265 video codec are supported",
+    "codecUnsupported": "H.265 required",
     "ipNotSet": "Not set",
     "scanForCameras": "Scan for Cameras",
     "rescan": "Rescan for Cameras",

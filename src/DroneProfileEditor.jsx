@@ -263,6 +263,13 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     return null
   }
   
+  // Check if camera has H.265 codec (required)
+  const isH265Codec = (camera) => {
+    const codecs = camera.rtsp?.sdp?.codecs
+    if (!codecs || !Array.isArray(codecs)) return false
+    return codecs.some(codec => codec.toUpperCase() === 'H265' || codec.toUpperCase() === 'HEVC')
+  }
+  
   return (
     <div className="camera-scanner-modal">
       <div className="camera-scanner-header">
@@ -270,10 +277,10 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         <span className="scanner-subtitle">{t('cameraScanner.subtitle', { id: droneId, ip: droneIp || t('cameraScanner.ipNotSet') })}</span>
       </div>
       
-      {/* H264 Codec Notice */}
+      {/* H265 Codec Notice */}
       <div className="camera-scanner-notice">
         <span className="notice-icon">⚠</span>
-        <span className="notice-text">{t('cameraScanner.h264Notice')}</span>
+        <span className="notice-text">{t('cameraScanner.h265Notice')}</span>
       </div>
       
       {/* Terminal Output */}
@@ -321,10 +328,12 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         <div className="cameras-grid">
           {cameras.map((camera, index) => {
             const assignment = getCameraAssignment(camera)
+            const hasH265 = isH265Codec(camera)
+            const videoCodec = camera.rtsp?.sdp?.codecs?.[0] || null
             return (
               <div 
                 key={camera.ip || index} 
-                className={`camera-card ${assignment ? `assigned-${assignment}` : ''}`}
+                className={`camera-card ${assignment ? `assigned-${assignment}` : ''} ${!hasH265 ? 'codec-unsupported' : ''}`}
               >
                 <div className="camera-snapshot">
                   {camera.snapshot?.url ? (
@@ -340,12 +349,26 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
                   <div className="snapshot-placeholder" style={{ display: camera.snapshot?.url ? 'none' : 'flex' }}>
                     {t('camera.noSnapshot')}
                   </div>
+                  
+                  {/* Warning overlay for non-H.265 cameras */}
+                  {!hasH265 && (
+                    <div className="codec-warning-overlay">
+                      <span className="warning-icon">⚠</span>
+                      <span className="warning-text">{t('cameraScanner.codecUnsupported')}</span>
+                      {videoCodec && <span className="detected-codec">{videoCodec}</span>}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="camera-info">
                   <div className="camera-ip">{camera.ip}</div>
                   {camera.onvif?.model && (
                     <div className="camera-model">{camera.onvif.manufacturer} {camera.onvif.model}</div>
+                  )}
+                  {videoCodec && (
+                    <div className={`camera-codec ${hasH265 ? 'supported' : 'unsupported'}`}>
+                      {videoCodec}
+                    </div>
                   )}
                 </div>
                 
@@ -361,12 +384,14 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
                   <button
                     className={`assign-btn front ${assignment === 'front' ? 'selected' : ''}`}
                     onClick={() => handleAssignFront(camera)}
+                    disabled={!hasH265}
                   >
                     {assignment === 'front' ? `✓ ${t('camera.front')}` : t('camera.setAsFront')}
                   </button>
                   <button
                     className={`assign-btn rear ${assignment === 'rear' ? 'selected' : ''}`}
                     onClick={() => handleAssignRear(camera)}
+                    disabled={!hasH265}
                   >
                     {assignment === 'rear' ? `✓ ${t('camera.rear')}` : t('camera.setAsRear')}
                   </button>
