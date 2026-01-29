@@ -380,7 +380,7 @@ function App() {
             <Link to="/" className="back-to-dashboard" title={t('nav.backToDashboard')}>←</Link>
             <ShareButton onClick={() => setShowShareModal(true)} />
             <FoxyLogo className="logo-icon" size={28} />
-            <span className="logo-text">{t('osd.title', { name: droneName.toUpperCase() })}</span>
+            <span className="logo-text">{t('dashboard.title')}</span>
           </div>
           
           <div className="hud-status-center">
@@ -420,9 +420,12 @@ function App() {
           </div>
         )}
 
-        {/* Left Panel - Compass & Satellites & Quality */}
+        {/* Left Panel - Compass & Drone Name & Satellites & Quality */}
         <div className="hud-left-panel">
-          <HudCompass heading={telemetry.heading} direction={directions[directionIndex]} />
+          <div className="hud-compass-row">
+            <HudCompass heading={telemetry.heading} direction={directions[directionIndex]} />
+            <span className="hud-drone-name">{droneName.toUpperCase()}</span>
+          </div>
           <SatelliteIndicator satellites={telemetry.satellites} />
           {hasHdStream && (
             <QualitySwitch isHd={hdMode} onToggle={() => setHdMode(!hdMode)} />

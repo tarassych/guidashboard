@@ -87,6 +87,29 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   const [scanLog, setScanLog] = useState(null) // { command, stdout, stderr, status }
   const scanTerminalRef = useRef(null)
   
+  // Direct connect mode state
+  const [mode, setMode] = useState('scanner') // 'scanner' or 'direct'
+  const [rtspUrl, setRtspUrl] = useState('')
+  const [rtspUrlError, setRtspUrlError] = useState(null)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testError, setTestError] = useState(null)
+  const [directCamera, setDirectCamera] = useState(null) // Camera from RTSP test
+  
+  // RTSP URL validation regex: rtsp://user:password@ip:port/path
+  const RTSP_URL_REGEX = /^rtsp:\/\/[^:]+:[^@]+@[\d.]+:\d+\/.+$/
+  
+  const validateRtspUrl = (url) => {
+    if (!url) return false
+    return RTSP_URL_REGEX.test(url)
+  }
+  
+  // Generate unique hash ID based on datetime
+  const generateDirectCameraId = () => {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 8)
+    return `direct_${timestamp}_${random}`
+  }
+  
   // Auto-scroll terminal
   useEffect(() => {
     if (scanTerminalRef.current) {
@@ -161,12 +184,135 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     setSelectedRear(camera)
   }
   
+  // Handle RTSP URL change
+  const handleRtspUrlChange = (e) => {
+    const value = e.target.value
+    setRtspUrl(value)
+    setRtspUrlError(null)
+    setTestError(null)
+    setDirectCamera(null)
+  }
+  
+  // Test RTSP connection
+  const handleTestRtsp = async () => {
+    // Validate URL format
+    if (!validateRtspUrl(rtspUrl)) {
+      setRtspUrlError(t('cameraScanner.rtspUrlInvalid'))
+      return
+    }
+    
+    setIsTesting(true)
+    setTestError(null)
+    setDirectCamera(null)
+    setRtspUrlError(null)
+    
+    // Set initial test log
+    setScanLog({
+      command: `rtsp_check.py "${rtspUrl}"`,
+      stdout: '',
+      stderr: '',
+      status: 'running'
+    })
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/check-rtsp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rtspUrl })
+      })
+      const data = await response.json()
+      
+      // Update log with response
+      setScanLog({
+        command: data.command || `rtsp_check.py "${rtspUrl}"`,
+        stdout: data.stdout || '',
+        stderr: data.stderr || '',
+        status: data.success && data.data?.result ? 'success' : 'error'
+      })
+      
+      if (data.success && data.data?.result) {
+        // Parse RTSP URL to extract components
+        const urlMatch = rtspUrl.match(/^rtsp:\/\/([^:]+):([^@]+)@([\d.]+):(\d+)(\/.+)$/)
+        if (urlMatch) {
+          const [, login, password, ip, port, path] = urlMatch
+          const codec = data.data.codec?.toUpperCase() || 'UNKNOWN'
+          
+          // Generate unique ID for this direct camera
+          const directCameraId = generateDirectCameraId()
+          
+          // Create camera object from RTSP test result
+          const camera = {
+            ip,
+            rtsp_port: parseInt(port, 10),
+            login,
+            password,
+            rtsp: {
+              port: parseInt(port, 10),
+              path,
+              sdp: {
+                codecs: [codec]
+              }
+            },
+            onvif: {
+              serial_number: directCameraId, // Use generated ID as serial number
+              model: 'Direct RTSP',
+              manufacturer: 'Manual'
+            },
+            snapshot: null,
+            directConnect: true,
+            directRtspUrl: rtspUrl // Store the original full RTSP URL
+          }
+          
+          setDirectCamera(camera)
+        }
+      } else {
+        const errorMsg = data.data?.error || data.error || t('cameraScanner.testFailed')
+        setTestError(errorMsg)
+      }
+    } catch (error) {
+      console.error('RTSP test error:', error)
+      setScanLog(prev => ({
+        ...prev,
+        status: 'error',
+        stderr: error.message
+      }))
+      setTestError(error.message)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+  
+  // Switch to direct mode
+  const handleSwitchToDirect = () => {
+    setMode('direct')
+    setScanError(null)
+    setScanLog(null)
+  }
+  
+  // Switch back to scanner mode
+  const handleSwitchToScanner = () => {
+    setMode('scanner')
+    setRtspUrl('')
+    setRtspUrlError(null)
+    setTestError(null)
+    setDirectCamera(null)
+    setScanLog(null)
+  }
+  
   const handleSaveAssignments = async () => {
     // Generate WebRTC WHEP URL: /webrtc/cam{serial_number}/whep
     // Uses nginx proxy to MediaMTX WebRTC endpoint on port 8889
     const generateWebrtcUrl = (camera, suffix = '') => {
       const serialNumber = camera.onvif?.serial_number || camera.ip.replace(/\./g, '')
       return `/webrtc/cam${serialNumber}${suffix}/whep`
+    }
+    
+    // Build RTSP URL - use direct URL if available, otherwise construct from components
+    const buildRtspUrl = (camera) => {
+      if (camera.directRtspUrl) {
+        return camera.directRtspUrl
+      }
+      return `rtsp://${camera.login}:${camera.password}@${camera.ip}:${camera.rtsp?.port || 554}${camera.rtsp?.path || '/stream0'}`
     }
     
     // Check if front camera has HD path available
@@ -178,7 +324,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       // HD stream URL for main camera view (only if path_hd available)
       webrtcUrlHd: hasHdPath ? generateWebrtcUrl(selectedFront, '_hd') : null,
       snapshotUrl: selectedFront.snapshot?.url || '',
-      rtspUrl: `rtsp://${selectedFront.login}:${selectedFront.password}@${selectedFront.ip}:${selectedFront.rtsp?.port || 554}${selectedFront.rtsp?.path || '/stream0'}`,
+      rtspUrl: buildRtspUrl(selectedFront),
       rtspPort: selectedFront.rtsp?.port || 554,
       rtspPath: selectedFront.rtsp?.path || '/stream0',
       // HD path for high quality stream (used for main camera view)
@@ -186,20 +332,22 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       login: selectedFront.login || '',
       password: selectedFront.password || '',
       serialNumber: selectedFront.onvif?.serial_number || '',
-      model: selectedFront.onvif?.model || ''
+      model: selectedFront.onvif?.model || '',
+      directConnect: selectedFront.directConnect || false
     } : null
     
     const rearCamera = selectedRear ? {
       ip: selectedRear.ip,
       webrtcUrl: generateWebrtcUrl(selectedRear),
       snapshotUrl: selectedRear.snapshot?.url || '',
-      rtspUrl: `rtsp://${selectedRear.login}:${selectedRear.password}@${selectedRear.ip}:${selectedRear.rtsp?.port || 554}${selectedRear.rtsp?.path || '/stream0'}`,
+      rtspUrl: buildRtspUrl(selectedRear),
       rtspPort: selectedRear.rtsp?.port || 554,
       rtspPath: selectedRear.rtsp?.path || '/stream0',
       login: selectedRear.login || '',
       password: selectedRear.password || '',
       serialNumber: selectedRear.onvif?.serial_number || '',
-      model: selectedRear.onvif?.model || ''
+      model: selectedRear.onvif?.model || '',
+      directConnect: selectedRear.directConnect || false
     } : null
     
     setIsSaving(true)
@@ -263,13 +411,95 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     return null
   }
   
-  // Check if camera has H.265 codec (required)
+  // Check if camera has H.265 codec (NOT supported - block only H.265, allow unknown)
   const isH265Codec = (camera) => {
     const codecs = camera.rtsp?.sdp?.codecs
     if (!codecs || !Array.isArray(codecs)) return false
     return codecs.some(codec => codec.toUpperCase() === 'H265' || codec.toUpperCase() === 'HEVC')
   }
   
+  // Render camera card (reusable for both scanner and direct modes)
+  const renderCameraCard = (camera, index) => {
+    const assignment = getCameraAssignment(camera)
+    const hasH265 = isH265Codec(camera)
+    const videoCodec = camera.rtsp?.sdp?.codecs?.[0] || null
+    return (
+      <div 
+        key={camera.ip || index} 
+        className={`camera-card ${assignment ? `assigned-${assignment}` : ''} ${hasH265 ? 'codec-unsupported' : ''}`}
+      >
+        <div className="camera-snapshot">
+          {camera.snapshot?.url ? (
+            <img 
+              src={camera.snapshot.url} 
+              alt={`Camera ${camera.ip}`}
+              onError={(e) => {
+                e.target.style.display = 'none'
+                e.target.nextSibling.style.display = 'flex'
+              }}
+            />
+          ) : null}
+          <div className="snapshot-placeholder" style={{ display: camera.snapshot?.url ? 'none' : 'flex' }}>
+            {camera.directConnect ? '📹 Direct RTSP' : t('camera.noSnapshot')}
+          </div>
+          
+          {/* Codec badge in top-right corner (only for supported codecs) */}
+          {videoCodec && !hasH265 && (
+            <div className="camera-codec supported">
+              {videoCodec}
+            </div>
+          )}
+          
+          {/* Warning overlay for H.265 cameras (not supported) */}
+          {hasH265 && (
+            <div className="codec-warning-overlay">
+              <span className="warning-icon">⚠</span>
+              <span className="warning-text">{t('cameraScanner.codecUnsupported')}</span>
+              {videoCodec && <span className="detected-codec">{videoCodec}</span>}
+            </div>
+          )}
+        </div>
+        
+        <div className="camera-info">
+          <div className="camera-ip">{camera.ip}</div>
+          {camera.onvif?.model && (
+            <div className="camera-model">
+              {camera.directConnect ? 'Direct RTSP' : `${camera.onvif.manufacturer} ${camera.onvif.model}`}
+            </div>
+          )}
+          {camera.directConnect && camera.onvif?.serial_number && (
+            <div className="camera-id">ID: {camera.onvif.serial_number}</div>
+          )}
+        </div>
+        
+        <div className="camera-assignment">
+          {assignment && (
+            <div className={`assignment-badge ${assignment}`}>
+              {assignment === 'front' ? t('camera.front') : t('camera.rear')}
+            </div>
+          )}
+        </div>
+        
+        <div className="camera-buttons">
+          <button
+            className={`assign-btn front ${assignment === 'front' ? 'selected' : ''}`}
+            onClick={() => handleAssignFront(camera)}
+            disabled={hasH265}
+          >
+            {assignment === 'front' ? `✓ ${t('camera.front')}` : t('camera.setAsFront')}
+          </button>
+          <button
+            className={`assign-btn rear ${assignment === 'rear' ? 'selected' : ''}`}
+            onClick={() => handleAssignRear(camera)}
+            disabled={hasH265}
+          >
+            {assignment === 'rear' ? `✓ ${t('camera.rear')}` : t('camera.setAsRear')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="camera-scanner-modal">
       <div className="camera-scanner-header">
@@ -277,150 +507,188 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         <span className="scanner-subtitle">{t('cameraScanner.subtitle', { id: droneId, ip: droneIp || t('cameraScanner.ipNotSet') })}</span>
       </div>
       
-      {/* H265 Codec Notice */}
+      {/* H264 Codec Notice */}
       <div className="camera-scanner-notice">
         <span className="notice-icon">⚠</span>
-        <span className="notice-text">{t('cameraScanner.h265Notice')}</span>
+        <span className="notice-text">{t('cameraScanner.h264Notice')}</span>
       </div>
       
-      {/* Terminal Output */}
-      {scanLog && (
-        <div className="camera-scanner-terminal">
-          <div className="terminal-header">
-            <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
-          </div>
-          <div className="terminal-body" ref={scanTerminalRef}>
-            <div className={`terminal-entry scan ${scanLog.status}`}>
-              <div className="terminal-command-line">
-                <span className="prompt">$</span>
-                <span className="command">{scanLog.command}</span>
-                {scanLog.status === 'running' && <span className="running-indicator">◌</span>}
+      {/* Scanner Mode Content */}
+      {mode === 'scanner' && (
+        <>
+          {/* Terminal Output - for scanner mode */}
+          {scanLog && (
+            <div className="camera-scanner-terminal">
+              <div className="terminal-header">
+                <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
               </div>
-              {scanLog.stdout && (
-                <pre className="terminal-stdout">{scanLog.stdout}</pre>
-              )}
-              {scanLog.stderr && (
-                <pre className="terminal-stderr">{scanLog.stderr}</pre>
-              )}
-              {scanLog.status === 'success' && scanLog.camerasFound !== undefined && (
-                <div className="terminal-result success">
-                  ✓ {t('cameraScanner.foundCameras', { count: scanLog.camerasFound })}
+              <div className="terminal-body" ref={scanTerminalRef}>
+                <div className={`terminal-entry scan ${scanLog.status}`}>
+                  <div className="terminal-command-line">
+                    <span className="prompt">$</span>
+                    <span className="command">{scanLog.command}</span>
+                    {scanLog.status === 'running' && <span className="running-indicator">◌</span>}
+                  </div>
+                  {scanLog.stdout && (
+                    <pre className="terminal-stdout">{scanLog.stdout}</pre>
+                  )}
+                  {scanLog.stderr && (
+                    <pre className="terminal-stderr">{scanLog.stderr}</pre>
+                  )}
+                  {scanLog.status === 'success' && scanLog.camerasFound !== undefined && (
+                    <div className="terminal-result success">
+                      ✓ {t('cameraScanner.foundCameras', { count: scanLog.camerasFound })}
+                    </div>
+                  )}
+                  {scanLog.status === 'error' && (
+                    <div className="terminal-result error">
+                      ✗ {t('cameraScanner.operationFailed')}
+                    </div>
+                  )}
                 </div>
+              </div>
+            </div>
+          )}
+          
+          {scanError && (
+            <div className="scan-error">
+              ⚠ {scanError}
+            </div>
+          )}
+          
+          {/* Cameras Grid */}
+          {cameras.length > 0 && (
+            <div className="cameras-grid">
+              {cameras.map((camera, index) => renderCameraCard(camera, index))}
+            </div>
+          )}
+          
+          {/* Scan Button - below cameras */}
+          <div className="camera-scanner-actions">
+            <button 
+              className={`scan-btn ${isScanning ? 'scanning' : ''}`}
+              onClick={handleScan}
+              disabled={isScanning || !droneIp}
+            >
+              {isScanning ? (
+                <>
+                  <span className="scan-spinner">◌</span>
+                  {t('cameraScanner.scanning')}
+                </>
+              ) : cameras.length > 0 ? (
+                t('cameraScanner.rescan')
+              ) : (
+                t('cameraScanner.scanForCameras')
               )}
-              {scanLog.status === 'error' && (
-                <div className="terminal-result error">
-                  ✗ {t('cameraScanner.operationFailed')}
-                </div>
+            </button>
+            <button 
+              className="direct-connect-btn"
+              onClick={handleSwitchToDirect}
+              disabled={isScanning || isSaving}
+            >
+              {t('cameraScanner.directConnect')}
+            </button>
+          </div>
+        </>
+      )}
+      
+      {/* Direct Connect Mode Content */}
+      {mode === 'direct' && (
+        <>
+          {/* 1. RTSP URL Input */}
+          <div className="direct-connect-form">
+            <div className="rtsp-input-group">
+              <label htmlFor="rtsp-url">{t('cameraScanner.rtspUrlLabel')}</label>
+              <input
+                type="text"
+                id="rtsp-url"
+                className={`rtsp-url-input ${rtspUrlError ? 'error' : ''}`}
+                placeholder={t('cameraScanner.rtspUrlPlaceholder')}
+                value={rtspUrl}
+                onChange={handleRtspUrlChange}
+                disabled={isTesting || isSaving}
+              />
+              <span className="rtsp-url-hint">{t('cameraScanner.rtspUrlHint')}</span>
+              {rtspUrlError && (
+                <span className="rtsp-url-error">{rtspUrlError}</span>
               )}
             </div>
-          </div>
-        </div>
-      )}
-      
-      {scanError && (
-        <div className="scan-error">
-          ⚠ {scanError}
-        </div>
-      )}
-      
-      {/* Cameras Grid */}
-      {cameras.length > 0 && (
-        <div className="cameras-grid">
-          {cameras.map((camera, index) => {
-            const assignment = getCameraAssignment(camera)
-            const hasH265 = isH265Codec(camera)
-            const videoCodec = camera.rtsp?.sdp?.codecs?.[0] || null
-            return (
-              <div 
-                key={camera.ip || index} 
-                className={`camera-card ${assignment ? `assigned-${assignment}` : ''} ${!hasH265 ? 'codec-unsupported' : ''}`}
+            
+            {/* 2. Buttons Test / Back */}
+            <div className="direct-connect-actions">
+              <button 
+                className={`test-btn ${isTesting ? 'testing' : ''}`}
+                onClick={handleTestRtsp}
+                disabled={isTesting || !rtspUrl || isSaving}
               >
-                <div className="camera-snapshot">
-                  {camera.snapshot?.url ? (
-                    <img 
-                      src={camera.snapshot.url} 
-                      alt={`Camera ${camera.ip}`}
-                      onError={(e) => {
-                        e.target.style.display = 'none'
-                        e.target.nextSibling.style.display = 'flex'
-                      }}
-                    />
-                  ) : null}
-                  <div className="snapshot-placeholder" style={{ display: camera.snapshot?.url ? 'none' : 'flex' }}>
-                    {t('camera.noSnapshot')}
+                {isTesting ? (
+                  <>
+                    <span className="scan-spinner">◌</span>
+                    {t('cameraScanner.testing')}
+                  </>
+                ) : (
+                  t('cameraScanner.testConnection')
+                )}
+              </button>
+              <button 
+                className="back-btn"
+                onClick={handleSwitchToScanner}
+                disabled={isTesting || isSaving}
+              >
+                {t('cameraScanner.backToScanner')}
+              </button>
+            </div>
+          </div>
+          
+          {/* 3. Terminal Output - for direct mode */}
+          {scanLog && (
+            <div className="camera-scanner-terminal">
+              <div className="terminal-header">
+                <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
+              </div>
+              <div className="terminal-body" ref={scanTerminalRef}>
+                <div className={`terminal-entry scan ${scanLog.status}`}>
+                  <div className="terminal-command-line">
+                    <span className="prompt">$</span>
+                    <span className="command">{scanLog.command}</span>
+                    {scanLog.status === 'running' && <span className="running-indicator">◌</span>}
                   </div>
-                  
-                  {/* Warning overlay for non-H.265 cameras */}
-                  {!hasH265 && (
-                    <div className="codec-warning-overlay">
-                      <span className="warning-icon">⚠</span>
-                      <span className="warning-text">{t('cameraScanner.codecUnsupported')}</span>
-                      {videoCodec && <span className="detected-codec">{videoCodec}</span>}
+                  {scanLog.stdout && (
+                    <pre className="terminal-stdout">{scanLog.stdout}</pre>
+                  )}
+                  {scanLog.stderr && (
+                    <pre className="terminal-stderr">{scanLog.stderr}</pre>
+                  )}
+                  {scanLog.status === 'success' && directCamera && (
+                    <div className="terminal-result success">
+                      ✓ {t('cameraScanner.testSuccess')}
                     </div>
                   )}
-                </div>
-                
-                <div className="camera-info">
-                  <div className="camera-ip">{camera.ip}</div>
-                  {camera.onvif?.model && (
-                    <div className="camera-model">{camera.onvif.manufacturer} {camera.onvif.model}</div>
-                  )}
-                  {videoCodec && (
-                    <div className={`camera-codec ${hasH265 ? 'supported' : 'unsupported'}`}>
-                      {videoCodec}
+                  {scanLog.status === 'error' && (
+                    <div className="terminal-result error">
+                      ✗ {t('cameraScanner.operationFailed')}
                     </div>
                   )}
-                </div>
-                
-                <div className="camera-assignment">
-                  {assignment && (
-                    <div className={`assignment-badge ${assignment}`}>
-                      {assignment === 'front' ? t('camera.front') : t('camera.rear')}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="camera-buttons">
-                  <button
-                    className={`assign-btn front ${assignment === 'front' ? 'selected' : ''}`}
-                    onClick={() => handleAssignFront(camera)}
-                    disabled={!hasH265}
-                  >
-                    {assignment === 'front' ? `✓ ${t('camera.front')}` : t('camera.setAsFront')}
-                  </button>
-                  <button
-                    className={`assign-btn rear ${assignment === 'rear' ? 'selected' : ''}`}
-                    onClick={() => handleAssignRear(camera)}
-                    disabled={!hasH265}
-                  >
-                    {assignment === 'rear' ? `✓ ${t('camera.rear')}` : t('camera.setAsRear')}
-                  </button>
                 </div>
               </div>
-            )
-          })}
-        </div>
-      )}
-      
-      {/* Scan Button - below cameras */}
-      <div className="camera-scanner-actions">
-        <button 
-          className={`scan-btn ${isScanning ? 'scanning' : ''}`}
-          onClick={handleScan}
-          disabled={isScanning || !droneIp}
-        >
-          {isScanning ? (
-            <>
-              <span className="scan-spinner">◌</span>
-              {t('cameraScanner.scanning')}
-            </>
-          ) : cameras.length > 0 ? (
-            t('cameraScanner.rescan')
-          ) : (
-            t('cameraScanner.scanForCameras')
+            </div>
           )}
-        </button>
-      </div>
+          
+          {/* 4. Error Warning Notice */}
+          {testError && (
+            <div className="direct-test-error">
+              ⚠ {testError}
+            </div>
+          )}
+          
+          {/* 5. Camera Cards */}
+          {directCamera && (
+            <div className="cameras-grid">
+              {renderCameraCard(directCamera, 0)}
+            </div>
+          )}
+        </>
+      )}
       
       <div className="camera-scanner-footer">
         <button className="cancel-btn" onClick={onClose} disabled={isSaving}>

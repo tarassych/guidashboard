@@ -215,8 +215,8 @@
   "cameraScanner": {
     "title": "Camera Scanner",
     "subtitle": "Drone #{{id}} • IP: {{ip}}",
-    "h265Notice": "Only cameras with H.265 video codec are supported",
-    "codecUnsupported": "H.265 required",
+    "h264Notice": "Only cameras with H.264 video codec are supported",
+    "codecUnsupported": "H.265 not supported",
     "ipNotSet": "Not set",
     "scanForCameras": "Scan for Cameras",
     "rescan": "Rescan for Cameras",
@@ -230,7 +230,18 @@
     "profileSaved": "Profile saved",
     "updatingMmtx": "Updating MediaMTX configuration...",
     "mmtxConfigSaved": "MMTX CONFIG SAVED - You can now close this window",
-    "operationFailed": "Operation failed"
+    "operationFailed": "Operation failed",
+    "directConnect": "Direct Camera Connect",
+    "directConnectDesc": "Connect camera using RTSP URL directly",
+    "rtspUrlPlaceholder": "rtsp://user:password@ip:port/path",
+    "rtspUrlLabel": "RTSP URL",
+    "rtspUrlHint": "Format: rtsp://user:password@ip:port/path",
+    "rtspUrlInvalid": "Invalid RTSP URL format",
+    "testConnection": "Test Connection",
+    "testing": "Testing...",
+    "testSuccess": "Connection successful",
+    "testFailed": "Connection failed",
+    "backToScanner": "Back to Scanner"
   },
   
   "mediamtx": {

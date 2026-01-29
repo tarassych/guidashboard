@@ -217,8 +217,8 @@
   "cameraScanner": {
     "title": "Сканер камер",
     "subtitle": "Дрон #{{id}} • IP: {{ip}}",
-    "h265Notice": "Підтримуються лише камери з відеокодеком H.265",
-    "codecUnsupported": "Потрібен H.265",
+    "h264Notice": "Підтримуються лише камери з відеокодеком H.264",
+    "codecUnsupported": "H.265 не підтримується",
     "ipNotSet": "Не встановлено",
     "scanForCameras": "Сканувати камери",
     "rescan": "Повторне сканування",
@@ -232,7 +232,18 @@
     "profileSaved": "Профіль збережено",
     "updatingMmtx": "Оновлення конфігурації MediaMTX...",
     "mmtxConfigSaved": "MMTX НАЛАШТОВАНО - Тепер можете закрити це вікно",
-    "operationFailed": "Операція не вдалася"
+    "operationFailed": "Операція не вдалася",
+    "directConnect": "Пряме підключення камери",
+    "directConnectDesc": "Підключити камеру напряму через RTSP URL",
+    "rtspUrlPlaceholder": "rtsp://user:password@ip:port/path",
+    "rtspUrlLabel": "RTSP URL",
+    "rtspUrlHint": "Формат: rtsp://user:password@ip:port/path",
+    "rtspUrlInvalid": "Невірний формат RTSP URL",
+    "testConnection": "Перевірити з'єднання",
+    "testing": "Перевірка...",
+    "testSuccess": "З'єднання успішне",
+    "testFailed": "З'єднання не вдалося",
+    "backToScanner": "Назад до сканера"
   },
   
   "mediamtx": {

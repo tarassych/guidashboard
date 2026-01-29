@@ -1,10 +1,11 @@
 /**
  * Camera-related API routes
  * - GET /api/scan-cameras/:ip - Scan for cameras
+ * - POST /api/check-rtsp - Test RTSP connection
  * - POST /api/update-mediamtx - Update MediaMTX config
  */
 import express from 'express';
-import { scanCameras } from '../lib/scripts.js';
+import { scanCameras, checkRtspConnection } from '../lib/scripts.js';
 import { updateProfileCamerasAsync } from '../lib/mediamtx.js';
 
 const router = express.Router();
@@ -29,6 +30,33 @@ router.get('/scan-cameras/:ip', async (req, res) => {
     command: result.command,
     stdout: result.stdout,
     stderr: result.stderr
+  });
+});
+
+/**
+ * POST /api/check-rtsp
+ * Test RTSP connection using rtsp_check.py
+ * Body: { rtspUrl: string }
+ */
+router.post('/check-rtsp', async (req, res) => {
+  const { rtspUrl } = req.body;
+  
+  if (!rtspUrl) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'RTSP URL is required' 
+    });
+  }
+  
+  const result = await checkRtspConnection(rtspUrl);
+  
+  res.json({
+    success: result.success,
+    data: result.data,
+    command: result.command,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    error: result.error
   });
 });
 

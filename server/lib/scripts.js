@@ -135,5 +135,60 @@ export async function scanCameras(ip) {
   };
 }
 
+/**
+ * Run rtsp_check.py to test RTSP connection
+ * @param {string} rtspUrl - Full RTSP URL to test
+ * @returns {Promise<Object>} Result with connection status
+ */
+export async function checkRtspConnection(rtspUrl) {
+  // Use python3 to run the script with quoted URL
+  const scriptPath = path.join(config.scriptsPath, 'rtsp_check.py');
+  const command = `cd ${config.scriptsPath} && python3 rtsp_check.py "${rtspUrl}"`;
+  
+  // Check if script exists
+  if (!fs.existsSync(scriptPath)) {
+    return {
+      success: false,
+      error: `Script not found: rtsp_check.py`,
+      path: scriptPath,
+      command: null,
+      stdout: '',
+      stderr: '',
+      data: null
+    };
+  }
+  
+  try {
+    const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+    
+    // Parse JSON response
+    let data = null;
+    try {
+      const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        data = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      // Parsing failed
+    }
+    
+    return {
+      success: true,
+      data,
+      command: `rtsp_check.py "${rtspUrl}"`,
+      stdout: stdout || '',
+      stderr: stderr || ''
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      command: `rtsp_check.py "${rtspUrl}"`,
+      stdout: error.stdout || '',
+      stderr: error.stderr || '',
+      data: null
+    };
+  }
+}
 
 

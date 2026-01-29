@@ -1465,6 +1465,7 @@ section h2 {
   padding: 1rem 1.5rem;
   display: flex;
   justify-content: center;
+  gap: 1rem;
 }
 
 .scan-btn {
@@ -1494,6 +1495,171 @@ section h2 {
 
 .scan-btn.scanning {
   background: linear-gradient(135deg, #1a3322, #2a4433);
+}
+
+/* Direct Connect Button */
+.direct-connect-btn {
+  padding: 0.8rem 2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #1a2233, #2a3344);
+  border: 1px solid #00aaff;
+  color: #00aaff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.direct-connect-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2a3344, #3a4455);
+  box-shadow: 0 0 20px rgba(0, 170, 255, 0.3);
+}
+
+.direct-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Direct Connect Form */
+.direct-connect-form {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+}
+
+.rtsp-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.rtsp-input-group label {
+  font-size: 0.9rem;
+  color: #00aaff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rtsp-url-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 20, 40, 0.8);
+  border: 1px solid rgba(0, 170, 255, 0.3);
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.rtsp-url-input:focus {
+  outline: none;
+  border-color: #00aaff;
+  box-shadow: 0 0 15px rgba(0, 170, 255, 0.2);
+}
+
+.rtsp-url-input.error {
+  border-color: #ff6666;
+  box-shadow: 0 0 10px rgba(255, 100, 100, 0.2);
+}
+
+.rtsp-url-input::placeholder {
+  color: #445566;
+}
+
+.rtsp-url-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rtsp-url-hint {
+  font-size: 0.75rem;
+  color: #668877;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.rtsp-url-error {
+  font-size: 0.8rem;
+  color: #ff6666;
+  margin-top: 0.25rem;
+}
+
+/* Direct Connect Actions */
+.direct-connect-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.test-btn {
+  padding: 0.8rem 2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #003322, #004433);
+  border: 1px solid var(--hud-primary, #00ff88);
+  color: var(--hud-primary, #00ff88);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.test-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #004433, #005544);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.test-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.test-btn.testing {
+  background: linear-gradient(135deg, #1a3322, #2a4433);
+}
+
+.back-btn {
+  padding: 0.8rem 2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid #666;
+  color: #888;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.back-btn:hover:not(:disabled) {
+  border-color: #888;
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.back-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Direct Test Error Message */
+.direct-test-error {
+  margin: 0 1.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: 4px;
+  color: #ffaa00;
+  font-size: 0.9rem;
 }
 
 .scan-spinner {
@@ -1613,27 +1779,31 @@ section h2 {
   border-color: rgba(255, 68, 68, 0.6);
 }
 
-/* Codec badge in camera info */
+/* Codec badge positioned over camera snapshot */
 .camera-codec {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
   font-weight: 600;
-  padding: 0.15rem 0.4rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 3px;
-  margin-top: 0.35rem;
-  display: inline-block;
+  z-index: 4;
 }
 
 .camera-codec.supported {
-  background: rgba(0, 255, 136, 0.15);
-  color: #00ff88;
-  border: 1px solid rgba(0, 255, 136, 0.3);
+  background: rgba(0, 255, 136, 0.9);
+  color: #001a0a;
+  border: 1px solid rgba(0, 255, 136, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3);
 }
 
 .camera-codec.unsupported {
-  background: rgba(255, 68, 68, 0.15);
-  color: #ff6666;
-  border: 1px solid rgba(255, 68, 68, 0.3);
+  background: rgba(255, 68, 68, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 68, 68, 0.5);
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
 }
 
 /* Disabled assign buttons */
@@ -1666,6 +1836,14 @@ section h2 {
   font-size: 0.75rem;
   color: #668877;
   margin-top: 0.25rem;
+}
+
+.camera-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #00aaff;
+  margin-top: 0.2rem;
+  opacity: 0.7;
 }
 
 .camera-assignment {

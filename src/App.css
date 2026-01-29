@@ -434,6 +434,25 @@ body {
   visibility: visible;
 }
 
+/* Compass row - compass + drone name */
+.hud-compass-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* Drone Name - next to compass, styled like logo-text */
+.hud-drone-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--theme-accent-primary, #00ff88);
+  text-shadow: 0 0 8px var(--theme-accent-primary, #00ff88);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
 /* ============================================
    ACTIVATION PASSWORD MODAL (OSD)
    ============================================ */
@@ -1144,11 +1163,12 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 12px;
-  padding: 8px 12px;
+  padding: 12px;
   border-width: 1px;
   border-style: solid;
   border-radius: 8px;
+  width: 120px;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
