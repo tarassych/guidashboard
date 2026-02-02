@@ -9,6 +9,9 @@ import CameraFeed from './components/CameraFeed'
 import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
 import FoxyLogo from './components/FoxyLogo'
 import { isAuthenticated, setAuthCookie } from './utils/auth'
+import { DRONE_TYPES } from './telemetrySchemas'
+import GroundDroneOSD from './GroundDroneOSD'
+import FlyingDroneOSD from './FlyingDroneOSD'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
@@ -365,134 +368,60 @@ function App() {
   // Determine which stream to use for main camera
   const mainCameraUrl = (hdMode && hasHdStream) ? frontCameraUrlHd : frontCameraUrl
 
+  // Get drone type from profile
+  const droneType = droneProfile?.droneType || DRONE_TYPES.FOXY
+
+  // Render OSD based on drone type
+  const renderOSD = () => {
+    if (droneType === DRONE_TYPES.GENERIC_FPV) {
+      return (
+        <FlyingDroneOSD
+          telemetry={telemetry}
+          droneName={droneName}
+          droneType={droneType}
+          isActive={isActive}
+          elrsConnected={elrsConnected}
+          hdMode={hdMode}
+          onHdToggle={() => setHdMode(!hdMode)}
+          mainCameraUrl={mainCameraUrl}
+          hasHdStream={hasHdStream}
+          onShareClick={() => setShowShareModal(true)}
+          onControlClick={handleControlIconClick}
+          directions={directions}
+          directionIndex={directionIndex}
+        />
+      )
+    }
+    
+    // Default: Ground drone (Foxy)
+    return (
+      <GroundDroneOSD
+        telemetry={telemetry}
+        droneName={droneName}
+        droneType={droneType}
+        isActive={isActive}
+        elrsConnected={elrsConnected}
+        hdMode={hdMode}
+        onHdToggle={() => setHdMode(!hdMode)}
+        mainCameraUrl={mainCameraUrl}
+        rearCameraUrl={rearCameraUrl}
+        hasHdStream={hasHdStream}
+        onShareClick={() => setShowShareModal(true)}
+        onControlClick={handleControlIconClick}
+        directions={directions}
+        directionIndex={directionIndex}
+      />
+    )
+  }
+
   return (
     <div className="hud-container">
-      {/* Full-screen Front Camera Background - HD or SD based on switch */}
-      <div className="main-camera-bg">
-        <CameraFeed streamUrl={mainCameraUrl} />
-      </div>
-
-      {/* HUD Overlay */}
-      <div className="hud-overlay">
-        {/* Top Bar */}
-        <div className="hud-top-bar">
-          <div className="hud-logo">
-            <Link to="/" className="back-to-dashboard" title={t('nav.backToDashboard')}>←</Link>
-            <ShareButton onClick={() => setShowShareModal(true)} />
-            <FoxyLogo className="logo-icon" size={28} />
-            <span className="logo-text">{t('dashboard.title')}</span>
-          </div>
-          
-          <div className="hud-status-center">
-            <span className={`status-mode ${telemetry.md_str.toLowerCase().replace(/\s+/g, '-')}`}>
-              {telemetry.md_str}
-            </span>
-            {!telemetry.connected && <span className="status-offline">{t('common.offline')}</span>}
-            {isActive && <span className="status-active">{t('common.active')}</span>}
-          </div>
-
-          <div className="hud-right-indicators">
-            <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>FAILSAFE:{telemetry.fs}</span>
-            <BatteryIndicator voltage={telemetry.batt_v} />
-          </div>
-        </div>
-
-        {/* Fuse Switches & Rear View Mirror */}
-        <div className="hud-mirror-section">
-          <FuseSwitch label="F1" armed={telemetry.f1} />
-          <div className="rear-mirror">
-            <div className="mirror-frame">
-              <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
-              <span className="mirror-label">{t('osd.rear')}</span>
-            </div>
-          </div>
-          <FuseSwitch label="F2" armed={telemetry.f2} />
-        </div>
-
-        {/* Heading Tape or Warning Banner */}
-        {(telemetry.f1 && telemetry.f2) ? (
-          <div className="hud-warning-banner">
-            <WarningBanner />
-          </div>
-        ) : (
-          <div className="hud-heading-tape">
-            <HeadingTape heading={telemetry.heading} />
-          </div>
-        )}
-
-        {/* Left Panel - Compass & Drone Name & Satellites & Quality */}
-        <div className="hud-left-panel">
-          <div className="hud-compass-row">
-            <HudCompass heading={telemetry.heading} direction={directions[directionIndex]} />
-            <span className="hud-drone-name">{droneName.toUpperCase()}</span>
-          </div>
-          <SatelliteIndicator satellites={telemetry.satellites} />
-          {hasHdStream && (
-            <QualitySwitch isHd={hdMode} onToggle={() => setHdMode(!hdMode)} />
-          )}
-        </div>
-
-        {/* Right Panel - Speedometer & Power */}
-        <div className="hud-right-panel">
-          <Speedometer speed={telemetry.speed} dist={telemetry.dist} />
-          <PowerIndicator power={telemetry.power} />
-        </div>
-
-        {/* Map with integrated Altimeter */}
-        <div className="hud-minimap-container">
-          <MapPanel 
-            pathHistory={telemetry.pathHistory} 
-            heading={telemetry.heading}
-            lat={telemetry.latitude}
-            lng={telemetry.longitude}
-            altitude={telemetry.altitude}
-          />
-        </div>
-
-        {/* Center Crosshair */}
-        <div className="hud-crosshair">
-          <div className="crosshair-h"></div>
-          <div className="crosshair-v"></div>
-          <div className="crosshair-center">◇</div>
-        </div>
-
-        {/* Telemetry Log */}
-        <div className="hud-telemetry-log-container">
-          <TelemetryLog droneId={droneId} onTelemetryUpdate={handleTelemetryUpdate} />
-        </div>
-
-        {/* Control Icon - shows active (green), inactive (grey), or disconnected (red) state */}
-        {/* Inactive state is clickable to activate control */}
-        <div 
-          className={`hud-active-control-icon ${!elrsConnected ? 'disconnected' : (isActive ? 'active' : 'inactive')} ${elrsConnected && !isActive ? 'clickable' : ''}`}
-          onClick={handleControlIconClick}
-          title={elrsConnected && !isActive ? t('control.activate') : undefined}
-        >
-          <svg viewBox="0 0 50 50" className="active-control-svg">
-            {/* Signal waves */}
-            <path className="signal-wave wave-1" d="M 22 8 Q 25 5, 28 8" />
-            <path className="signal-wave wave-2" d="M 19 5 Q 25 0, 31 5" />
-            <path className="signal-wave wave-3" d="M 16 2 Q 25 -5, 34 2" />
-            {/* Antenna */}
-            <line x1="25" y1="14" x2="25" y2="8" className="antenna" />
-            <circle cx="25" cy="7" r="1.5" className="antenna-tip" />
-            {/* Controller */}
-            <rect x="12" y="14" width="26" height="18" rx="3" className="controller-body" />
-            {/* Joysticks */}
-            <circle cx="19" cy="23" r="4" className="joystick-base-small" />
-            <circle cx="19" cy="23" r="2" className="joystick-stick-left" />
-            <circle cx="31" cy="23" r="4" className="joystick-base-small" />
-            <circle cx="31" cy="23" r="2" className="joystick-stick-right" />
-            {/* Indicator */}
-            <rect x="23" y="17" width="4" height="2" rx="1" className="controller-indicator" />
-          </svg>
-          {elrsConnected && !isActive && <span className="control-tooltip">{t('control.activate')}</span>}
-        </div>
-
-        {/* Bottom Telemetry Strip */}
-        <div className="hud-bottom-strip">
-          <TelemetryStrip telemetry={telemetry} />
-        </div>
+      {/* Render OSD based on drone type */}
+      {renderOSD()}
+      
+      {/* Telemetry Log - hidden, used for data fetching */}
+      <div className="hud-telemetry-log-container">
+        <TelemetryLog droneId={droneId} onTelemetryUpdate={handleTelemetryUpdate} />
       </div>
       
       {/* Share Info Modal */}
