@@ -79,7 +79,13 @@
     "sat": "SAT",
     "mode": "MODE",
     "time": "TIME",
-    "fs": "FS"
+    "fs": "FS",
+    "pitch": "PITCH",
+    "roll": "ROLL",
+    "yaw": "YAW",
+    "flightMode": "MODE",
+    "throttle": "THR",
+    "armed": "ARM"
   },
   
   "battery": {
@@ -188,6 +194,14 @@
     "pairingFailed": "Pairing failed",
     "pairingSuccess": "Drone {{id}} paired successfully!",
     "parsingDroneId": "Parsing Drone ID from response..."
+  },
+  
+  "droneType": {
+    "title": "Drone Type",
+    "foxy": "Foxy",
+    "genericFpv": "Generic FPV",
+    "ground": "Ground",
+    "fpv": "FPV"
   },
   
   "pairing": {

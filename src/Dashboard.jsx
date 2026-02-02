@@ -7,6 +7,12 @@ import LanguageSwitcher from './components/LanguageSwitcher'
 import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
 import FoxyLogo from './components/FoxyLogo'
 import { isAuthenticated, setAuthCookie } from './utils/auth'
+import { 
+  DRONE_TYPES, 
+  DRONE_TYPE_LABELS_SHORT,
+  createInitialState as createTelemetryState,
+  getBatteryStatus
+} from './telemetrySchemas'
 import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
@@ -59,6 +65,62 @@ function JoystickIcon({ isActive, elrsConnected, onActivateClick }) {
       </svg>
       {isClickable && <span className="joystick-tooltip">{t('control.activate')}</span>}
     </div>
+  )
+}
+
+// Drone type icons
+function GroundDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Antenna waves */}
+      <ellipse cx="42" cy="12" rx="8" ry="4" stroke={color} strokeWidth="2" fill="none" opacity="0.6"/>
+      <ellipse cx="42" cy="12" rx="14" ry="7" stroke={color} strokeWidth="2" fill="none" opacity="0.4"/>
+      {/* Antenna */}
+      <line x1="42" y1="16" x2="42" y2="28" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="42" cy="14" r="3" fill={color}/>
+      {/* Body */}
+      <rect x="12" y="28" width="40" height="20" rx="3" fill={color}/>
+      {/* Wheels */}
+      <circle cx="18" cy="54" r="6" stroke={color} strokeWidth="3" fill="none"/>
+      <circle cx="46" cy="54" r="6" stroke={color} strokeWidth="3" fill="none"/>
+      <circle cx="18" cy="54" r="2" fill={color}/>
+      <circle cx="46" cy="54" r="2" fill={color}/>
+      {/* Axles */}
+      <line x1="18" y1="48" x2="18" y2="50" stroke={color} strokeWidth="3"/>
+      <line x1="46" y1="48" x2="46" y2="50" stroke={color} strokeWidth="3"/>
+    </svg>
+  )
+}
+
+function FpvDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Arms */}
+      <line x1="32" y1="32" x2="14" y2="14" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <line x1="32" y1="32" x2="50" y2="14" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <line x1="32" y1="32" x2="14" y2="50" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <line x1="32" y1="32" x2="50" y2="50" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      {/* Center body */}
+      <circle cx="32" cy="32" r="8" fill={color}/>
+      <circle cx="32" cy="32" r="4" fill="var(--hud-background, #0a0a0a)" stroke={color} strokeWidth="2"/>
+      {/* Propeller circles */}
+      <circle cx="14" cy="14" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      <circle cx="50" cy="14" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      <circle cx="14" cy="50" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      <circle cx="50" cy="50" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      {/* Propeller centers */}
+      <circle cx="14" cy="14" r="3" fill={color}/>
+      <circle cx="50" cy="14" r="3" fill={color}/>
+      <circle cx="14" cy="50" r="3" fill={color}/>
+      <circle cx="50" cy="50" r="3" fill={color}/>
+      {/* Propeller blades */}
+      <ellipse cx="14" cy="14" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(45 14 14)"/>
+      <ellipse cx="50" cy="14" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(-45 50 14)"/>
+      <ellipse cx="14" cy="50" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(-45 14 50)"/>
+      <ellipse cx="50" cy="50" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(45 50 50)"/>
+    </svg>
   )
 }
 
@@ -118,11 +180,26 @@ function DroneCard({
           <span className="drone-number">#{droneNumber}</span>
         </div>
         
+        {/* Drone type indicator - right center */}
+        <div className="drone-type-overlay">
+          {profile?.droneType === DRONE_TYPES.GENERIC_FPV ? (
+            <>
+              <FpvDroneIcon size={32} active={true} />
+              <span className="type-label">{DRONE_TYPE_LABELS_SHORT[DRONE_TYPES.GENERIC_FPV]}</span>
+            </>
+          ) : (
+            <>
+              <GroundDroneIcon size={32} active={true} />
+              <span className="type-label">{DRONE_TYPE_LABELS_SHORT[DRONE_TYPES.FOXY]}</span>
+            </>
+          )}
+        </div>
+        
         {/* OSD Elements overlaid on video */}
         <div className="card-osd-overlay">
           {/* Top row - Battery & Mode */}
           <div className="osd-top">
-            <span className={`osd-battery ${telemetry?.batt_v >= 35 ? 'good' : telemetry?.batt_v >= 30 ? 'warn' : 'crit'}`}>
+            <span className={`osd-battery ${getBatteryStatus(telemetry?.batt_v || 0, profile?.droneType)}`}>
               ⚡ {telemetry?.batt_v?.toFixed(1) || '--'}V
             </span>
             <span className="osd-mode">{telemetry?.md_str || '--'}</span>
@@ -164,29 +241,6 @@ function EmptySlot({ slotNumber }) {
           <span className="drone-number">#{slotNumber}</span>
         </div>
       </div>
-    </div>
-  )
-}
-
-// Detected drone alert - drones with telemetry but no profile
-function DetectedDroneAlert({ detectedDrones, onAddProfile }) {
-  const { t } = useTranslation()
-  if (!detectedDrones || detectedDrones.length === 0) return null
-  
-  return (
-    <div className="detected-drone-alert">
-      <div className="alert-icon"><FoxyLogo size={28} /></div>
-      <div className="alert-content">
-        <span className="alert-title">{t('dashboard.detectedDrones', { count: detectedDrones.length })}</span>
-        <div className="alert-drone-list">
-          {detectedDrones.map(drone => (
-            <span key={drone.droneId} className="alert-drone-id">#{drone.droneId}</span>
-          ))}
-        </div>
-      </div>
-      <button className="alert-action" onClick={onAddProfile}>
-        {t('dashboard.configureProfiles')}
-      </button>
     </div>
   )
 }
@@ -547,13 +601,6 @@ function Dashboard() {
           <LanguageSwitcher />
         </div>
       </header>
-      
-      {detectedDrones.length > 0 && (
-        <DetectedDroneAlert 
-          detectedDrones={detectedDrones} 
-          onAddProfile={() => navigate('/settings')} 
-        />
-      )}
       
       <main className="dashboard-grid">
         {/* Always render exactly 6 slots */}

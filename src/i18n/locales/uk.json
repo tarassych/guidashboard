@@ -81,7 +81,13 @@
     "sat": "СУП",
     "mode": "РЕЖ",
     "time": "ЧАС",
-    "fs": "АВР"
+    "fs": "АВР",
+    "pitch": "ТАНГАЖ",
+    "roll": "КРЕН",
+    "yaw": "РИСКАННЯ",
+    "flightMode": "РЕЖИМ",
+    "throttle": "ГАЗ",
+    "armed": "АКТИВН"
   },
   
   "battery": {
@@ -190,6 +196,14 @@
     "pairingFailed": "Помилка з'єднання",
     "pairingSuccess": "Дрон {{id}} успішно з'єднано!",
     "parsingDroneId": "Отримання ID дрона з відповіді..."
+  },
+  
+  "droneType": {
+    "title": "Тип дрона",
+    "foxy": "Foxy",
+    "genericFpv": "Звичайний FPV",
+    "ground": "Наземний",
+    "fpv": "FPV"
   },
   
   "pairing": {

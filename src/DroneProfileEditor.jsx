@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import { useTranslation } from 'react-i18next'
 import config from './config'
+import { DRONE_TYPES, DRONE_TYPE_LABELS } from './telemetrySchemas'
 import './DroneProfileEditor.css'
 import './Dashboard.css'
 
@@ -63,10 +64,67 @@ function DroneLocationMap({ latitude, longitude }) {
   )
 }
 
+// Drone type icons
+function GroundDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Antenna waves */}
+      <ellipse cx="42" cy="12" rx="8" ry="4" stroke={color} strokeWidth="2" fill="none" opacity="0.6"/>
+      <ellipse cx="42" cy="12" rx="14" ry="7" stroke={color} strokeWidth="2" fill="none" opacity="0.4"/>
+      {/* Antenna */}
+      <line x1="42" y1="16" x2="42" y2="28" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="42" cy="14" r="3" fill={color}/>
+      {/* Body */}
+      <rect x="12" y="28" width="40" height="20" rx="3" fill={color}/>
+      {/* Wheels */}
+      <circle cx="18" cy="54" r="6" stroke={color} strokeWidth="3" fill="none"/>
+      <circle cx="46" cy="54" r="6" stroke={color} strokeWidth="3" fill="none"/>
+      <circle cx="18" cy="54" r="2" fill={color}/>
+      <circle cx="46" cy="54" r="2" fill={color}/>
+      {/* Axles */}
+      <line x1="18" y1="48" x2="18" y2="50" stroke={color} strokeWidth="3"/>
+      <line x1="46" y1="48" x2="46" y2="50" stroke={color} strokeWidth="3"/>
+    </svg>
+  )
+}
+
+function FpvDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Arms */}
+      <line x1="32" y1="32" x2="14" y2="14" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <line x1="32" y1="32" x2="50" y2="14" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <line x1="32" y1="32" x2="14" y2="50" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <line x1="32" y1="32" x2="50" y2="50" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      {/* Center body */}
+      <circle cx="32" cy="32" r="8" fill={color}/>
+      <circle cx="32" cy="32" r="4" fill="var(--hud-background, #0a0a0a)" stroke={color} strokeWidth="2"/>
+      {/* Propeller circles */}
+      <circle cx="14" cy="14" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      <circle cx="50" cy="14" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      <circle cx="14" cy="50" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      <circle cx="50" cy="50" r="9" stroke={color} strokeWidth="2" fill="none"/>
+      {/* Propeller centers */}
+      <circle cx="14" cy="14" r="3" fill={color}/>
+      <circle cx="50" cy="14" r="3" fill={color}/>
+      <circle cx="14" cy="50" r="3" fill={color}/>
+      <circle cx="50" cy="50" r="3" fill={color}/>
+      {/* Propeller blades */}
+      <ellipse cx="14" cy="14" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(45 14 14)"/>
+      <ellipse cx="50" cy="14" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(-45 50 14)"/>
+      <ellipse cx="14" cy="50" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(-45 14 50)"/>
+      <ellipse cx="50" cy="50" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(45 50 50)"/>
+    </svg>
+  )
+}
+
 // Default profile template
 const defaultProfile = {
   name: '',
   ipAddress: '',
+  droneType: DRONE_TYPES.FOXY, // Default to Foxy (ground drone)
   frontCamera: null,
   rearCamera: null,
   // Legacy fields for backwards compatibility
@@ -764,6 +822,33 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
       </div>
       
       <div className="form-group">
+        <label>{t('droneType.title')}</label>
+        <div className="drone-type-selector form-type-selector">
+          <div className="drone-type-buttons">
+            <button
+              type="button"
+              className={`drone-type-btn ${formData.droneType === DRONE_TYPES.FOXY || !formData.droneType ? 'active' : ''}`}
+              onClick={() => setFormData(prev => ({ ...prev, droneType: DRONE_TYPES.FOXY }))}
+              title="Foxy (Ground)"
+            >
+              <GroundDroneIcon size={28} active={formData.droneType === DRONE_TYPES.FOXY || !formData.droneType} />
+            </button>
+            <button
+              type="button"
+              className={`drone-type-btn ${formData.droneType === DRONE_TYPES.GENERIC_FPV ? 'active' : ''}`}
+              onClick={() => setFormData(prev => ({ ...prev, droneType: DRONE_TYPES.GENERIC_FPV }))}
+              title="Generic FPV"
+            >
+              <FpvDroneIcon size={28} active={formData.droneType === DRONE_TYPES.GENERIC_FPV} />
+            </button>
+          </div>
+          <span className="drone-type-label">
+            {DRONE_TYPE_LABELS[formData.droneType] || DRONE_TYPE_LABELS[DRONE_TYPES.FOXY]}
+          </span>
+        </div>
+      </div>
+      
+      <div className="form-group">
         <label htmlFor={`ip-${droneId}`}>{t('profile.ipAddress')}</label>
         <input
           id={`ip-${droneId}`}
@@ -1162,6 +1247,10 @@ function DroneProfileEditor() {
   const [directPairLogs, setDirectPairLogs] = useState([]) // Dedicated terminal logs for direct pairing
   const directPairTerminalRef = useRef(null)
   
+  // Drone type selection state (keyed by IP for discovered drones)
+  const [selectedDroneTypes, setSelectedDroneTypes] = useState({}) // { ip: 'foxy' | 'generic_fpv' }
+  const [directPairDroneType, setDirectPairDroneType] = useState(DRONE_TYPES.FOXY) // Default to Foxy for direct pair
+  
   // Auto-scroll direct pair terminal
   useEffect(() => {
     if (directPairTerminalRef.current) {
@@ -1528,7 +1617,7 @@ function DroneProfileEditor() {
   }
   
   // Pair with a discovered drone
-  const handlePair = async (drone) => {
+  const handlePair = async (drone, droneType = DRONE_TYPES.FOXY) => {
     const { ip, drone_id } = drone
     const pairCommand = `pair.sh ${ip} ${drone_id}`
     
@@ -1578,101 +1667,111 @@ function DroneProfileEditor() {
         return
       }
       
-      // Update status to checking
+      // Pairing script returned success - proceed with profile creation
+      // (Telemetry wait/check disabled - script result is sufficient)
+      
+      // /* TELEMETRY WAIT - COMMENTED OUT
+      // // Update status to checking
+      // setPairingStatus(prev => ({
+      //   ...prev,
+      //   [ip]: { status: 'checking', message: t('pairing.waitingTelemetry') }
+      // }))
+      // 
+      // // Add waiting log
+      // addTerminalLog({
+      //   type: 'info',
+      //   message: t('pairing.waitingForTelemetry', { id: drone_id })
+      // })
+      // 
+      // // Wait at least 10 seconds, then check for telemetry
+      // await new Promise(resolve => setTimeout(resolve, 10000))
+      // 
+      // // Check if telemetry appeared
+      // const telemetryResponse = await fetch(`${API_BASE_URL}/api/drone/${drone_id}/has-telemetry`)
+      // const telemetryData = await telemetryResponse.json()
+      // 
+      // // Add telemetry check result log
+      // addTerminalLog({
+      //   type: 'telemetry-check',
+      //   status: telemetryData.hasTelemetry ? 'success' : 'failed',
+      //   droneId: drone_id,
+      //   hasTelemetry: telemetryData.hasTelemetry
+      // })
+      // 
+      // if (telemetryData.success && telemetryData.hasTelemetry) {
+      // TELEMETRY WAIT - COMMENTED OUT */
+      
+      // Success! Script returned true - save profile
       setPairingStatus(prev => ({
         ...prev,
-        [ip]: { status: 'checking', message: t('pairing.waitingTelemetry') }
+        [ip]: { status: 'success', message: t('pairing.success') }
       }))
       
-      // Add waiting log
-      addTerminalLog({
-        type: 'info',
-        message: t('pairing.waitingForTelemetry', { id: drone_id })
-      })
-      
-      // Wait at least 10 seconds, then check for telemetry
-      await new Promise(resolve => setTimeout(resolve, 10000))
-      
-      // Check if telemetry appeared
-      const telemetryResponse = await fetch(`${API_BASE_URL}/api/drone/${drone_id}/has-telemetry`)
-      const telemetryData = await telemetryResponse.json()
-      
-      // Add telemetry check result log
-      addTerminalLog({
-        type: 'telemetry-check',
-        status: telemetryData.hasTelemetry ? 'success' : 'failed',
-        droneId: drone_id,
-        hasTelemetry: telemetryData.hasTelemetry
-      })
-      
-      if (telemetryData.success && telemetryData.hasTelemetry) {
-        // Success! Move drone to detected drones
-        setPairingStatus(prev => ({
-          ...prev,
-          [ip]: { status: 'success', message: t('pairing.success') }
-        }))
+      // Create or update profile with IP address
+      try {
+        // First fetch the current profile to avoid stale closure issues
+        const currentProfileRes = await fetch(`${API_BASE_URL}/api/profiles`)
+        const currentProfileData = await currentProfileRes.json()
+        const existingProfile = currentProfileData.success ? currentProfileData.profiles[drone_id] : null
         
-        // Create or update profile with IP address
-        try {
-          // First fetch the current profile to avoid stale closure issues
-          const currentProfileRes = await fetch(`${API_BASE_URL}/api/profiles`)
-          const currentProfileData = await currentProfileRes.json()
-          const existingProfile = currentProfileData.success ? currentProfileData.profiles[drone_id] : null
-          
-          console.log('Saving profile with IP:', ip, 'for drone:', drone_id)
-          
-          const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${drone_id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...defaultProfile,
-              ...existingProfile, // Keep existing profile data if any
-              ipAddress: ip || '' // Ensure ip is defined
-            })
+        console.log('Saving profile with IP:', ip, 'droneType:', droneType, 'for drone:', drone_id)
+        
+        const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${drone_id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...defaultProfile,
+            ...existingProfile, // Keep existing profile data if any
+            ipAddress: ip || '', // Ensure ip is defined
+            droneType: droneType // Save the selected drone type
           })
-          
-          const profileData = await profileResponse.json()
-          
-          if (profileData.success) {
-            setProfiles(prev => ({
-              ...prev,
-              [drone_id]: profileData.profile
-            }))
-            // Also remove from detected drones since it now has a profile
-            setDetectedDrones(prev => prev.filter(d => String(d.droneId) !== String(drone_id)))
-          }
-        } catch (profileError) {
-          console.error('Failed to save profile with IP:', profileError)
-          // Still add to detected drones if profile save failed
-          setDetectedDrones(prev => [
+        })
+        
+        const profileData = await profileResponse.json()
+        
+        if (profileData.success) {
+          setProfiles(prev => ({
             ...prev,
-            {
-              droneId: String(drone_id),
-              latitude: null,
-              longitude: null,
-              lastSeen: new Date().toISOString()
-            }
-          ])
+            [drone_id]: profileData.profile
+          }))
+          // Also remove from detected drones since it now has a profile
+          setDetectedDrones(prev => prev.filter(d => String(d.droneId) !== String(drone_id)))
         }
-        
-        // Remove from discovered drones
-        setDiscoveredDrones(prev => prev.filter(d => d.ip !== ip))
-        
-        // Clear success status after a moment
-        setTimeout(() => {
-          setPairingStatus(prev => {
-            const updated = { ...prev }
-            delete updated[ip]
-            return updated
-          })
-        }, 3000)
-      } else {
-        // No telemetry found
-        setPairingStatus(prev => ({
+      } catch (profileError) {
+        console.error('Failed to save profile with IP:', profileError)
+        // Still add to detected drones if profile save failed
+        setDetectedDrones(prev => [
           ...prev,
-          [ip]: { status: 'failed', message: 'No telemetry received. Try again.' }
-        }))
+          {
+            droneId: String(drone_id),
+            latitude: null,
+            longitude: null,
+            lastSeen: new Date().toISOString()
+          }
+        ])
       }
+      
+      // Remove from discovered drones
+      setDiscoveredDrones(prev => prev.filter(d => d.ip !== ip))
+      
+      // Clear success status after a moment
+      setTimeout(() => {
+        setPairingStatus(prev => {
+          const updated = { ...prev }
+          delete updated[ip]
+          return updated
+        })
+      }, 3000)
+      
+      // /* TELEMETRY CHECK FAILURE - COMMENTED OUT
+      // } else {
+      //   // No telemetry found
+      //   setPairingStatus(prev => ({
+      //     ...prev,
+      //     [ip]: { status: 'failed', message: 'No telemetry received. Try again.' }
+      //   }))
+      // }
+      // TELEMETRY CHECK FAILURE - COMMENTED OUT */
     } catch (error) {
       console.error('Pairing error:', error)
       addTerminalLog({
@@ -1823,7 +1922,8 @@ function DroneProfileEditor() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...defaultProfile,
-              ipAddress: ip
+              ipAddress: ip,
+              droneType: directPairDroneType // Save the selected drone type
             })
           })
           
@@ -2084,6 +2184,22 @@ function DroneProfileEditor() {
                     
                     <div className="drone-card-video profile-content">
                       <div className="profile-details">
+                        <div className="detail-row drone-type-row">
+                          <span className="detail-label">{t('droneType.title')}:</span>
+                          <span className="detail-value drone-type-value">
+                            {profile.droneType === DRONE_TYPES.GENERIC_FPV ? (
+                              <>
+                                <FpvDroneIcon size={18} active={true} />
+                                <span>{DRONE_TYPE_LABELS[DRONE_TYPES.GENERIC_FPV]}</span>
+                              </>
+                            ) : (
+                              <>
+                                <GroundDroneIcon size={18} active={true} />
+                                <span>{DRONE_TYPE_LABELS[DRONE_TYPES.FOXY]}</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
                         <div className="detail-row">
                           <span className="detail-label">{t('profile.ipAddress')}:</span>
                           <span className="detail-value">
@@ -2303,6 +2419,9 @@ function DroneProfileEditor() {
                         // Show Re-pair if either has telemetry OR is already connected
                         const needsRepair = alreadyHasTelemetry || isAlreadyConnected
                         
+                        // Get selected drone type for this discovered drone (default to Foxy)
+                        const currentDroneType = selectedDroneTypes[drone.ip] || DRONE_TYPES.FOXY
+                        
                         const handlePairClick = () => {
                           if (needsRepair) {
                             setConfirmModal({
@@ -2312,12 +2431,12 @@ function DroneProfileEditor() {
                                 : `Drone ${drone.drone_id} already has active telemetry. Are you sure you want to re-pair this drone?`,
                               onConfirm: () => {
                                 setConfirmModal(null)
-                                handlePair(drone)
+                                handlePair(drone, currentDroneType)
                               },
                               onCancel: () => setConfirmModal(null)
                             })
                           } else {
-                            handlePair(drone)
+                            handlePair(drone, currentDroneType)
                           }
                         }
                         
@@ -2357,6 +2476,29 @@ function DroneProfileEditor() {
                                 {status.message}
                               </div>
                             )}
+                            
+                            {/* Drone Type Selector */}
+                            <div className="drone-type-selector">
+                              <div className="drone-type-buttons">
+                                <button
+                                  className={`drone-type-btn ${currentDroneType === DRONE_TYPES.FOXY ? 'active' : ''}`}
+                                  onClick={() => setSelectedDroneTypes(prev => ({ ...prev, [drone.ip]: DRONE_TYPES.FOXY }))}
+                                  disabled={isPairing || isSuccess}
+                                  title="Foxy (Ground)"
+                                >
+                                  <GroundDroneIcon size={28} active={currentDroneType === DRONE_TYPES.FOXY} />
+                                </button>
+                                <button
+                                  className={`drone-type-btn ${currentDroneType === DRONE_TYPES.GENERIC_FPV ? 'active' : ''}`}
+                                  onClick={() => setSelectedDroneTypes(prev => ({ ...prev, [drone.ip]: DRONE_TYPES.GENERIC_FPV }))}
+                                  disabled={isPairing || isSuccess}
+                                  title="Generic FPV"
+                                >
+                                  <FpvDroneIcon size={28} active={currentDroneType === DRONE_TYPES.GENERIC_FPV} />
+                                </button>
+                              </div>
+                              <span className="drone-type-label">{DRONE_TYPE_LABELS[currentDroneType]}</span>
+                            </div>
                             
                             <div className="discovered-drone-actions">
                               <button
@@ -2491,6 +2633,29 @@ function DroneProfileEditor() {
                 <h2>{t('directPair.title')}</h2>
                 <p>{t('directPair.subtitle')}</p>
               </div>
+            </div>
+            
+            {/* Drone Type Selector for Direct Pair */}
+            <div className="drone-type-selector direct-pair-type">
+              <div className="drone-type-buttons">
+                <button
+                  className={`drone-type-btn ${directPairDroneType === DRONE_TYPES.FOXY ? 'active' : ''}`}
+                  onClick={() => setDirectPairDroneType(DRONE_TYPES.FOXY)}
+                  disabled={isPairingAny}
+                  title="Foxy (Ground)"
+                >
+                  <GroundDroneIcon size={32} active={directPairDroneType === DRONE_TYPES.FOXY} />
+                </button>
+                <button
+                  className={`drone-type-btn ${directPairDroneType === DRONE_TYPES.GENERIC_FPV ? 'active' : ''}`}
+                  onClick={() => setDirectPairDroneType(DRONE_TYPES.GENERIC_FPV)}
+                  disabled={isPairingAny}
+                  title="Generic FPV"
+                >
+                  <FpvDroneIcon size={32} active={directPairDroneType === DRONE_TYPES.GENERIC_FPV} />
+                </button>
+              </div>
+              <span className="drone-type-label">{DRONE_TYPE_LABELS[directPairDroneType]}</span>
             </div>
             
             <div className="direct-pair-form">
