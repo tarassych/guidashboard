@@ -6,7 +6,11 @@ import { useTranslation } from 'react-i18next'
 import CameraFeed from './components/CameraFeed'
 import {
   HudTopBar,
-  HudLeftPanel
+  HudLeftPanel,
+  Crosshair,
+  TelemetryStrip,
+  MapPanel,
+  ControlIcon
 } from './components/osd'
 
 /**
@@ -58,6 +62,32 @@ export default function FlyingDroneOSD({
           hdMode={hdMode}
           onHdToggle={onHdToggle}
         />
+        
+        {/* Map with integrated Altimeter */}
+        <div className="hud-minimap-container">
+          <MapPanel 
+            pathHistory={telemetry.pathHistory} 
+            heading={telemetry.heading}
+            lat={telemetry.latitude}
+            lng={telemetry.longitude}
+            altitude={telemetry.altitude}
+          />
+        </div>
+        
+        {/* Center Crosshair */}
+        <Crosshair />
+        
+        {/* Control Icon */}
+        <ControlIcon
+          isActive={isActive}
+          elrsConnected={elrsConnected}
+          onClick={onControlClick}
+        />
+        
+        {/* Bottom Telemetry Strip - uses FPV schema for fields */}
+        <div className="hud-bottom-strip">
+          <TelemetryStrip telemetry={telemetry} droneType={droneType} />
+        </div>
       </div>
     </>
   )

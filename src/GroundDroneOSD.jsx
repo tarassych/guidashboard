@@ -14,7 +14,8 @@ import {
   HeadingTape,
   WarningBanner,
   TelemetryStrip,
-  ControlIcon
+  ControlIcon,
+  Crosshair
 } from './components/osd'
 
 /**
@@ -109,11 +110,7 @@ export default function GroundDroneOSD({
         </div>
 
         {/* Center Crosshair */}
-        <div className="hud-crosshair">
-          <div className="crosshair-h"></div>
-          <div className="crosshair-v"></div>
-          <div className="crosshair-center">◇</div>
-        </div>
+        <Crosshair />
 
         {/* Control Icon */}
         <ControlIcon
@@ -124,7 +121,7 @@ export default function GroundDroneOSD({
 
         {/* Bottom Telemetry Strip */}
         <div className="hud-bottom-strip">
-          <TelemetryStrip telemetry={telemetry} />
+          <TelemetryStrip telemetry={telemetry} droneType={droneType} />
         </div>
       </div>
     </>
