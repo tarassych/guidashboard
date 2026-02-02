@@ -1,11 +1,13 @@
 /**
  * Flying Drone OSD (Generic FPV)
  * OSD layout for FPV quadcopters
- * TODO: Implement FPV-specific OSD components
  */
 import { useTranslation } from 'react-i18next'
 import CameraFeed from './components/CameraFeed'
-import { HudTopBar, HudLeftPanel } from './SharedOSDComponents'
+import {
+  HudTopBar,
+  HudLeftPanel
+} from './components/osd'
 
 /**
  * Flying Drone OSD Component
