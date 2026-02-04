@@ -7,10 +7,14 @@ import CameraFeed from './components/CameraFeed'
 import {
   HudTopBar,
   HudLeftPanel,
-  Crosshair,
   TelemetryStrip,
   MapPanel,
-  ControlIcon
+  ControlIcon,
+  AirspeedTape,
+  AltitudeTape,
+  ArtificialHorizon,
+  SlipSkidIndicator,
+  HeadingCompassArc
 } from './components/osd'
 
 /**
@@ -40,18 +44,26 @@ export default function FlyingDroneOSD({
       <div className="main-camera-bg">
         <CameraFeed streamUrl={mainCameraUrl} />
       </div>
+      
+      {/* Artificial Horizon Overlay - covers camera view */}
+      <ArtificialHorizon 
+        pitch={telemetry.pitch || 0} 
+        roll={telemetry.roll || 0} 
+      />
 
       {/* HUD Overlay - FPV specific */}
       <div className="hud-overlay flying-drone-osd">
-        {/* Top Bar - shared component, no failsafe for FPV */}
+        {/* Top Bar - shared component, no failsafe for FPV, show flight mode instead */}
         <HudTopBar
           telemetry={telemetry}
           isActive={isActive}
           onShareClick={onShareClick}
           showFailsafe={false}
+          showFlightMode={true}
+          showStatusMode={false}
         />
         
-        {/* Left Panel - Compass & Drone Name & Satellites & Quality */}
+        {/* Left Panel - Drone Name & Satellites & Quality (no compass for FPV) */}
         <HudLeftPanel
           heading={telemetry.heading}
           direction={directions[directionIndex]}
@@ -61,7 +73,20 @@ export default function FlyingDroneOSD({
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}
+          showCompass={false}
         />
+        
+        {/* Airspeed Tape - Garmin G1000 style (left side) */}
+        <AirspeedTape speed={telemetry.groundspeed || 0} unit="KM/H" />
+        
+        {/* Altitude Tape - Garmin G1000 style (right side) */}
+        <AltitudeTape altitude={telemetry.altitude || 0} unit="M" />
+        
+        {/* Slip-Skid Indicator (Turn Coordinator) - bottom arc with yaw ball */}
+        <SlipSkidIndicator yaw={telemetry.yaw || 0} />
+        
+        {/* Heading Compass Arc - bottom of screen */}
+        <HeadingCompassArc heading={telemetry.heading || 0} />
         
         {/* Map with integrated Altimeter */}
         <div className="hud-minimap-container">
@@ -73,9 +98,6 @@ export default function FlyingDroneOSD({
             altitude={telemetry.altitude}
           />
         </div>
-        
-        {/* Center Crosshair */}
-        <Crosshair />
         
         {/* Control Icon */}
         <ControlIcon

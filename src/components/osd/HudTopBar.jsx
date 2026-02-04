@@ -12,12 +12,16 @@ export function HudTopBar({
   telemetry, 
   isActive, 
   onShareClick, 
-  showFailsafe = true 
+  showFailsafe = true,
+  showFlightMode = false,
+  showStatusMode = true
 }) {
   const { t } = useTranslation()
   
   // Get mode string - handle both ground drone (md_str) and FPV (mode) formats
   const modeStr = telemetry.md_str || telemetry.mode || 'OFFLINE'
+  // Get flight mode specifically for FPV (from mode field)
+  const flightMode = telemetry.mode || telemetry.md_str || 'OFFLINE'
   
   return (
     <div className="hud-top-bar">
@@ -29,9 +33,11 @@ export function HudTopBar({
       </div>
       
       <div className="hud-status-center">
-        <span className={`status-mode ${modeStr.toLowerCase().replace(/\s+/g, '-')}`}>
-          {modeStr}
-        </span>
+        {showStatusMode && (
+          <span className={`status-mode ${modeStr.toLowerCase().replace(/\s+/g, '-')}`}>
+            {modeStr}
+          </span>
+        )}
         {!telemetry.connected && <span className="status-offline">{t('common.offline')}</span>}
         {isActive && <span className="status-active">{t('common.active')}</span>}
       </div>
@@ -40,6 +46,11 @@ export function HudTopBar({
         {showFailsafe && (
           <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>
             FAILSAFE:{telemetry.fs || 0}
+          </span>
+        )}
+        {showFlightMode && (
+          <span className="status-fs flight-mode">
+            MODE:{flightMode}
           </span>
         )}
         <BatteryIndicator voltage={telemetry.batt_v || 0} />

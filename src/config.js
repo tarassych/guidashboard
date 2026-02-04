@@ -47,15 +47,17 @@ export const config = {
   // Theme will auto-switch when telemetry data matches conditions
   // Conditions are checked in order - first match wins
   themeConditions: {
-    // Switch to aggressive-red when both fuses are armed
+    // Switch to aggressive-red when both fuses are armed (ground drones only)
     fusesArmed: {
       theme: 'aggressive-red',
       condition: (telemetry) => telemetry?.f1 === true && telemetry?.f2 === true,
     },
     // Switch to aggressive-red when battery voltage drops below 12V
+    // Only trigger when we have valid battery data (> 1V) to avoid false triggers
+    // batt_v = 0 means no data, so ignore it
     lowBattery: {
       theme: 'aggressive-red',
-      condition: (telemetry) => telemetry?.batt_v < 12,
+      condition: (telemetry) => telemetry?.batt_v > 1 && telemetry?.batt_v < 12,
     },
   },
 }

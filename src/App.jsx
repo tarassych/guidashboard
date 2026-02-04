@@ -42,7 +42,7 @@ const createInitialState = () => ({
   satellites: 0,
   // Battery data
   batt_v: 0,
-  // State data
+  // State data (ground drones)
   speed: 0,
   dist: 0,
   power: 0,
@@ -52,6 +52,11 @@ const createInitialState = () => ({
   md: 0,
   md_str: 'OFFLINE',
   telemetry_time: 0,
+  // Attitude data (FPV drones)
+  pitch: 0,
+  roll: 0,
+  yaw: 0,
+  mode: 'OFFLINE',
   // Meta
   timestamp: Date.now(),
   pathHistory: [],
@@ -333,7 +338,7 @@ function App() {
         updated.batt_v = data.batt_v ?? prev.batt_v
       }
       
-      // Merge State data
+      // Merge State data (ground drones)
       if (data.type === 'state') {
         updated.speed = data.speed ?? prev.speed
         updated.dist = data.dist ?? prev.dist
@@ -344,6 +349,19 @@ function App() {
         updated.md = data.md ?? prev.md
         updated.md_str = data.md_str ?? prev.md_str
         updated.telemetry_time = data.telemetry_time ?? prev.telemetry_time
+      }
+      
+      // Merge Attitude data (FPV drones)
+      if (data.type === 'att') {
+        updated.pitch = data.pitch ?? prev.pitch
+        updated.roll = data.roll ?? prev.roll
+        updated.yaw = data.yaw ?? prev.yaw
+      }
+      
+      // Merge Mode data (FPV drones)
+      if (data.type === 'mode') {
+        updated.mode = data.mode ?? prev.mode
+        updated.md_str = data.mode ?? prev.md_str // Map mode to md_str for UI compatibility
       }
       
       return updated
@@ -1135,12 +1153,24 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
       if (data.batt_v !== undefined) fields.push(`${data.batt_v}V`)
     }
     
-    // State type fields
+    // State type fields (ground drones)
     if (type === 'state') {
       if (data.md_str !== undefined) fields.push(data.md_str)
       if (data.speed !== undefined) fields.push(`SPD:${data.speed}`)
       if (data.dist !== undefined) fields.push(`DST:${data.dist}`)
       if (data.power !== undefined) fields.push(`PWR:${data.power}`)
+    }
+    
+    // Attitude type fields (FPV drones)
+    if (type === 'att') {
+      if (data.pitch !== undefined) fields.push(`P:${data.pitch.toFixed(1)}°`)
+      if (data.roll !== undefined) fields.push(`R:${data.roll.toFixed(1)}°`)
+      if (data.yaw !== undefined) fields.push(`Y:${data.yaw.toFixed(1)}°`)
+    }
+    
+    // Mode type fields (FPV drones)
+    if (type === 'mode') {
+      if (data.mode !== undefined) fields.push(data.mode)
     }
     
     return fields.join(' ')

@@ -189,6 +189,11 @@ body {
   pointer-events: none;
 }
 
+/* Flying OSD - move control icon up by its height */
+.flying-drone-osd .hud-active-control-icon {
+  bottom: 170px;
+}
+
 .active-control-svg {
   width: 105px;
   height: 105px;
@@ -436,6 +441,13 @@ body {
 
 /* Compass row - compass + drone name */
 .hud-compass-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* Info row - satellites + drone name (for Flying OSD without compass) */
+.hud-info-row {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
@@ -1213,17 +1225,18 @@ body {
 
 .quality-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 3px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #888;
   transition: all 0.2s ease;
 }
 
 .quality-toggle.hd .quality-thumb {
-  left: 20px;
+  left: 21px;
   background: #00ff88;
 }
 
@@ -1640,6 +1653,7 @@ body {
   left: 0;
   right: 0;
   padding: 15px 20px 10px;
+  z-index: 10;
 }
 
 .telemetry-strip {
@@ -1969,5 +1983,853 @@ body {
   .telemetry-log.collapsed {
     width: 170px;
     max-height: 75px;
+  }
+}
+
+/* ========== AIRSPEED TAPE (Garmin G1000 Style) ========== */
+.airspeed-tape {
+  position: absolute;
+  left: 15%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 15;
+}
+
+/* Tape title label */
+.tape-label {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--theme-accent-primary, #00ff88);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.airspeed-tape-container {
+  position: relative;
+  width: 80px;
+  height: 630px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--theme-accent-primary-rgb, 0, 255, 136), 0.3);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Background - transparent dark */
+.airspeed-tape-bg {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+/* Scrolling tape container */
+.airspeed-tape-scroll {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.1s linear;
+}
+
+/* Individual tick marks */
+.airspeed-mark {
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.airspeed-mark .mark-line {
+  height: 1px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.25;
+}
+
+/* Major marks (every 10 km/h) */
+.airspeed-mark.major .mark-line {
+  width: 28px;
+  height: 1px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.6;
+}
+
+.airspeed-mark.major .mark-label {
+  position: absolute;
+  right: 32px;
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--theme-accent-primary, #00ff88);
+  text-shadow: 0 0 5px var(--theme-accent-primary, #00ff88);
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+/* Medium marks (every 5 km/h) */
+.airspeed-mark.medium .mark-line {
+  width: 18px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.4;
+}
+
+/* Minor marks (every 1 km/h) */
+.airspeed-mark.minor .mark-line {
+  width: 10px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.2;
+}
+
+/* Center reference box */
+.airspeed-reference-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--theme-accent-primary, #00ff88);
+  border-radius: 4px;
+  padding: 6px 10px;
+  min-width: 50px;
+  text-align: center;
+  z-index: 20;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.airspeed-value {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--theme-accent-primary, #00ff88);
+  text-shadow: 0 0 5px var(--theme-accent-primary, #00ff88);
+}
+
+/* Trend vector */
+.airspeed-trend {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  background: #ff00ff;
+  transform-origin: center top;
+  z-index: 18;
+  box-shadow: 0 0 8px #ff00ff;
+}
+
+.airspeed-trend.up {
+  transform: translateX(-50%) translateY(-100%);
+}
+
+.airspeed-trend.down {
+  transform: translateX(-50%);
+}
+
+.airspeed-trend .trend-arrow {
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+}
+
+.airspeed-trend.up .trend-arrow {
+  top: 0;
+  transform: translateX(-50%) translateY(-100%);
+  border-bottom: 10px solid #ff00ff;
+}
+
+.airspeed-trend.down .trend-arrow {
+  bottom: 0;
+  transform: translateX(-50%) translateY(100%);
+  border-top: 10px solid #ff00ff;
+}
+
+/* Fade masks for tape edges */
+.airspeed-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.airspeed-mask.top {
+  top: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    transparent 100%
+  );
+}
+
+.airspeed-mask.bottom {
+  bottom: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    transparent 100%
+  );
+}
+
+/* Unit label */
+.airspeed-unit {
+  margin-top: 6px;
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--theme-accent-primary, #00ffaa);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+/* Flying OSD specific positioning - move left panel up to make room */
+.flying-drone-osd .hud-left-panel {
+  top: 50px;
+}
+
+/* ========== ALTITUDE TAPE (Garmin G1000 Style) ========== */
+.altitude-tape {
+  position: absolute;
+  right: 15%;
+  top: 50%;
+  transform: translate(50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 15;
+}
+
+.altitude-tape-container {
+  position: relative;
+  width: 90px;
+  height: 630px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--theme-accent-primary-rgb, 0, 255, 136), 0.3);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Background - transparent dark */
+.altitude-tape-bg {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+/* Scrolling tape container */
+.altitude-tape-scroll {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.1s linear;
+}
+
+/* Individual tick marks - mirrored from airspeed (left side) */
+.altitude-mark {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.altitude-mark .mark-line {
+  height: 1px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.25;
+}
+
+/* Major marks (every 500m) */
+.altitude-mark.major .mark-line {
+  width: 28px;
+  height: 1px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.6;
+}
+
+.altitude-mark.major .mark-label {
+  position: absolute;
+  left: 32px;
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--theme-accent-primary, #00ff88);
+  text-shadow: 0 0 5px var(--theme-accent-primary, #00ff88);
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+/* Medium marks (every 100m) */
+.altitude-mark.medium .mark-line {
+  width: 18px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.4;
+}
+
+/* Minor marks (every 20m) */
+.altitude-mark.minor .mark-line {
+  width: 10px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.2;
+}
+
+/* Center reference box with digits */
+.altitude-reference-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--theme-accent-primary, #00ff88);
+  border-radius: 4px;
+  padding: 4px 6px;
+  z-index: 20;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* Digits container */
+.altitude-digits {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  gap: 1px;
+}
+
+/* Individual digit */
+.altitude-digits .digit {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--theme-accent-primary, #00ff88);
+  text-shadow: 0 0 5px var(--theme-accent-primary, #00ff88);
+  width: 16px;
+  text-align: center;
+  line-height: 28px;
+}
+
+.altitude-digits .digit.thousands {
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  padding-right: 3px;
+  margin-right: 2px;
+}
+
+/* Trend vector */
+.altitude-trend {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  background: #ff00ff;
+  transform-origin: center top;
+  z-index: 18;
+  box-shadow: 0 0 8px #ff00ff;
+}
+
+.altitude-trend.up {
+  transform: translateX(-50%) translateY(-100%);
+}
+
+.altitude-trend.down {
+  transform: translateX(-50%);
+}
+
+.altitude-trend .trend-arrow {
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+}
+
+.altitude-trend.up .trend-arrow {
+  top: 0;
+  transform: translateX(-50%) translateY(-100%);
+  border-bottom: 10px solid #ff00ff;
+}
+
+.altitude-trend.down .trend-arrow {
+  bottom: 0;
+  transform: translateX(-50%) translateY(100%);
+  border-top: 10px solid #ff00ff;
+}
+
+/* Fade masks for tape edges */
+.altitude-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.altitude-mask.top {
+  top: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    transparent 100%
+  );
+}
+
+.altitude-mask.bottom {
+  bottom: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    transparent 100%
+  );
+}
+
+/* Unit label */
+.altitude-unit {
+  margin-top: 6px;
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--theme-accent-primary, #00ffaa);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+/* Responsive adjustments for altitude tape */
+@media (max-width: 900px) {
+  .altitude-tape {
+    transform: translate(50%, -50%) scale(0.85);
+    right: 12%;
+  }
+}
+
+@media (max-width: 600px) {
+  .altitude-tape {
+    transform: translate(50%, -50%) scale(0.7);
+    right: 10%;
+  }
+  
+  .altitude-tape-container {
+    height: 450px;
+  }
+}
+
+/* Responsive adjustments for airspeed tape */
+@media (max-width: 900px) {
+  .airspeed-tape {
+    transform: translate(-50%, -50%) scale(0.85);
+    left: 12%;
+  }
+}
+
+@media (max-width: 600px) {
+  .airspeed-tape {
+    transform: translate(-50%, -50%) scale(0.7);
+    left: 10%;
+  }
+  
+  .airspeed-tape-container {
+    height: 450px;
+  }
+}
+
+/* ========== ARTIFICIAL HORIZON (Attitude Indicator) ========== */
+.artificial-horizon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+}
+
+
+/* Sky and Ground background container */
+.ah-background {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 300vmax;
+  height: 300vmax;
+  transform-origin: center center;
+  transition: transform 0.1s ease-out;
+}
+
+/* Sky (upper half) - light blue transparent overlay */
+.ah-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(70, 130, 200, 0.35) 0%,
+    rgba(100, 160, 220, 0.25) 100%
+  );
+}
+
+/* Ground (lower half) - light brown transparent overlay */
+.ah-ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(
+    0deg,
+    rgba(154, 71, 16, 0.35) 0%,
+    rgba(174, 91, 36, 0.25) 100%
+  );
+}
+
+/* Horizon line */
+.ah-horizon-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 0.5px;
+  background: var(--theme-accent-primary, #00ff88);
+  transform: translateY(-50%);
+  box-shadow: 0 0 4px var(--theme-accent-primary, #00ff88);
+  opacity: 0.3;
+}
+
+/* Pitch ladder container */
+.ah-pitch-ladder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 300px;
+  transform: translate(-50%, 0);
+}
+
+/* Individual pitch marks */
+.ah-pitch-mark {
+  position: absolute;
+  left: 50%;
+  /* transform is set inline to combine X centering with Y positioning */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Pitch line (major - 10 degree marks) */
+.ah-pitch-mark.major .ah-pitch-line {
+  width: 80px;
+  height: 2px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.6;
+}
+
+/* Pitch line (minor - 5 degree marks) */
+.ah-pitch-mark.minor .ah-pitch-line {
+  width: 40px;
+  height: 1px;
+  background: var(--theme-accent-primary, #00ff88);
+  opacity: 0.4;
+}
+
+/* Pitch degree labels */
+.ah-pitch-label {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--theme-accent-primary, #00ff88);
+  opacity: 0.7;
+  padding: 0 8px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.ah-pitch-label.left {
+  text-align: right;
+}
+
+.ah-pitch-label.right {
+  text-align: left;
+}
+
+/* Roll scale at top - spans area between speed and altitude tapes */
+.ah-roll-scale {
+  position: absolute;
+  top: 30px;
+  left: 25%;
+  right: 25%;
+  width: auto;
+  height: 50vh;
+  max-height: 50vh;
+  transform: none;
+}
+
+.ah-roll-svg {
+  width: 100%;
+  height: 100%;
+  color: var(--theme-accent-primary, #00ff88);
+}
+
+.ah-roll-arc {
+  opacity: 0.4;
+  stroke-width: 0.5 !important;
+}
+
+.ah-roll-tick {
+  opacity: 0.6;
+}
+
+.ah-roll-label {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 5px;
+  fill: var(--theme-accent-primary, #00ff88);
+  opacity: 0.7;
+}
+
+/* Zero reference marker (fixed triangle at top) */
+.ah-zero-marker {
+  opacity: 0.8;
+}
+
+/* Roll pointer container (rotates with roll) */
+.ah-roll-pointer-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: center 67%;
+  transition: transform 0.1s ease-out;
+}
+
+.ah-roll-pointer-svg {
+  width: 100%;
+  height: 100%;
+  color: var(--theme-accent-primary, #00ff88);
+}
+
+.ah-roll-pointer {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Aircraft symbol (fixed in center) */
+.ah-aircraft-symbol {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 180px;
+  height: 45px;
+  z-index: 10;
+}
+
+.ah-aircraft-svg {
+  width: 100%;
+  height: 100%;
+  color: #f0a000;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
+}
+
+.ah-aircraft-svg path {
+  stroke-width: 1.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .ah-roll-scale {
+    left: 20%;
+    right: 20%;
+    top: 20px;
+  }
+  
+  .ah-aircraft-symbol {
+    width: 150px;
+  }
+  
+  .ah-pitch-ladder {
+    width: 250px;
+  }
+}
+
+@media (max-width: 600px) {
+  .ah-roll-scale {
+    left: 15%;
+    right: 15%;
+    top: 15px;
+  }
+  
+  .ah-aircraft-symbol {
+    width: 120px;
+  }
+  
+  .ah-pitch-ladder {
+    width: 200px;
+  }
+  
+  .ah-pitch-mark.major .ah-pitch-line {
+    width: 60px;
+  }
+  
+  .ah-pitch-mark.minor .ah-pitch-line {
+    width: 30px;
+  }
+}
+
+/* ========== SLIP-SKID INDICATOR (Turn Coordinator) ========== */
+.slip-skid-indicator {
+  position: absolute;
+  bottom: calc(80px + 5%);
+  left: 25%;
+  right: 25%;
+  width: auto;
+  height: 50vh;
+  max-height: 50vh;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.slip-skid-svg {
+  width: 100%;
+  height: 100%;
+  color: var(--theme-accent-primary, #00ff88);
+}
+
+.slip-skid-arc {
+  opacity: 0.4;
+}
+
+.slip-skid-center-mark {
+  opacity: 0.6;
+}
+
+.slip-skid-ball {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+/* Responsive adjustments for slip-skid */
+@media (max-width: 900px) {
+  .slip-skid-indicator {
+    left: 20%;
+    right: 20%;
+  }
+}
+
+@media (max-width: 600px) {
+  .slip-skid-indicator {
+    left: 15%;
+    right: 15%;
+  }
+}
+
+/* ========== HEADING COMPASS ARC (Garmin G1000 Style) ========== */
+.heading-compass-arc {
+  position: absolute;
+  bottom: -5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1000px;
+  height: 200px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.hca-svg {
+  width: 100%;
+  height: 100%;
+  color: var(--theme-accent-primary, #00ff88);
+  overflow: visible;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.hca-arc-line {
+  opacity: 0.5;
+}
+
+.hca-tick {
+  opacity: 0.6;
+}
+
+.hca-tick.major {
+  opacity: 0.9;
+}
+
+.hca-tick.medium {
+  opacity: 0.6;
+}
+
+.hca-tick.minor {
+  opacity: 0.35;
+}
+
+.hca-label {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  fill: var(--theme-accent-primary, #00ff88);
+  opacity: 0.8;
+}
+
+.hca-label.cardinal {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 1;
+}
+
+.hca-lubber-triangle {
+  fill: var(--theme-accent-primary, #00ff88);
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+.hca-heading-number {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: 500;
+  fill: var(--theme-accent-primary, #00ff88);
+}
+
+.hca-heading-label {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  fill: var(--theme-accent-primary, #00ff88);
+  opacity: 0.7;
+}
+
+/* Responsive adjustments for heading compass */
+@media (max-width: 900px) {
+  .heading-compass-arc {
+    width: 800px;
+  }
+}
+
+@media (max-width: 600px) {
+  .heading-compass-arc {
+    width: 600px;
   }
 }
