@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { ShareButton } from '../ShareInfoModal'
 import FoxyLogo from '../FoxyLogo'
 import { BatteryIndicator } from './BatteryIndicator'
+import { FlyingSatelliteIndicator } from './FlyingSatelliteIndicator'
 
 export function HudTopBar({ 
   telemetry, 
@@ -52,6 +53,9 @@ export function HudTopBar({
           <span className="status-fs flight-mode">
             MODE:{flightMode}
           </span>
+        )}
+        {showFlightMode && (
+          <FlyingSatelliteIndicator satellites={telemetry.satellites || 0} />
         )}
         <BatteryIndicator voltage={telemetry.batt_v || 0} />
       </div>

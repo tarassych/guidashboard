@@ -35,10 +35,16 @@ export function HudLeftPanel({
             </span>
           </div>
           <SatelliteIndicator satellites={satellites} />
+          {hasHdStream && (
+            <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
+          )}
         </>
       ) : (
+        /* Flying OSD - no compass, no satellites (satellites in top bar), quality switch in place of satellites */
         <div className="hud-info-row">
-          <SatelliteIndicator satellites={satellites} />
+          {hasHdStream && (
+            <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
+          )}
           <span className="hud-drone-name">
             {droneType === DRONE_TYPES.GENERIC_FPV ? (
               <FpvDroneIcon size={20} active={true} />
@@ -48,9 +54,6 @@ export function HudLeftPanel({
             {droneName.toUpperCase()}
           </span>
         </div>
-      )}
-      {hasHdStream && (
-        <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
       )}
     </div>
   )

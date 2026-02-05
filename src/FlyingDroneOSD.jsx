@@ -7,8 +7,9 @@ import CameraFeed from './components/CameraFeed'
 import {
   HudTopBar,
   HudLeftPanel,
-  TelemetryStrip,
+  FlyingTelemetryStrip,
   MapPanel,
+  MapBlot,
   ControlIcon,
   AirspeedTape,
   AltitudeTape,
@@ -34,7 +35,8 @@ export default function FlyingDroneOSD({
   onShareClick,
   onControlClick,
   directions,
-  directionIndex
+  directionIndex,
+  tlogState
 }) {
   const { t } = useTranslation()
   
@@ -88,16 +90,13 @@ export default function FlyingDroneOSD({
         {/* Heading Compass Arc - bottom of screen */}
         <HeadingCompassArc heading={telemetry.heading || 0} />
         
-        {/* Map with integrated Altimeter */}
-        <div className="hud-minimap-container">
-          <MapPanel 
-            pathHistory={telemetry.pathHistory} 
-            heading={telemetry.heading}
-            lat={telemetry.latitude}
-            lng={telemetry.longitude}
-            altitude={telemetry.altitude}
-          />
-        </div>
+        {/* Map Blot - organic masked map at bottom-right */}
+        <MapBlot 
+          pathHistory={telemetry.pathHistory} 
+          heading={telemetry.heading}
+          lat={telemetry.latitude}
+          lng={telemetry.longitude}
+        />
         
         {/* Control Icon */}
         <ControlIcon
@@ -106,9 +105,13 @@ export default function FlyingDroneOSD({
           onClick={onControlClick}
         />
         
-        {/* Bottom Telemetry Strip - uses FPV schema for fields */}
+        {/* Bottom Telemetry Strip - FPV version with integrated telemetry log */}
         <div className="hud-bottom-strip">
-          <TelemetryStrip telemetry={telemetry} droneType={droneType} />
+          <FlyingTelemetryStrip 
+            telemetry={telemetry} 
+            droneType={droneType} 
+            tlogState={tlogState}
+          />
         </div>
       </div>
     </>

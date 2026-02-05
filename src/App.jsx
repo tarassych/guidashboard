@@ -101,6 +101,13 @@ function App() {
   const [elrsConnected, setElrsConnected] = useState(true) // ELRS connection status
   const [hdMode, setHdMode] = useState(true) // HD quality mode for main camera (default: HD)
   
+  // Telemetry log state (lifted from TelemetryLog for sharing with FlyingDroneOSD)
+  const [tlogState, setTlogState] = useState({
+    records: [],
+    connectionStatus: 'connecting',
+    heartbeats: []
+  })
+  
   // Activation modal state
   const [showActivateModal, setShowActivateModal] = useState(false)
   const [activatePasskey, setActivatePasskey] = useState('')
@@ -407,6 +414,7 @@ function App() {
           onControlClick={handleControlIconClick}
           directions={directions}
           directionIndex={directionIndex}
+          tlogState={tlogState}
         />
       )
     }
@@ -437,9 +445,13 @@ function App() {
       {/* Render OSD based on drone type */}
       {renderOSD()}
       
-      {/* Telemetry Log - hidden, used for data fetching */}
-      <div className="hud-telemetry-log-container">
-        <TelemetryLog droneId={droneId} onTelemetryUpdate={handleTelemetryUpdate} />
+      {/* Telemetry Log - hidden for flying OSD, visible for ground */}
+      <div className={`hud-telemetry-log-container ${droneType === DRONE_TYPES.GENERIC_FPV ? 'hidden' : ''}`}>
+        <TelemetryLog 
+          droneId={droneId} 
+          onTelemetryUpdate={handleTelemetryUpdate} 
+          onStateChange={setTlogState}
+        />
       </div>
       
       {/* Share Info Modal */}
@@ -1111,7 +1123,7 @@ function AnimatedCardiogram({ heartbeats }) {
 }
 
 // Telemetry Log Component - Real-time database telemetry
-function TelemetryLog({ droneId, onTelemetryUpdate }) {
+function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
   const { t } = useTranslation()
   const [records, setRecords] = useState([])
   const [connectionStatus, setConnectionStatus] = useState('connecting')
@@ -1120,6 +1132,13 @@ function TelemetryLog({ droneId, onTelemetryUpdate }) {
   const lastIdRef = useRef(0)
   const isFirstFetch = useRef(true) // Skip heartbeat on initial historical data load
   const lastFreshDataTime = useRef(0) // Track when we last received fresh telemetry
+  
+  // Expose state changes to parent
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange({ records, connectionStatus, heartbeats })
+    }
+  }, [records, connectionStatus, heartbeats, onStateChange])
 
   const formatTimestamp = useCallback((timestamp) => {
     const date = new Date(timestamp)

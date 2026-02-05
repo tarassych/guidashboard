@@ -34,6 +34,15 @@ export function SlipSkidIndicator({ yaw = 0 }) {
   return (
     <div className="slip-skid-indicator">
       <svg viewBox="-100 -20 200 120" className="slip-skid-svg">
+        {/* Radial gradient for ball - transparent center, opaque edges */}
+        <defs>
+          <radialGradient id="ballGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+            <stop offset="60%" stopColor="currentColor" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="1" />
+          </radialGradient>
+        </defs>
+        
         {/* Curved tube arc (quarter circle at bottom) */}
         <path
           d={`M ${startX} ${startY} A ${arcRadius} ${arcRadius} 0 0 0 ${endX} ${endY}`}
@@ -63,12 +72,12 @@ export function SlipSkidIndicator({ yaw = 0 }) {
           className="slip-skid-center-mark"
         />
         
-        {/* Ball indicator */}
+        {/* Ball indicator with gradient fill */}
         <circle
           cx={ballX}
           cy={ballY}
           r="2.5"
-          fill="currentColor"
+          fill="url(#ballGradient)"
           className="slip-skid-ball"
         />
       </svg>
