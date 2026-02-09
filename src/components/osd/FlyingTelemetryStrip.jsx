@@ -95,7 +95,11 @@ function AnimatedCardiogram({ heartbeats }) {
 export function FlyingTelemetryStrip({ 
   telemetry, 
   droneType = DRONE_TYPES.GENERIC_FPV,
-  tlogState = { records: [], connectionStatus: 'connecting', heartbeats: [] }
+  tlogState = { records: [], connectionStatus: 'connecting', heartbeats: [] },
+  mapVisible = true,
+  osdVisible = true,
+  onMapToggle,
+  onOsdToggle
 }) {
   const { t } = useTranslation()
   const [isCollapsed, setIsCollapsed] = useState(true)
@@ -175,7 +179,7 @@ export function FlyingTelemetryStrip({
 
   return (
     <div className={`telemetry-strip ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Collapsed: heartbeat+status left, button center */}
+      {/* Collapsed: heartbeat+status left, button center, switches right */}
       {isCollapsed && (
         <>
           <div className="flying-tstrip-left">
@@ -192,6 +196,22 @@ export function FlyingTelemetryStrip({
           >
             ▲ {t('osd.telemetry')}
           </button>
+          <div className="flying-tstrip-right">
+            <button 
+              className={`flying-osd-switch ${osdVisible ? 'on' : 'off'}`}
+              onClick={onOsdToggle}
+            >
+              <span className="switch-label">OSD</span>
+              <span className="switch-indicator"></span>
+            </button>
+            <button 
+              className={`flying-osd-switch ${mapVisible ? 'on' : 'off'}`}
+              onClick={onMapToggle}
+            >
+              <span className="switch-label">MAP</span>
+              <span className="switch-indicator"></span>
+            </button>
+          </div>
         </>
       )}
       

@@ -2,6 +2,7 @@
  * Flying Drone OSD (Generic FPV)
  * OSD layout for FPV quadcopters
  */
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CameraFeed from './components/CameraFeed'
 import {
@@ -40,6 +41,10 @@ export default function FlyingDroneOSD({
 }) {
   const { t } = useTranslation()
   
+  // Toggle states for OSD elements (not persisted, reset on refresh)
+  const [mapVisible, setMapVisible] = useState(true)
+  const [osdVisible, setOsdVisible] = useState(true)
+  
   return (
     <>
       {/* Full-screen Front Camera Background */}
@@ -47,11 +52,13 @@ export default function FlyingDroneOSD({
         <CameraFeed streamUrl={mainCameraUrl} />
       </div>
       
-      {/* Artificial Horizon Overlay - covers camera view */}
-      <ArtificialHorizon 
-        pitch={telemetry.pitch || 0} 
-        roll={telemetry.roll || 0} 
-      />
+      {/* Artificial Horizon Overlay - covers camera view, toggles with OSD */}
+      <div className={`flying-osd-elements ${osdVisible ? '' : 'hidden'}`}>
+        <ArtificialHorizon 
+          pitch={telemetry.pitch || 0} 
+          roll={telemetry.roll || 0} 
+        />
+      </div>
 
       {/* HUD Overlay - FPV specific */}
       <div className="hud-overlay flying-drone-osd">
@@ -78,32 +85,37 @@ export default function FlyingDroneOSD({
           showCompass={false}
         />
         
-        {/* Airspeed Tape - Garmin G1000 style (left side) */}
-        <AirspeedTape speed={telemetry.groundspeed || 0} unit="KM/H" />
+        {/* OSD elements - can be toggled off */}
+        <div className={`flying-osd-elements ${osdVisible ? '' : 'hidden'}`}>
+          {/* Airspeed Tape - Garmin G1000 style (left side) */}
+          <AirspeedTape speed={telemetry.groundspeed || 0} unit="KM/H" />
+          
+          {/* Altitude Tape - Garmin G1000 style (right side) */}
+          <AltitudeTape altitude={telemetry.altitude || 0} unit="M" />
+          
+          {/* Slip-Skid Indicator (Turn Coordinator) - bottom arc with yaw ball */}
+          <SlipSkidIndicator yaw={telemetry.yaw || 0} />
+          
+          {/* Heading Compass Arc - bottom of screen */}
+          <HeadingCompassArc heading={telemetry.heading || 0} />
+          
+          {/* Control Icon */}
+          <ControlIcon
+            isActive={isActive}
+            elrsConnected={elrsConnected}
+            onClick={onControlClick}
+          />
+        </div>
         
-        {/* Altitude Tape - Garmin G1000 style (right side) */}
-        <AltitudeTape altitude={telemetry.altitude || 0} unit="M" />
-        
-        {/* Slip-Skid Indicator (Turn Coordinator) - bottom arc with yaw ball */}
-        <SlipSkidIndicator yaw={telemetry.yaw || 0} />
-        
-        {/* Heading Compass Arc - bottom of screen */}
-        <HeadingCompassArc heading={telemetry.heading || 0} />
-        
-        {/* Map Blot - organic masked map at bottom-right */}
-        <MapBlot 
-          pathHistory={telemetry.pathHistory} 
-          heading={telemetry.heading}
-          lat={telemetry.latitude}
-          lng={telemetry.longitude}
-        />
-        
-        {/* Control Icon */}
-        <ControlIcon
-          isActive={isActive}
-          elrsConnected={elrsConnected}
-          onClick={onControlClick}
-        />
+        {/* Map Blot - organic masked map at bottom-right, slides in/out */}
+        <div className={`map-blot-wrapper ${mapVisible ? 'visible' : 'hidden'}`}>
+          <MapBlot 
+            pathHistory={telemetry.pathHistory} 
+            heading={telemetry.heading}
+            lat={telemetry.latitude}
+            lng={telemetry.longitude}
+          />
+        </div>
         
         {/* Bottom Telemetry Strip - FPV version with integrated telemetry log */}
         <div className="hud-bottom-strip">
@@ -111,6 +123,10 @@ export default function FlyingDroneOSD({
             telemetry={telemetry} 
             droneType={droneType} 
             tlogState={tlogState}
+            mapVisible={mapVisible}
+            osdVisible={osdVisible}
+            onMapToggle={() => setMapVisible(!mapVisible)}
+            onOsdToggle={() => setOsdVisible(!osdVisible)}
           />
         </div>
       </div>
