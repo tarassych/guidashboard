@@ -592,6 +592,15 @@ section h2 {
   opacity: 0.4;
 }
 
+.crsf-speed-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.crsf-speed-row input {
+  flex: 1;
+}
+
 .color-input-row {
   display: flex;
   gap: 0.75rem;
@@ -608,6 +617,16 @@ section h2 {
 
 .color-input-row .color-text {
   flex: 1;
+}
+
+.form-error.save-profile-error {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 4px;
+  color: #ff6666;
+  font-size: 0.85rem;
 }
 
 .form-actions {

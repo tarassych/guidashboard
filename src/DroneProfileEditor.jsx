@@ -130,7 +130,9 @@ const defaultProfile = {
   // Legacy fields for backwards compatibility
   frontCameraUrl: '',
   rearCameraUrl: '',
-  color: '#00ff88'
+  color: '#00ff88',
+  crsf_speed: null,
+  crsf2_speed: null
 }
 
 // Camera Scanner Modal Component
@@ -771,7 +773,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   )
 }
 
-function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
+function ProfileForm({ droneId, profile, onSave, onCancel, onDelete, saveError }) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
     ...defaultProfile,
@@ -782,6 +784,14 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+  
+  const handleNumericChange = (e, field) => {
+    const raw = e.target.value.replace(/\D/g, '')
+    setFormData(prev => ({
+      ...prev,
+      [field]: raw === '' ? null : parseInt(raw, 10)
+    }))
   }
   
   const handleSubmit = async (e) => {
@@ -861,6 +871,33 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
         <span className="form-hint">{t('profile.ipHint')}</span>
       </div>
       
+      <div className="form-group crsf-speed-group">
+        <label htmlFor={`crsf_speed-${droneId}`}>{t('profile.crsfSpeed')}</label>
+        <div className="crsf-speed-row">
+          <input
+            id={`crsf_speed-${droneId}`}
+            name="crsf_speed"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={formData.crsf_speed != null ? String(formData.crsf_speed) : ''}
+            onChange={(e) => handleNumericChange(e, 'crsf_speed')}
+            placeholder={t('profile.crsfSpeedPlaceholder')}
+          />
+          <input
+            id={`crsf2_speed-${droneId}`}
+            name="crsf2_speed"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={formData.crsf2_speed != null ? String(formData.crsf2_speed) : ''}
+            onChange={(e) => handleNumericChange(e, 'crsf2_speed')}
+            placeholder={t('profile.crsf2SpeedPlaceholder')}
+          />
+        </div>
+        <span className="form-hint">{t('profile.crsfSpeedHint')}</span>
+      </div>
+      
       <div className="form-group">
         <label htmlFor={`frontCamera-${droneId}`}>{t('profile.frontCameraUrl')}</label>
         <input
@@ -907,6 +944,11 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete }) {
         </div>
       </div>
       
+      {saveError && (
+        <div className="form-error save-profile-error">
+          ⚠ {saveError}
+        </div>
+      )}
       <div className="form-actions">
         <button type="button" className="cancel-btn" onClick={onCancel}>
           {t('common.cancel')}
@@ -1464,7 +1506,58 @@ function DroneProfileEditor() {
     setDragOverSlot(null)
   }, [draggedDrone, fetchProfiles])
   
+  const [saveProfileError, setSaveProfileError] = useState(null)
+  
   const handleSaveProfile = async (droneId, profileData) => {
+    setSaveProfileError(null)
+    const existingProfile = profiles[droneId] || {}
+    
+    const oldIp = (existingProfile.ipAddress || '').trim()
+    const newIp = (profileData.ipAddress || '').trim()
+    const oldCrsf = existingProfile.crsf_speed ?? null
+    const newCrsf = profileData.crsf_speed ?? null
+    const oldCrsf2 = existingProfile.crsf2_speed ?? null
+    const newCrsf2 = profileData.crsf2_speed ?? null
+    
+    const ipChanged = oldIp !== newIp
+    const crsfChanged = oldCrsf !== newCrsf
+    const crsf2Changed = oldCrsf2 !== newCrsf2
+    const needsDroneConf = ipChanged || crsfChanged || crsf2Changed
+    
+    if (needsDroneConf) {
+      try {
+        const confResponse = await fetch(`${API_BASE_URL}/api/drone-conf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            oldIp,
+            newIp,
+            newCrsfSpeed: newCrsf,
+            newCrsf2Speed: newCrsf2
+          })
+        })
+        const confData = await confResponse.json()
+        
+        if (!confData.success || confData.result === false) {
+          let errMsg = confData.errorMessage || confData.error
+          if (!errMsg && confData.stdout) {
+            try {
+              const jsonMatch = confData.stdout.match(/\{[\s\S]*\}/)
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0])
+                if (parsed?.error) errMsg = parsed.error
+              }
+            } catch (e) { /* ignore */ }
+          }
+          setSaveProfileError(errMsg || t('profile.droneConfFailed'))
+          return
+        }
+      } catch (err) {
+        setSaveProfileError(err.message || t('profile.droneConfFailed'))
+        return
+      }
+    }
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/profiles/${droneId}`, {
         method: 'POST',
@@ -1481,11 +1574,14 @@ function DroneProfileEditor() {
         }))
         setEditingDrone(null)
         setShowNewForm(false)
-        // Remove from detected drones if it was there
+        setSaveProfileError(null)
         setDetectedDrones(prev => prev.filter(d => String(d.droneId) !== String(droneId)))
+      } else {
+        setSaveProfileError(data.error || t('profile.saveFailed'))
       }
     } catch (error) {
       console.error('Failed to save profile:', error)
+      setSaveProfileError(error.message || t('profile.saveFailed'))
     }
   }
   
@@ -1716,6 +1812,11 @@ function DroneProfileEditor() {
         
         console.log('Saving profile with IP:', ip, 'droneType:', droneType, 'for drone:', drone_id)
         
+        // Prefer crsf params from pair response, then discover drone, then existing profile
+        const scriptPairData = pairData.pairData
+        const crsfSpeed = scriptPairData?.crsf_speed ?? drone.crsf_speed ?? existingProfile?.crsf_speed ?? null
+        const crsf2Speed = scriptPairData?.crsf2_speed ?? drone.crsf2_speed ?? existingProfile?.crsf2_speed ?? null
+        
         const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${drone_id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1723,7 +1824,9 @@ function DroneProfileEditor() {
             ...defaultProfile,
             ...existingProfile, // Keep existing profile data if any
             ipAddress: ip || '', // Ensure ip is defined
-            droneType: droneType // Save the selected drone type
+            droneType: droneType, // Save the selected drone type
+            crsf_speed: crsfSpeed,
+            crsf2_speed: crsf2Speed
           })
         })
         
@@ -1915,6 +2018,11 @@ function DroneProfileEditor() {
         // Success! Save profile with IP address
         setDirectPairStatus({ status: 'success', message: t('directPair.pairingSuccess', { id: droneId }) })
         
+        // Extract crsf params from pair response (pairData from API, pairData.pairData from script)
+        const scriptPairData = pairData.pairData
+        const crsfSpeed = scriptPairData?.crsf_speed ?? null
+        const crsf2Speed = scriptPairData?.crsf2_speed ?? null
+        
         // Create profile
         try {
           const profileResponse = await fetch(`${API_BASE_URL}/api/profiles/${droneId}`, {
@@ -1923,7 +2031,9 @@ function DroneProfileEditor() {
             body: JSON.stringify({
               ...defaultProfile,
               ipAddress: ip,
-              droneType: directPairDroneType // Save the selected drone type
+              droneType: directPairDroneType, // Save the selected drone type
+              crsf_speed: crsfSpeed,
+              crsf2_speed: crsf2Speed
             })
           })
           
@@ -2128,14 +2238,15 @@ function DroneProfileEditor() {
       
       {/* New/Edit form modal */}
       {(editingDrone !== null && showNewForm) && (
-        <div className="modal-overlay" onClick={() => { setShowNewForm(false); setEditingDrone(null); }}>
+        <div className="modal-overlay" onClick={() => { setShowNewForm(false); setEditingDrone(null); setSaveProfileError(null); }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <ProfileForm
               droneId={editingDrone}
               profile={profiles[editingDrone]}
               onSave={handleSaveProfile}
-              onCancel={() => { setShowNewForm(false); setEditingDrone(null); }}
+              onCancel={() => { setShowNewForm(false); setEditingDrone(null); setSaveProfileError(null); }}
               onDelete={handleDeleteProfile}
+              saveError={saveProfileError}
             />
           </div>
         </div>
@@ -2204,6 +2315,20 @@ function DroneProfileEditor() {
                           <span className="detail-label">{t('profile.ipAddress')}:</span>
                           <span className="detail-value">
                             {profile.ipAddress || <em>{t('camera.notSet')}</em>}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">{t('profile.crsfSpeed')}:</span>
+                          <span className="detail-value">
+                            {profile.crsf_speed != null || profile.crsf2_speed != null ? (
+                              <>
+                                {profile.crsf_speed != null ? profile.crsf_speed.toLocaleString() : <em>{t('profile.notAvailable')}</em>}
+                                {' / '}
+                                {profile.crsf2_speed != null ? profile.crsf2_speed.toLocaleString() : <em>{t('profile.notAvailable')}</em>}
+                              </>
+                            ) : (
+                              <em>{t('profile.notAvailable')}</em>
+                            )}
                           </span>
                         </div>
                         <div className="detail-row">

@@ -71,14 +71,25 @@ export async function executeScript(scriptName, args = [], options = {}) {
       stderr: stderr || ''
     };
   } catch (error) {
+    const stdout = error.stdout || '';
+    const stderr = error.stderr || '';
+    let data = null;
+    try {
+      const jsonObjectMatch = stdout.match(/\{[\s\S]*\}/);
+      if (jsonObjectMatch) {
+        data = JSON.parse(jsonObjectMatch[0]);
+      }
+    } catch (e) {
+      /* ignore parse error */
+    }
     return {
       success: false,
       error: error.message,
       code: error.code,
       command,
-      stdout: error.stdout || '',
-      stderr: error.stderr || '',
-      data: null
+      stdout,
+      stderr,
+      data
     };
   }
 }
@@ -132,6 +143,43 @@ export async function scanCameras(ip) {
   return {
     ...result,
     cameras: Array.isArray(result.data) ? result.data : []
+  };
+}
+
+/**
+ * Run drone_conf.sh to apply IP and CRSF speed config changes
+ * @param {string} oldIp - Previous IP address
+ * @param {string} newIp - New IP address
+ * @param {number|null} newCrsfSpeed - New CRSF speed (bps)
+ * @param {number|null} newCrsf2Speed - New CRSF2 speed (bps)
+ * @returns {Promise<Object>} Result with script success and result flag
+ */
+export async function runDroneConf(oldIp, newIp, newCrsfSpeed, newCrsf2Speed) {
+  const args = [
+    oldIp || '',
+    newIp || '',
+    String(newCrsfSpeed ?? ''),
+    String(newCrsf2Speed ?? '')
+  ];
+  const result = await executeScript('drone_conf.sh', args, { timeout: 60000 });
+  
+  let configResult = false;
+  let scriptError = null;
+  if (result.data) {
+    if (typeof result.data.result === 'boolean') {
+      configResult = result.data.result;
+      if (!configResult && result.data.error) {
+        scriptError = result.data.error;
+      }
+    } else if (result.data === true) {
+      configResult = true;
+    }
+  }
+  
+  return {
+    ...result,
+    result: configResult,
+    scriptError
   };
 }
 

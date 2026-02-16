@@ -4,7 +4,7 @@
  * - POST /api/pair - Pair with a drone
  */
 import express from 'express';
-import { discoverDrones, pairDrone } from '../lib/scripts.js';
+import { discoverDrones, pairDrone, runDroneConf } from '../lib/scripts.js';
 
 const router = express.Router();
 
@@ -55,6 +55,41 @@ router.post('/pair', async (req, res) => {
   res.json({
     success: result.success,
     result: result.result,
+    pairData: result.data || null,
+    command: result.command,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    parseError: result.parseError
+  });
+});
+
+/**
+ * POST /api/drone-conf
+ * Run drone_conf.sh to apply IP and CRSF speed changes
+ * Body: { oldIp: string, newIp: string, newCrsfSpeed: number|null, newCrsf2Speed: number|null }
+ */
+router.post('/drone-conf', async (req, res) => {
+  const { oldIp, newIp, newCrsfSpeed, newCrsf2Speed } = req.body;
+  
+  const result = await runDroneConf(oldIp, newIp, newCrsfSpeed, newCrsf2Speed);
+  
+  let errorMessage = result.scriptError || result.error;
+  if (!errorMessage && result.result === false && result.stdout) {
+    try {
+      const jsonMatch = result.stdout.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed && typeof parsed.error === 'string') {
+          errorMessage = parsed.error;
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+  
+  res.json({
+    success: result.success,
+    result: result.result,
+    errorMessage,
     command: result.command,
     stdout: result.stdout,
     stderr: result.stderr,
