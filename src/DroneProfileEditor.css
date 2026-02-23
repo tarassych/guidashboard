@@ -1619,6 +1619,89 @@ section h2 {
   background: linear-gradient(135deg, #1a3322, #2a4433);
 }
 
+/* Upgrade tab */
+.upgrade-tab-content {
+  padding: 1rem;
+}
+.upgrade-form {
+  margin-bottom: 1rem;
+}
+.upgrade-password-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 320px;
+}
+.upgrade-password-group label {
+  font-size: 0.9rem;
+  color: var(--hud-primary, #00ff88);
+  opacity: 0.9;
+}
+.upgrade-password-input {
+  padding: 0.6rem 0.8rem;
+  font-family: inherit;
+  font-size: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 6px;
+  color: var(--hud-primary, #00ff88);
+}
+.upgrade-password-input::placeholder {
+  color: rgba(0, 255, 136, 0.5);
+}
+.upgrade-password-input:focus {
+  outline: none;
+  border-color: rgba(0, 255, 136, 0.6);
+}
+.upgrade-password-hint {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+.upgrade-actions {
+  margin-bottom: 1rem;
+}
+.upgrade-btn {
+  padding: 0.8rem 2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #003322, #004433);
+  color: var(--hud-primary, #00ff88);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.upgrade-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #004433, #005544);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+.upgrade-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.upgrade-btn.running {
+  background: linear-gradient(135deg, #1a3322, #2a4433);
+}
+.upgrade-terminal {
+  margin-top: 1rem;
+}
+.upgrade-terminal .terminal-body {
+  max-height: 400px;
+}
+.upgrade-terminal .terminal-output-combined {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--hud-primary, #00ff88);
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 2rem;
+}
+
 /* Direct Connect Button */
 .direct-connect-btn {
   padding: 0.8rem 2rem;

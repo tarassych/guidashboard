@@ -1270,6 +1270,10 @@ function DroneProfileEditor() {
   
   // Tab state: 'connected' or 'discover'
   const [activeTab, setActiveTab] = useState('connected')
+  const [upgradeLog, setUpgradeLog] = useState(null) // { command, stdout, stderr, status }
+  const [isUpgrading, setIsUpgrading] = useState(false)
+  const [upgradeSudoPassword, setUpgradeSudoPassword] = useState('')
+  const upgradeTerminalRef = useRef(null)
   
   // Discovery state
   const [discoveredDrones, setDiscoveredDrones] = useState([])
@@ -1360,6 +1364,13 @@ function DroneProfileEditor() {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight
     }
   }, [terminalLogs])
+
+  // Auto-scroll upgrade terminal
+  useEffect(() => {
+    if (upgradeTerminalRef.current) {
+      upgradeTerminalRef.current.scrollTop = upgradeTerminalRef.current.scrollHeight
+    }
+  }, [upgradeLog])
   
   // Fetch data
   useEffect(() => {
@@ -1585,6 +1596,50 @@ function DroneProfileEditor() {
     }
   }
   
+  // Handle Run Upgrade
+  const handleRunUpgrade = async () => {
+    const displayCommand = 'cd /home/orangepi && curl ... -o deploy.sh && chmod +x deploy.sh && sudo ./deploy.sh'
+    if (!upgradeSudoPassword.trim()) {
+      setUpgradeLog({
+        command: displayCommand,
+        stdout: '',
+        stderr: t('settings.upgradePasswordRequired'),
+        status: 'error'
+      })
+      return
+    }
+    setIsUpgrading(true)
+    setUpgradeLog({
+      command: displayCommand,
+      stdout: '',
+      stderr: '',
+      status: 'running'
+    })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upgrade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sudoPassword: upgradeSudoPassword })
+      })
+      const data = await response.json()
+      setUpgradeLog(prev => ({
+        ...prev,
+        command: data.command || prev.command,
+        stdout: data.stdout || '',
+        stderr: data.stderr || '',
+        status: data.success ? 'success' : 'error'
+      }))
+    } catch (err) {
+      setUpgradeLog(prev => ({
+        ...prev,
+        stderr: err.message || 'Request failed',
+        status: 'error'
+      }))
+    } finally {
+      setIsUpgrading(false)
+    }
+  }
+
   // Handle camera settings save from scanner modal
   const handleSaveCameraSettings = async (frontCamera, rearCamera) => {
     if (!cameraScannerDrone) return
@@ -2233,6 +2288,12 @@ function DroneProfileEditor() {
         >
           <span className={`mmtx-status-dot ${mmtxStatus}`} title={`MediaMTX: ${mmtxStatus}`}></span>
           {t('settings.camerasTab')}
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'upgrade' ? 'active' : ''}`}
+          onClick={() => setActiveTab('upgrade')}
+        >
+          {t('settings.upgradeTab')}
         </button>
       </nav>
       
@@ -2935,6 +2996,74 @@ function DroneProfileEditor() {
           <section className="cameras-section">
             <MediaMTXPanel profiles={profiles} />
           </section>
+        </div>
+      )}
+      
+      {/* TAB: Upgrade */}
+      {activeTab === 'upgrade' && (
+        <div className="tab-content upgrade-tab-content">
+          <div className="upgrade-form">
+            <div className="upgrade-password-group">
+              <label htmlFor="upgrade-sudo-password">{t('settings.sudoPassword')}</label>
+              <input
+                type="password"
+                id="upgrade-sudo-password"
+                className="upgrade-password-input"
+                placeholder={t('settings.sudoPasswordPlaceholder')}
+                value={upgradeSudoPassword}
+                onChange={(e) => setUpgradeSudoPassword(e.target.value)}
+                disabled={isUpgrading}
+                autoComplete="current-password"
+              />
+              <span className="upgrade-password-hint">{t('settings.sudoPasswordHint')}</span>
+            </div>
+          </div>
+          <div className="upgrade-actions">
+            <button
+              className={`upgrade-btn ${isUpgrading ? 'running' : ''}`}
+              onClick={handleRunUpgrade}
+              disabled={isUpgrading}
+            >
+              {isUpgrading ? (
+                <>
+                  <span className="scan-spinner">◌</span>
+                  {t('settings.upgradeRunning')}
+                </>
+              ) : (
+                t('settings.runUpgrade')
+              )}
+            </button>
+          </div>
+          {upgradeLog && (
+            <div className="camera-scanner-terminal upgrade-terminal">
+              <div className="terminal-header">
+                <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
+              </div>
+              <div className="terminal-body" ref={upgradeTerminalRef}>
+                <div className={`terminal-entry scan ${upgradeLog.status}`}>
+                  <div className="terminal-command-line">
+                    <span className="prompt">$</span>
+                    <span className="command">{upgradeLog.command}</span>
+                    {upgradeLog.status === 'running' && <span className="running-indicator">◌</span>}
+                  </div>
+                  <pre className="terminal-output-combined">
+                    {upgradeLog.status === 'running' && !upgradeLog.stdout && !upgradeLog.stderr
+                      ? 'Running...'
+                      : [
+                          upgradeLog.stdout || '',
+                          upgradeLog.stderr || ''
+                        ].filter(Boolean).join('\n') || '(no output)'}
+                  </pre>
+                  {upgradeLog.status === 'success' && (
+                    <div className="terminal-result success">✓ Done</div>
+                  )}
+                  {upgradeLog.status === 'error' && (
+                    <div className="terminal-result error">✗ Failed</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
       
