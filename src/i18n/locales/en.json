@@ -142,7 +142,6 @@
     "upgradeTab": "Upgrade",
     "runUpgrade": "Run Upgrade",
     "upgradeRunning": "Running...",
-    "upgradeHint": "Runs deploy script from S3. One-time setup required on Orange Pi: sudo tools/setup-upgrade-wrapper.sh",
     "connectedDrones": "Connected Drones",
     "noDronesYet": "No connected drones yet. Go to Discover & Pair to add drones.",
     "detectedDrones": "Detected Drones",

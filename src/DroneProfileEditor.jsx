@@ -1272,7 +1272,9 @@ function DroneProfileEditor() {
   const [activeTab, setActiveTab] = useState('connected')
   const [upgradeLog, setUpgradeLog] = useState(null) // { command, stdout, stderr, status }
   const [isUpgrading, setIsUpgrading] = useState(false)
+  const [upgradeProgress, setUpgradeProgress] = useState(0)
   const upgradeTerminalRef = useRef(null)
+  const upgradeProgressIntervalRef = useRef(null)
   
   // Discovery state
   const [discoveredDrones, setDiscoveredDrones] = useState([])
@@ -1370,6 +1372,15 @@ function DroneProfileEditor() {
       upgradeTerminalRef.current.scrollTop = upgradeTerminalRef.current.scrollHeight
     }
   }, [upgradeLog])
+
+  // Cleanup upgrade progress interval on unmount
+  useEffect(() => {
+    return () => {
+      if (upgradeProgressIntervalRef.current) {
+        clearInterval(upgradeProgressIntervalRef.current)
+      }
+    }
+  }, [])
   
   // Fetch data
   useEffect(() => {
@@ -1595,19 +1606,41 @@ function DroneProfileEditor() {
     }
   }
   
+  // Compute progress from deploy script output stages
+  const getProgressFromOutput = (stdout, stderr, success) => {
+    const text = (stdout || '') + (stderr || '')
+    if (success) return 100
+    if (text.includes('COMPLETE') || text.includes('Complete')) return 100
+    if (text.includes('Fetching') || text.includes('sshpass')) return 70
+    if (text.includes('Update starts')) return 30
+    return 0
+  }
+
   // Handle Run Upgrade
   const handleRunUpgrade = async () => {
     const displayCommand = 'sudo /usr/local/bin/run-upgrade'
     setIsUpgrading(true)
+    setUpgradeProgress(0)
     setUpgradeLog({
       command: displayCommand,
       stdout: '',
       stderr: '',
       status: 'running'
     })
+    // Animate progress while running (0 -> 85%)
+    if (upgradeProgressIntervalRef.current) clearInterval(upgradeProgressIntervalRef.current)
+    upgradeProgressIntervalRef.current = setInterval(() => {
+      setUpgradeProgress(prev => (prev < 85 ? prev + 5 : prev))
+    }, 800)
     try {
       const response = await fetch(`${API_BASE_URL}/api/upgrade`, { method: 'POST' })
       const data = await response.json()
+      if (upgradeProgressIntervalRef.current) {
+        clearInterval(upgradeProgressIntervalRef.current)
+        upgradeProgressIntervalRef.current = null
+      }
+      const progress = getProgressFromOutput(data.stdout, data.stderr, data.success)
+      setUpgradeProgress(progress)
       setUpgradeLog(prev => ({
         ...prev,
         command: data.command || prev.command,
@@ -1616,6 +1649,11 @@ function DroneProfileEditor() {
         status: data.success ? 'success' : 'error'
       }))
     } catch (err) {
+      if (upgradeProgressIntervalRef.current) {
+        clearInterval(upgradeProgressIntervalRef.current)
+        upgradeProgressIntervalRef.current = null
+      }
+      setUpgradeProgress(0)
       setUpgradeLog(prev => ({
         ...prev,
         stderr: err.message || 'Request failed',
@@ -2988,7 +3026,6 @@ function DroneProfileEditor() {
       {/* TAB: Upgrade */}
       {activeTab === 'upgrade' && (
         <div className="tab-content upgrade-tab-content">
-          <p className="upgrade-hint">{t('settings.upgradeHint')}</p>
           <div className="upgrade-actions">
             <button
               className={`upgrade-btn ${isUpgrading ? 'running' : ''}`}
@@ -3006,7 +3043,16 @@ function DroneProfileEditor() {
             </button>
           </div>
           {upgradeLog && (
-            <div className="camera-scanner-terminal upgrade-terminal">
+            <>
+              {(isUpgrading || upgradeProgress > 0) && (
+                <div className="upgrade-progress-bar">
+                  <div
+                    className={`upgrade-progress-fill ${upgradeLog.status === 'error' ? 'error' : ''}`}
+                    style={{ width: `${upgradeProgress}%` }}
+                  />
+                </div>
+              )}
+              <div className="camera-scanner-terminal upgrade-terminal">
               <div className="terminal-header">
                 <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
               </div>
@@ -3034,6 +3080,7 @@ function DroneProfileEditor() {
                 </div>
               </div>
             </div>
+            </>
           )}
         </div>
       )}

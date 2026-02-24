@@ -1623,13 +1623,24 @@ section h2 {
 .upgrade-tab-content {
   padding: 1rem;
 }
-.upgrade-hint {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 1rem;
-}
 .upgrade-actions {
   margin-bottom: 1rem;
+}
+.upgrade-progress-bar {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.upgrade-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--hud-primary, #00ff88), #00cc6a);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.upgrade-progress-fill.error {
+  background: linear-gradient(90deg, #ff6666, #cc4444);
 }
 .upgrade-btn {
   padding: 0.8rem 2rem;
@@ -1656,6 +1667,9 @@ section h2 {
 }
 .upgrade-terminal {
   margin-top: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
 }
 .upgrade-terminal .terminal-body {
   max-height: 400px;

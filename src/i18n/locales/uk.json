@@ -144,7 +144,6 @@
     "upgradeTab": "Оновлення",
     "runUpgrade": "Запустити оновлення",
     "upgradeRunning": "Виконується...",
-    "upgradeHint": "Запускає скрипт розгортання з S3. Одноразове налаштування на Orange Pi: sudo tools/setup-upgrade-wrapper.sh",
     "connectedDrones": "Підключені дрони",
     "noDronesYet": "Дронів ще немає. Перейдіть до Пошук та з'єднання щоб додати дрони.",
     "detectedDrones": "Виявлені дрони",
