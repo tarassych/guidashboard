@@ -9,7 +9,7 @@ import { spawn } from 'child_process';
 const router = express.Router();
 
 const UPGRADE_COMMAND = 'sudo /usr/local/bin/run-upgrade';
-const timeout = 120000; // 2 min - curl + deploy script may take time
+const timeout = 900000; // 15 min - download + unpack can be slow on low-bandwidth networks
 
 /**
  * POST /api/upgrade
