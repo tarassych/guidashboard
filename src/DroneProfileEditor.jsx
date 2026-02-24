@@ -3026,6 +3026,9 @@ function DroneProfileEditor() {
       {/* TAB: Upgrade */}
       {activeTab === 'upgrade' && (
         <div className="tab-content upgrade-tab-content">
+          <div className="upgrade-instructions">
+            <p>{t('settings.upgradeInstructions')}</p>
+          </div>
           <div className="upgrade-actions">
             <button
               className={`upgrade-btn ${isUpgrading ? 'running' : ''}`}

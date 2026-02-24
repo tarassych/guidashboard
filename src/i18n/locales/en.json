@@ -142,6 +142,7 @@
     "upgradeTab": "Upgrade",
     "runUpgrade": "Run Upgrade",
     "upgradeRunning": "Running...",
+    "upgradeInstructions": "This downloads and installs the latest update. It may take several minutes, especially on slow connections. Keep this window open until the process finishes.",
     "connectedDrones": "Connected Drones",
     "noDronesYet": "No connected drones yet. Go to Discover & Pair to add drones.",
     "detectedDrones": "Detected Drones",
