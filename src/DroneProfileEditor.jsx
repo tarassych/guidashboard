@@ -1272,7 +1272,6 @@ function DroneProfileEditor() {
   const [activeTab, setActiveTab] = useState('connected')
   const [upgradeLog, setUpgradeLog] = useState(null) // { command, stdout, stderr, status }
   const [isUpgrading, setIsUpgrading] = useState(false)
-  const [upgradeSudoPassword, setUpgradeSudoPassword] = useState('')
   const upgradeTerminalRef = useRef(null)
   
   // Discovery state
@@ -1598,16 +1597,7 @@ function DroneProfileEditor() {
   
   // Handle Run Upgrade
   const handleRunUpgrade = async () => {
-    const displayCommand = 'cd /home/orangepi && curl ... -o deploy.sh && chmod +x deploy.sh && sudo ./deploy.sh'
-    if (!upgradeSudoPassword.trim()) {
-      setUpgradeLog({
-        command: displayCommand,
-        stdout: '',
-        stderr: t('settings.upgradePasswordRequired'),
-        status: 'error'
-      })
-      return
-    }
+    const displayCommand = 'sudo /usr/local/bin/run-upgrade'
     setIsUpgrading(true)
     setUpgradeLog({
       command: displayCommand,
@@ -1616,11 +1606,7 @@ function DroneProfileEditor() {
       status: 'running'
     })
     try {
-      const response = await fetch(`${API_BASE_URL}/api/upgrade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sudoPassword: upgradeSudoPassword })
-      })
+      const response = await fetch(`${API_BASE_URL}/api/upgrade`, { method: 'POST' })
       const data = await response.json()
       setUpgradeLog(prev => ({
         ...prev,
@@ -3002,22 +2988,7 @@ function DroneProfileEditor() {
       {/* TAB: Upgrade */}
       {activeTab === 'upgrade' && (
         <div className="tab-content upgrade-tab-content">
-          <div className="upgrade-form">
-            <div className="upgrade-password-group">
-              <label htmlFor="upgrade-sudo-password">{t('settings.sudoPassword')}</label>
-              <input
-                type="password"
-                id="upgrade-sudo-password"
-                className="upgrade-password-input"
-                placeholder={t('settings.sudoPasswordPlaceholder')}
-                value={upgradeSudoPassword}
-                onChange={(e) => setUpgradeSudoPassword(e.target.value)}
-                disabled={isUpgrading}
-                autoComplete="current-password"
-              />
-              <span className="upgrade-password-hint">{t('settings.sudoPasswordHint')}</span>
-            </div>
-          </div>
+          <p className="upgrade-hint">{t('settings.upgradeHint')}</p>
           <div className="upgrade-actions">
             <button
               className={`upgrade-btn ${isUpgrading ? 'running' : ''}`}
