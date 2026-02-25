@@ -169,7 +169,17 @@ if [ "$LOCAL" = "$BASE" ]; then
   cd "$REPO_DIR"
   npm install --production --omit=dev
 
-  # Restart backend server with PM2
+  # Verify deployment artifacts before restart (avoid restart if install failed partially)
+  if [ ! -f "$REPO_DIR/server/index.js" ] || [ ! -d "$REPO_DIR/node_modules" ]; then
+    echo "ERROR: Server files incomplete (server/index.js or node_modules missing). Skipping restart."
+    exit 1
+  fi
+  if [ ! -f "$NGINX_ROOT/index.html" ]; then
+    echo "ERROR: Frontend not deployed (index.html missing in web root). Skipping restart."
+    exit 1
+  fi
+
+  # Restart backend server with PM2 (only after all above succeeded)
   echo "Restarting backend server..."
   if pm2 describe "$SERVER_NAME" > /dev/null 2>&1; then
     pm2 restart "$SERVER_NAME"
