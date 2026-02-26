@@ -1277,9 +1277,23 @@ EOF
 start_backend() {
     print_step 10 "Starting Backend Server"
     
-    # Check if already running
-    if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
-        local status=$(run_as_orangepi "pm2 jlist" 2>/dev/null | grep -o '"name":"guidashboard-api"[^}]*"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    local LOG="/tmp/guidashboard-upgrade.log"
+    echo "--- start_backend $(date) ---" >> "$LOG" 2>/dev/null || true
+    
+    # Reason 1 diagnostic: pm2 path (as orangepi user)
+    run_as_orangepi "echo PATH=\$PATH" >> "$LOG" 2>/dev/null || true
+    run_as_orangepi "which pm2 2>/dev/null || echo pm2_NOT_FOUND" >> "$LOG" 2>/dev/null || true
+    
+    run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1
+    local pm2_show_exit=$?
+    echo "pm2_show_exit=$pm2_show_exit" >> "$LOG" 2>/dev/null || true
+    
+    if [ $pm2_show_exit -eq 0 ]; then
+        # Reason 2 diagnostic: status extraction
+        local jlist_raw=$(run_as_orangepi "pm2 jlist 2>/dev/null")
+        echo "pm2_jlist_sample=${jlist_raw:0:400}" >> "$LOG" 2>/dev/null || true
+        local status=$(echo "$jlist_raw" | grep -o '"name":"guidashboard-api"[^}]*"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+        echo "status=[$status]" >> "$LOG" 2>/dev/null || true
         
         if [ "$status" = "online" ]; then
             print_installed "Backend server (running)"
@@ -1297,6 +1311,9 @@ start_backend() {
             sleep 2
             return
         fi
+        echo "REASON2: status not online (got [$status]), taking delete path" >> "$LOG" 2>/dev/null || true
+    else
+        echo "REASON1: pm2 show failed (exit=$pm2_show_exit), taking delete path" >> "$LOG" 2>/dev/null || true
     fi
     
     # Stop any existing instance
