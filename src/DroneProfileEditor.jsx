@@ -1275,6 +1275,7 @@ function DroneProfileEditor() {
   const [upgradeProgress, setUpgradeProgress] = useState(0)
   const upgradeTerminalRef = useRef(null)
   const upgradeProgressIntervalRef = useRef(null)
+  const upgradePollTimeoutRef = useRef(null)
   
   // Discovery state
   const [discoveredDrones, setDiscoveredDrones] = useState([])
@@ -1373,11 +1374,14 @@ function DroneProfileEditor() {
     }
   }, [upgradeLog])
 
-  // Cleanup upgrade progress interval on unmount
+  // Cleanup upgrade progress interval and poll timeout on unmount
   useEffect(() => {
     return () => {
       if (upgradeProgressIntervalRef.current) {
         clearInterval(upgradeProgressIntervalRef.current)
+      }
+      if (upgradePollTimeoutRef.current) {
+        clearTimeout(upgradePollTimeoutRef.current)
       }
     }
   }, [])
@@ -1607,8 +1611,8 @@ function DroneProfileEditor() {
   }
   
   // Compute progress from deploy script output stages
-  const getProgressFromOutput = (stdout, stderr, success) => {
-    const text = (stdout || '') + (stderr || '')
+  const getProgressFromOutput = (output, success) => {
+    const text = output || ''
     if (success) return 100
     if (text.includes('COMPLETE') || text.includes('Complete')) return 100
     if (text.includes('Fetching') || text.includes('sshpass')) return 70
@@ -1616,9 +1620,9 @@ function DroneProfileEditor() {
     return 0
   }
 
-  // Handle Run Upgrade
+  // Handle Run Upgrade (systemd: POST starts, poll GET /status for output)
   const handleRunUpgrade = async () => {
-    const displayCommand = 'sudo /usr/local/bin/run-upgrade'
+    const displayCommand = 'sudo systemctl start guidashboard-upgrade'
     setIsUpgrading(true)
     setUpgradeProgress(0)
     setUpgradeLog({
@@ -1627,7 +1631,7 @@ function DroneProfileEditor() {
       stderr: '',
       status: 'running'
     })
-    // Animate progress while running (0 -> 85%)
+    // Progress bar: 0 -> 85% while running
     if (upgradeProgressIntervalRef.current) clearInterval(upgradeProgressIntervalRef.current)
     upgradeProgressIntervalRef.current = setInterval(() => {
       setUpgradeProgress(prev => (prev < 85 ? prev + 5 : prev))
@@ -1635,19 +1639,53 @@ function DroneProfileEditor() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/upgrade`, { method: 'POST' })
       const data = await response.json()
-      if (upgradeProgressIntervalRef.current) {
-        clearInterval(upgradeProgressIntervalRef.current)
-        upgradeProgressIntervalRef.current = null
+      if (!data.success) {
+        if (upgradeProgressIntervalRef.current) {
+          clearInterval(upgradeProgressIntervalRef.current)
+          upgradeProgressIntervalRef.current = null
+        }
+        setUpgradeProgress(0)
+        setUpgradeLog(prev => ({
+          ...prev,
+          stderr: data.message || data.stderr || 'Failed to start upgrade',
+          status: 'error'
+        }))
+        setIsUpgrading(false)
+        return
       }
-      const progress = getProgressFromOutput(data.stdout, data.stderr, data.success)
-      setUpgradeProgress(progress)
-      setUpgradeLog(prev => ({
-        ...prev,
-        command: data.command || prev.command,
-        stdout: data.stdout || '',
-        stderr: data.stderr || '',
-        status: data.success ? 'success' : 'error'
-      }))
+      // Poll status until upgrade completes
+      const pollStatus = async () => {
+        try {
+          const statusRes = await fetch(`${API_BASE_URL}/api/upgrade/status`)
+          const status = await statusRes.json()
+          setUpgradeLog(prev => ({
+            ...prev,
+            stdout: status.output || prev.stdout,
+            stderr: status.error ? status.error : prev.stderr
+          }))
+          if (!status.running) {
+            if (upgradeProgressIntervalRef.current) {
+              clearInterval(upgradeProgressIntervalRef.current)
+              upgradeProgressIntervalRef.current = null
+            }
+            upgradePollTimeoutRef.current = null
+            const progress = getProgressFromOutput(status.output, status.success)
+            setUpgradeProgress(progress)
+            setUpgradeLog(prev => ({
+              ...prev,
+              stdout: status.output || prev.stdout,
+              status: status.success ? 'success' : 'error'
+            }))
+            setIsUpgrading(false)
+            return
+          }
+          upgradePollTimeoutRef.current = setTimeout(pollStatus, 2000)
+        } catch (err) {
+          // API may be restarting - retry
+          upgradePollTimeoutRef.current = setTimeout(pollStatus, 3000)
+        }
+      }
+      upgradePollTimeoutRef.current = setTimeout(pollStatus, 1500)
     } catch (err) {
       if (upgradeProgressIntervalRef.current) {
         clearInterval(upgradeProgressIntervalRef.current)
@@ -1659,7 +1697,6 @@ function DroneProfileEditor() {
         stderr: err.message || 'Request failed',
         status: 'error'
       }))
-    } finally {
       setIsUpgrading(false)
     }
   }
