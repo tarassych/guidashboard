@@ -9,6 +9,13 @@ import { config } from './config.js';
 // Database
 import { connectDatabase, closeDatabase, isConnected } from './lib/database.js';
 
+// Package version for health/upgrade display
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
+
 // Route modules
 import dronesRouter from './routes/drones.js';
 import profilesRouter from './routes/profiles.js';
@@ -44,6 +51,7 @@ app.use('/api/upgrade', upgradeRouter);
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
+    version: pkg.version,
     dbConnected: isConnected(),
     dbPath: config.dbPath,
     scriptsPath: config.scriptsPath,

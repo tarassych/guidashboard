@@ -45,7 +45,7 @@
   
   "osd": {
     "title": "{{name}}",
-    "version": "v4.3.5",
+    "version": "v4.3.6",
     "telemetry": "TELEMETRY",
     "telemetryLog": "TELEMETRY LOG",
     "live": "LIVE",
@@ -142,7 +142,9 @@
     "upgradeTab": "Upgrade",
     "runUpgrade": "Run Upgrade",
     "upgradeRunning": "Running...",
-    "upgradeInstructions": "This downloads and installs the latest update. It may take several minutes, especially on slow connections. Keep this window open until the process finishes.",
+    "upgradeInstructions": "This downloads and installs the latest update. It may take several minutes, especially on slow connections. The progress at 80–90% is the most time-consuming (frontend build, deployment). Please be patient during this phase and do not close this window or shut down the computer until the upgrade completes.",
+    "upgradeSuccess": "Upgrade completed successfully. Current app version: {{version}}",
+    "upgradeError": "Upgrade failed: {{message}}",
     "connectedDrones": "Connected Drones",
     "noDronesYet": "No connected drones yet. Go to Discover & Pair to add drones.",
     "detectedDrones": "Detected Drones",

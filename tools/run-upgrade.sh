@@ -3,8 +3,7 @@
 # Install with: sudo tools/setup-upgrade-wrapper.sh
 # Requires: orangepi ALL=(ALL) NOPASSWD: /usr/local/bin/run-upgrade in sudoers
 #
-# deploy.sh handles code.zip + install-guidashboard. We only run setup-upgrade-wrapper
-# after deploy, to ensure upgrade wrapper/service stay current.
+# deploy.sh handles code.zip + install-guidashboard + setup-upgrade-wrapper.
 
 set -e
 export TERM=dumb
@@ -19,10 +18,6 @@ chmod +x deploy.sh
 ./deploy.sh
 log_time "Deploy script finished"
 
-# 2. Run setup-upgrade-wrapper so upgrade wrapper/service stay current
-log_time "Running setup-upgrade-wrapper and nginx timeout"
-cd /home/orangepi/guidashboard-repo/tools
-./setup-upgrade-wrapper.sh
-./update-nginx-upgrade-timeout.sh
+# deploy.sh already runs setup-upgrade-wrapper and update-nginx-upgrade-timeout (via install)
 
 log_time "Upgrade complete"

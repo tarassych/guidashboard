@@ -1271,6 +1271,7 @@ function DroneProfileEditor() {
   // Tab state: 'connected' or 'discover'
   const [activeTab, setActiveTab] = useState('connected')
   const [upgradeLog, setUpgradeLog] = useState(null) // { command, stdout, stderr, status }
+  const [upgradeVersion, setUpgradeVersion] = useState(null) // version after success
   const [isUpgrading, setIsUpgrading] = useState(false)
   const [upgradeProgress, setUpgradeProgress] = useState(0)
   const upgradeTerminalRef = useRef(null)
@@ -1625,6 +1626,7 @@ function DroneProfileEditor() {
     const displayCommand = 'sudo systemctl start guidashboard-upgrade'
     setIsUpgrading(true)
     setUpgradeProgress(0)
+    setUpgradeVersion(null)
     setUpgradeLog({
       command: displayCommand,
       stdout: '',
@@ -1674,9 +1676,18 @@ function DroneProfileEditor() {
             setUpgradeLog(prev => ({
               ...prev,
               stdout: status.output || prev.stdout,
+              stderr: status.error || prev.stderr,
               status: status.success ? 'success' : 'error'
             }))
             setIsUpgrading(false)
+            if (status.success) {
+              fetch(`${API_BASE_URL}/api/health`)
+                .then(r => r.json())
+                .then(d => setUpgradeVersion(d.version || null))
+                .catch(() => setUpgradeVersion(null))
+            } else {
+              setUpgradeVersion(null)
+            }
             return
           }
           upgradePollTimeoutRef.current = setTimeout(pollStatus, 1500)
@@ -3063,64 +3074,78 @@ function DroneProfileEditor() {
       {/* TAB: Upgrade */}
       {activeTab === 'upgrade' && (
         <div className="tab-content upgrade-tab-content">
-          <div className="upgrade-instructions">
-            <p>{t('settings.upgradeInstructions')}</p>
-          </div>
-          <div className="upgrade-actions">
-            <button
-              className={`upgrade-btn ${isUpgrading ? 'running' : ''}`}
-              onClick={handleRunUpgrade}
-              disabled={isUpgrading}
-            >
-              {isUpgrading ? (
-                <>
-                  <span className="scan-spinner">◌</span>
-                  {t('settings.upgradeRunning')}
-                </>
-              ) : (
-                t('settings.runUpgrade')
-              )}
-            </button>
+          <div className="upgrade-tab-top">
+            <div className="upgrade-instructions">
+              <p>{t('settings.upgradeInstructions')}</p>
+            </div>
+            <div className="upgrade-actions">
+              <button
+                className={`upgrade-btn ${isUpgrading ? 'running' : ''}`}
+                onClick={handleRunUpgrade}
+                disabled={isUpgrading}
+              >
+                {isUpgrading ? (
+                  <>
+                    <span className="scan-spinner">◌</span>
+                    {t('settings.upgradeRunning')}
+                  </>
+                ) : (
+                  t('settings.runUpgrade')
+                )}
+              </button>
+            </div>
+            {upgradeLog?.status === 'success' && (
+              <div className="upgrade-notification success">
+                <span className="icon">✓</span>
+                <span>{t('settings.upgradeSuccess', { version: upgradeVersion || t('osd.version') })}</span>
+              </div>
+            )}
+            {upgradeLog?.status === 'error' && (
+              <div className="upgrade-notification error">
+                <span className="icon">✗</span>
+                <span>{t('settings.upgradeError', { message: (upgradeLog.stderr || 'Unknown error').slice(0, 300) })}</span>
+              </div>
+            )}
+            {upgradeLog && (isUpgrading || upgradeProgress > 0) && (
+              <div className="upgrade-progress-bar">
+                <div
+                  className={`upgrade-progress-fill ${upgradeLog.status === 'error' ? 'error' : ''}`}
+                  style={{ width: `${upgradeProgress}%` }}
+                />
+              </div>
+            )}
           </div>
           {upgradeLog && (
-            <>
-              {(isUpgrading || upgradeProgress > 0) && (
-                <div className="upgrade-progress-bar">
-                  <div
-                    className={`upgrade-progress-fill ${upgradeLog.status === 'error' ? 'error' : ''}`}
-                    style={{ width: `${upgradeProgress}%` }}
-                  />
-                </div>
-              )}
+            <div className="upgrade-tab-terminal-wrap">
               <div className="camera-scanner-terminal upgrade-terminal">
-              <div className="terminal-header">
-                <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
-              </div>
-              <div className="terminal-body" ref={upgradeTerminalRef}>
-                <div className={`terminal-entry scan ${upgradeLog.status}`}>
-                  <div className="terminal-command-line">
-                    <span className="prompt">$</span>
-                    <span className="command">{upgradeLog.command}</span>
-                    {upgradeLog.status === 'running' && <span className="running-indicator">◌</span>}
+                <div className="terminal-header">
+                  <span className="terminal-title"><span className="terminal-icon">&gt;_</span> {t('terminal.title')}</span>
+                </div>
+                <div className="terminal-body" ref={upgradeTerminalRef}>
+                  <div className={`terminal-entry scan ${upgradeLog.status}`}>
+                    <div className="terminal-command-line">
+                      <span className="prompt">$</span>
+                      <span className="command">{upgradeLog.command}</span>
+                      {upgradeLog.status === 'running' && <span className="running-indicator">◌</span>}
+                    </div>
+                    <pre className="terminal-output-combined">
+                      {upgradeLog.status === 'running' && !upgradeLog.stdout && !upgradeLog.stderr
+                        ? 'Running...'
+                        : [
+                            upgradeLog.stdout || '',
+                            upgradeLog.stderr || ''
+                          ].filter(Boolean).join('\n') || '(no output)'}
+                    </pre>
+                    {upgradeLog.status === 'success' && (
+                      <div className="terminal-result success">✓ Done</div>
+                    )}
+                    {upgradeLog.status === 'error' && (
+                      <div className="terminal-result error">✗ Failed</div>
+                    )}
                   </div>
-                  <pre className="terminal-output-combined">
-                    {upgradeLog.status === 'running' && !upgradeLog.stdout && !upgradeLog.stderr
-                      ? 'Running...'
-                      : [
-                          upgradeLog.stdout || '',
-                          upgradeLog.stderr || ''
-                        ].filter(Boolean).join('\n') || '(no output)'}
-                  </pre>
-                  {upgradeLog.status === 'success' && (
-                    <div className="terminal-result success">✓ Done</div>
-                  )}
-                  {upgradeLog.status === 'error' && (
-                    <div className="terminal-result error">✗ Failed</div>
-                  )}
                 </div>
               </div>
             </div>
-            </>
           )}
         </div>
       )}

@@ -1622,6 +1622,20 @@ section h2 {
 /* Upgrade tab */
 .upgrade-tab-content {
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.upgrade-tab-top {
+  flex-shrink: 0;
+}
+.upgrade-tab-terminal-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 .upgrade-instructions {
   margin-bottom: 1rem;
@@ -1679,13 +1693,36 @@ section h2 {
   background: linear-gradient(135deg, #1a3322, #2a4433);
 }
 .upgrade-terminal {
-  margin-top: 1rem;
   margin-left: 0;
   margin-right: 0;
   width: 100%;
+  flex-shrink: 0;
 }
 .upgrade-terminal .terminal-body {
   max-height: 400px;
+}
+.upgrade-notification {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.upgrade-notification.success {
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  color: var(--hud-primary, #00ff88);
+}
+.upgrade-notification.error {
+  background: rgba(255, 100, 100, 0.15);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  color: #ff8888;
+}
+.upgrade-notification .icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
 }
 .upgrade-terminal .terminal-output-combined {
   margin: 0.5rem 0;
