@@ -6,7 +6,7 @@ After=network.target
 Type=oneshot
 Environment=TERM=dumb
 ExecStartPre=/bin/sh -c 'echo "=== Upgrade started $(date) ===" > /tmp/upgrade.log && chmod 644 /tmp/upgrade.log'
-ExecStart=/usr/bin/script -q -a -c "/usr/local/bin/run-upgrade" /tmp/upgrade.log
+ExecStart=/usr/bin/script -q -a -c '/usr/local/bin/run-upgrade 2>&1 | sed "s/\x1b\[[0-9;]*[a-zA-Z]//g"' /tmp/upgrade.log
 StandardOutput=null
 StandardError=null
 TimeoutStartSec=900

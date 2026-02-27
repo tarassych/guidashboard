@@ -45,7 +45,7 @@
   
   "osd": {
     "title": "{{name}}",
-    "version": "v4.3.4",
+    "version": "v4.3.5",
     "telemetry": "TELEMETRY",
     "telemetryLog": "TELEMETRY LOG",
     "live": "LIVE",

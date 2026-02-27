@@ -48,24 +48,21 @@ WEB_DIR="/var/www/html"
 DB_PATH="$CODE_DIR/telemetry.db"
 
 # Plain mode: no ANSI colors, no spinners (for web terminal / log files)
-if [ "${TERM:-}" = "dumb" ] || [ ! -t 1 ] 2>/dev/null; then
+# Use PLAIN_OUTPUT=1 or TERM=dumb or non-TTY to force plain output
+if [ "${PLAIN_OUTPUT:-}" = "1" ] || [ "${TERM:-}" = "dumb" ] || [ ! -t 1 ] 2>/dev/null; then
     PLAIN_MODE=true
-    RED=''; GREEN=''; YELLOW=''; BLUE=''; CYAN=''; WHITE=''; GRAY=''; NC=''; BOLD=''; DIM=''
 else
     PLAIN_MODE=false
 fi
 
-# Colors and formatting (empty when PLAIN_MODE)
-RED="${RED:-\033[0;31m}"
-GREEN="${GREEN:-\033[0;32m}"
-YELLOW="${YELLOW:-\033[1;33m}"
-BLUE="${BLUE:-\033[0;34m}"
-CYAN="${CYAN:-\033[0;36m}"
-WHITE="${WHITE:-\033[1;37m}"
-GRAY="${GRAY:-\033[0;90m}"
-NC="${NC:-\033[0m}"
-BOLD="${BOLD:-\033[1m}"
-DIM="${DIM:-\033[2m}"
+# Colors and formatting (empty when PLAIN_MODE - do NOT use ${var:-default} or it overwrites empty)
+if [ "$PLAIN_MODE" = true ]; then
+    RED=''; GREEN=''; YELLOW=''; BLUE=''; CYAN=''; WHITE=''; GRAY=''; NC=''; BOLD=''; DIM=''
+else
+    RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'
+    CYAN='\033[0;36m'; WHITE='\033[1;37m'; GRAY='\033[0;90m'; NC='\033[0m'
+    BOLD='\033[1m'; DIM='\033[2m'
+fi
 
 # Tracking for rollback
 ROLLBACK_ACTIONS=()
