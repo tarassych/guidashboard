@@ -47,7 +47,7 @@
   
   "osd": {
     "title": "{{name}}",
-    "version": "v4.3.2",
+    "version": "v4.3.3",
     "telemetry": "ТЕЛЕМЕТРІЯ",
     "telemetryLog": "ЖУРНАЛ ТЕЛЕМЕТРІЇ",
     "live": "НАЖИВО",
