@@ -47,17 +47,25 @@ WEB_DIR="/var/www/html"
 # Database
 DB_PATH="$CODE_DIR/telemetry.db"
 
-# Colors and formatting
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-GRAY='\033[0;90m'
-NC='\033[0m' # No Color
-BOLD='\033[1m'
-DIM='\033[2m'
+# Plain mode: no ANSI colors, no spinners (for web terminal / log files)
+if [ "${TERM:-}" = "dumb" ] || [ ! -t 1 ] 2>/dev/null; then
+    PLAIN_MODE=true
+    RED=''; GREEN=''; YELLOW=''; BLUE=''; CYAN=''; WHITE=''; GRAY=''; NC=''; BOLD=''; DIM=''
+else
+    PLAIN_MODE=false
+fi
+
+# Colors and formatting (empty when PLAIN_MODE)
+RED="${RED:-\033[0;31m}"
+GREEN="${GREEN:-\033[0;32m}"
+YELLOW="${YELLOW:-\033[1;33m}"
+BLUE="${BLUE:-\033[0;34m}"
+CYAN="${CYAN:-\033[0;36m}"
+WHITE="${WHITE:-\033[1;37m}"
+GRAY="${GRAY:-\033[0;90m}"
+NC="${NC:-\033[0m}"
+BOLD="${BOLD:-\033[1m}"
+DIM="${DIM:-\033[2m}"
 
 # Tracking for rollback
 ROLLBACK_ACTIONS=()
@@ -74,6 +82,12 @@ SPINNER_PID=""
 # =============================================================================
 
 print_banner() {
+    if [ "$PLAIN_MODE" = true ]; then
+        echo ""
+        echo "GUI Dashboard Installer - github.com/tarassych/guidashboard"
+        echo ""
+        return
+    fi
     [ -t 1 ] && clear 2>/dev/null || true
     echo ""
     echo -e "${CYAN}+==================================================================+${NC}"
@@ -87,11 +101,14 @@ print_banner() {
 print_progress_bar() {
     local current=$1
     local total=$2
-    local width=50
     local percent=$((current * 100 / total))
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "  [$current/$total - ${percent}%]"
+        return
+    fi
+    local width=50
     local filled=$((current * width / total))
     local empty=$((width - filled))
-    
     printf "\r  ${GRAY}[${NC}"
     printf "${GREEN}%${filled}s${NC}" | tr ' ' '#'
     printf "${GRAY}%${empty}s${NC}" | tr ' ' '-'
@@ -101,9 +118,11 @@ print_progress_bar() {
 # Spinner functions
 start_spinner() {
     local msg="$1"
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "  [*] $msg"
+        return
+    fi
     printf "\r  ${CYAN}*${NC} %s " "$msg"
-    
-    # Start spinner in background
     (
         local chars=('-' '\' '|' '/')
         local i=0
@@ -118,6 +137,7 @@ start_spinner() {
 }
 
 stop_spinner() {
+    if [ "$PLAIN_MODE" = true ]; then return; fi
     if [ -n "$SPINNER_PID" ]; then
         kill $SPINNER_PID 2>/dev/null || true
         wait $SPINNER_PID 2>/dev/null || true
@@ -130,8 +150,14 @@ print_step() {
     local step_num=$1
     local step_name=$2
     CURRENT_STEP=$step_num
+    local percent=$((step_num * 100 / TOTAL_STEPS))
     
     stop_spinner
+    if [ "$PLAIN_MODE" = true ]; then
+        echo ""
+        echo "--- Step $step_num/$TOTAL_STEPS ($percent%) - $step_name ---"
+        return
+    fi
     echo ""
     echo ""
     print_progress_bar $step_num $TOTAL_STEPS
@@ -176,6 +202,13 @@ print_installed() {
 # Run command with live output in a box
 run_boxed() {
     local cmd="$1"
+    if [ "$PLAIN_MODE" = true ]; then
+        eval "$cmd" 2>&1 | while IFS= read -r line; do
+            echo "    $line"
+        done
+        local result=${PIPESTATUS[0]}
+        return $result
+    fi
     echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
     eval "$cmd" 2>&1 | while IFS= read -r line; do
         echo -e "    ${GRAY}|${NC} ${DIM}$line${NC}"
@@ -198,17 +231,26 @@ download_with_progress() {
     wget --progress=dot:giga "$url" -O "$output" > "$logfile" 2>&1 &
     local dl_pid=$!
     
-    echo -ne "  ${CYAN}>${NC} Downloading $desc"
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "  Downloading $desc..."
+    else
+        echo -ne "  ${CYAN}>${NC} Downloading $desc"
+    fi
     
+    local last_printed=0
     while kill -0 $dl_pid 2>/dev/null; do
         sleep 1
         local elapsed=$(( $(date +%s) - dl_start ))
-        printf "\r  ${CYAN}>${NC} Downloading $desc... [%02ds] " "$elapsed"
-        
-        # Try to get progress percentage
         local progress=$(grep -oE '[0-9]+%' "$logfile" 2>/dev/null | tail -1)
-        if [ -n "$progress" ]; then
-            echo -ne "${GREEN}$progress${NC} "
+        if [ "$PLAIN_MODE" = true ]; then
+            # Print progress every 5s or when we have % and it changed
+            if [ $elapsed -ge $((last_printed + 5)) ] || { [ -n "$progress" ] && [ $elapsed -gt $last_printed ]; }; then
+                echo "    ${elapsed}s ${progress:-...}"
+                last_printed=$elapsed
+            fi
+        else
+            printf "\r  ${CYAN}>${NC} Downloading $desc... [%02ds] " "$elapsed"
+            [ -n "$progress" ] && echo -ne "${GREEN}$progress${NC} "
         fi
     done
     
@@ -216,7 +258,7 @@ download_with_progress() {
     local dl_exit=$?
     
     local dl_duration=$(( $(date +%s) - dl_start ))
-    echo ""
+    [ "$PLAIN_MODE" != true ] && echo ""
     
     if [ $dl_exit -eq 0 ]; then
         local filesize=$(ls -lh "$output" 2>/dev/null | awk '{print $5}')
@@ -610,14 +652,16 @@ clone_repository() {
         else
             # Force reset to match remote (discard any local changes)
             print_info "Updating repository..."
-            echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
-            
+            if [ "$PLAIN_MODE" != true ]; then
+                echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+            fi
             run_as_orangepi "cd $REPO_DIR && git reset --hard origin/main" 2>&1 | while IFS= read -r line; do
-                echo -e "    ${GRAY}|${NC} $line"
+                echo "    $line"
             done
             local reset_exit=${PIPESTATUS[0]}
-            
-            echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+            if [ "$PLAIN_MODE" != true ]; then
+                echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+            fi
             
             if [ $reset_exit -eq 0 ]; then
                 local new_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
@@ -640,24 +684,32 @@ clone_repository() {
     sudo -u orangepi git clone --progress "$REPO_URL" "$REPO_DIR" > "$logfile" 2>&1 &
     local clone_pid=$!
     
-    echo -ne "  ${CYAN}>${NC} Cloning repository"
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "  Cloning repository..."
+    else
+        echo -ne "  ${CYAN}>${NC} Cloning repository"
+    fi
     
+    local last_printed=0
     while kill -0 $clone_pid 2>/dev/null; do
         sleep 1
         local elapsed=$(( $(date +%s) - clone_start ))
-        printf "\r  ${CYAN}>${NC} Cloning repository... [%02ds] " "$elapsed"
-        
-        # Show last line of progress
         local progress=$(tail -1 "$logfile" 2>/dev/null | grep -oE '[0-9]+%' | tail -1)
-        if [ -n "$progress" ]; then
-            echo -ne "${GREEN}$progress${NC} "
+        if [ "$PLAIN_MODE" = true ]; then
+            if [ $elapsed -ge $((last_printed + 5)) ] || { [ -n "$progress" ] && [ $elapsed -gt $last_printed ]; }; then
+                echo "    ${elapsed}s ${progress:-...}"
+                last_printed=$elapsed
+            fi
+        else
+            printf "\r  ${CYAN}>${NC} Cloning repository... [%02ds] " "$elapsed"
+            [ -n "$progress" ] && echo -ne "${GREEN}$progress${NC} "
         fi
     done
     
     wait $clone_pid
     local clone_exit=$?
     
-    echo ""
+    [ "$PLAIN_MODE" != true ] && echo ""
     
     if [ $clone_exit -eq 0 ]; then
         local clone_duration=$(( $(date +%s) - clone_start ))
@@ -1417,6 +1469,28 @@ print_summary() {
     
     stop_spinner
     echo ""
+    
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "============================================================"
+        echo "           INSTALLATION COMPLETED SUCCESSFULLY"
+        echo "============================================================"
+        echo ""
+        echo "  Duration: ${minutes}m ${seconds}s"
+        echo ""
+        echo "  Services:"
+        echo "    - Backend API    : http://localhost:3001"
+        echo "    - Web Interface  : http://localhost"
+        echo "    - MediaMTX API   : http://localhost:9997"
+        echo "    - WebRTC Streams : http://localhost:8889"
+        echo ""
+        local ip=$(hostname -I | awk '{print $1}')
+        if [ -n "$ip" ]; then
+            echo "  Access dashboard at: http://$ip"
+        fi
+        echo ""
+        return
+    fi
+    
     echo ""
     print_progress_bar $TOTAL_STEPS $TOTAL_STEPS
     echo ""
@@ -1439,7 +1513,6 @@ print_summary() {
     echo -e "    ${DIM}sudo systemctl status mediamtx${NC} - MediaMTX status"
     echo ""
     
-    # Get Orange Pi IP
     local ip=$(hostname -I | awk '{print $1}')
     if [ -n "$ip" ]; then
         echo -e "  ${GREEN}------------------------------------------------------------${NC}"
@@ -1733,8 +1806,12 @@ main() {
         print_banner
     fi
     
-    echo -e "  ${WHITE}Starting installation...${NC}"
-    echo -e "  ${DIM}Checking existing packages and installing only what's needed${NC}"
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "Starting installation..."
+    else
+        echo -e "  ${WHITE}Starting installation...${NC}"
+        echo -e "  ${DIM}Checking existing packages and installing only what's needed${NC}"
+    fi
     echo ""
     
     install_system_packages

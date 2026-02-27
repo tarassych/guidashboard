@@ -7,14 +7,17 @@ set -e
 export TERM=dumb
 cd /home/orangepi
 
+log_time() { echo "[$(date '+%H:%M:%S')] $1"; }
+
 # 1. Run deploy script (code.zip, system services)
-echo "=== Running deploy script (code.zip) ==="
+log_time "Starting deploy script (code.zip)"
 curl -fsSL "https://yuri-private.s3.amazonaws.com/_deploy.sh?AWSAccessKeyId=AKIAILTLRNN4SVYR2YOQ&Expires=1801762087&Signature=3c55QGUCo4pPzImwVRWyXzHJhww%3D" -o deploy.sh
 chmod +x deploy.sh
 ./deploy.sh
+log_time "Deploy script finished"
 
 # 2. Explicitly run guidashboard install (git pull, build, deploy) - ensures web app is updated
-echo "=== Running guidashboard install ==="
+log_time "Starting guidashboard install"
 cd /home/orangepi/code
 if [ -f /home/orangepi/guidashboard-repo/tools/install-guidashboard.sh ]; then
   cp /home/orangepi/guidashboard-repo/tools/install-guidashboard.sh ./
@@ -26,10 +29,10 @@ chmod +x install-guidashboard.sh
 code=$?
 rm -f install-guidashboard.sh
 if [ $code -eq 0 ]; then
-  echo "=== Running setup-upgrade-wrapper and nginx timeout ==="
+  log_time "Running setup-upgrade-wrapper and nginx timeout"
   cd /home/orangepi/guidashboard-repo/tools
   ./setup-upgrade-wrapper.sh
   ./update-nginx-upgrade-timeout.sh
 fi
 
-echo "COMPLETE!"
+log_time "Upgrade complete"
