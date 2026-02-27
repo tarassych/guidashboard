@@ -20,7 +20,7 @@ const MAX_LOG_BYTES = 100000; // ~100KB tail
  */
 router.post('/', async (req, res) => {
   return new Promise((resolve) => {
-    const proc = spawn('sudo', ['systemctl', 'start', UPGRADE_SERVICE], {
+    const proc = spawn('sudo', ['systemctl', 'start', '--no-block', UPGRADE_SERVICE], {
       stdio: ['ignore', 'pipe', 'pipe']
     });
 

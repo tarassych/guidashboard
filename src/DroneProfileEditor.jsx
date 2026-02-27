@@ -1679,13 +1679,13 @@ function DroneProfileEditor() {
             setIsUpgrading(false)
             return
           }
-          upgradePollTimeoutRef.current = setTimeout(pollStatus, 2000)
+          upgradePollTimeoutRef.current = setTimeout(pollStatus, 1500)
         } catch (err) {
           // API may be restarting - retry
           upgradePollTimeoutRef.current = setTimeout(pollStatus, 3000)
         }
       }
-      upgradePollTimeoutRef.current = setTimeout(pollStatus, 1500)
+      upgradePollTimeoutRef.current = setTimeout(pollStatus, 1000)
     } catch (err) {
       if (upgradeProgressIntervalRef.current) {
         clearInterval(upgradeProgressIntervalRef.current)

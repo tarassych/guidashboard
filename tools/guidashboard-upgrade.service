@@ -4,10 +4,11 @@ After=network.target
 
 [Service]
 Type=oneshot
+Environment=TERM=dumb
 ExecStartPre=/bin/sh -c 'echo "=== Upgrade started $(date) ===" > /tmp/upgrade.log && chmod 644 /tmp/upgrade.log'
-ExecStart=/usr/local/bin/run-upgrade
-StandardOutput=append:/tmp/upgrade.log
-StandardError=append:/tmp/upgrade.log
+ExecStart=/usr/bin/script -q -a -c "/usr/local/bin/run-upgrade" /tmp/upgrade.log
+StandardOutput=null
+StandardError=null
 TimeoutStartSec=900
 
 [Install]

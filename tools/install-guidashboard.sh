@@ -74,7 +74,7 @@ SPINNER_PID=""
 # =============================================================================
 
 print_banner() {
-    clear
+    [ -t 1 ] && clear 2>/dev/null || true
     echo ""
     echo -e "${CYAN}+==================================================================+${NC}"
     echo -e "${CYAN}|${NC}${BOLD}${WHITE}           GUI Dashboard Installer for Orange Pi              ${NC}${CYAN}|${NC}"
