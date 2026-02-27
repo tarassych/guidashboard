@@ -9,7 +9,8 @@ WRAPPER_SRC="${SCRIPT_DIR}/run-upgrade.sh"
 WRAPPER_DEST="/usr/local/bin/run-upgrade"
 SERVICE_SRC="${SCRIPT_DIR}/guidashboard-upgrade.service"
 SERVICE_DEST="/etc/systemd/system/guidashboard-upgrade.service"
-SUDOERS_ENTRY="orangepi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start guidashboard-upgrade"
+# Two lines: some sudoers versions mishandle comma-separated NOPASSWD
+SUDOERS_FILE="/etc/sudoers.d/guidashboard-upgrade"
 
 if [ ! -f "$WRAPPER_SRC" ]; then
   echo "Error: run-upgrade.sh not found at $WRAPPER_SRC"
@@ -32,8 +33,11 @@ else
 fi
 
 echo "Configuring sudoers for systemctl start guidashboard-upgrade..."
-echo "$SUDOERS_ENTRY" | tee /etc/sudoers.d/guidashboard-upgrade > /dev/null
-chmod 440 /etc/sudoers.d/guidashboard-upgrade
+cat > "$SUDOERS_FILE" << 'SUDOERS_EOF'
+orangepi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start guidashboard-upgrade
+orangepi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start --no-block guidashboard-upgrade
+SUDOERS_EOF
+chmod 440 "$SUDOERS_FILE"
 echo "Sudoers configured."
 
 echo "Done. Upgrade runs via: sudo systemctl start guidashboard-upgrade"
