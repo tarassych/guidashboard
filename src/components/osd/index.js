@@ -4,7 +4,7 @@
  */
 
 // Icons
-export { GroundDroneIcon, FpvDroneIcon } from './DroneTypeIcons'
+export { GroundDroneIcon, FpvDroneIcon, UgvDroneIcon } from './DroneTypeIcons'
 
 // Indicators
 export { BatteryIndicator } from './BatteryIndicator'

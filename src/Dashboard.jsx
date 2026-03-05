@@ -124,6 +124,29 @@ function FpvDroneIcon({ size = 24, active = false }) {
   )
 }
 
+// UGV Icon (Unmanned Ground Vehicle) - tracks instead of wheels, smaller height
+function UgvDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Antenna waves */}
+      <ellipse cx="42" cy="12" rx="8" ry="4" stroke={color} strokeWidth="2" fill="none" opacity="0.6"/>
+      <ellipse cx="42" cy="12" rx="14" ry="7" stroke={color} strokeWidth="2" fill="none" opacity="0.4"/>
+      {/* Antenna */}
+      <line x1="42" y1="16" x2="42" y2="26" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="42" cy="14" r="3" fill={color}/>
+      {/* Body - shorter than Foxy */}
+      <rect x="12" y="26" width="40" height="14" rx="3" fill={color}/>
+      {/* Left track */}
+      <rect x="6" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="8" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
+      {/* Right track */}
+      <rect x="50" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="52" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
+    </svg>
+  )
+}
+
 // Mini drone preview card with live telemetry and camera feed
 function DroneCard({ 
   droneId, 
@@ -186,6 +209,11 @@ function DroneCard({
             <>
               <FpvDroneIcon size={32} active={true} />
               <span className="type-label">{DRONE_TYPE_LABELS_SHORT[DRONE_TYPES.GENERIC_FPV]}</span>
+            </>
+          ) : profile?.droneType === DRONE_TYPES.UGV ? (
+            <>
+              <UgvDroneIcon size={32} active={true} />
+              <span className="type-label">{DRONE_TYPE_LABELS_SHORT[DRONE_TYPES.UGV]}</span>
             </>
           ) : (
             <>

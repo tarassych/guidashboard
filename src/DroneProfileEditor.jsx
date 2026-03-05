@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import { useTranslation } from 'react-i18next'
 import config from './config'
-import { DRONE_TYPES, DRONE_TYPE_LABELS } from './telemetrySchemas'
+import { DRONE_TYPES, DRONE_TYPE_LABEL_KEYS } from './telemetrySchemas'
 import './DroneProfileEditor.css'
 import './Dashboard.css'
 
@@ -116,6 +116,29 @@ function FpvDroneIcon({ size = 24, active = false }) {
       <ellipse cx="50" cy="14" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(-45 50 14)"/>
       <ellipse cx="14" cy="50" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(-45 14 50)"/>
       <ellipse cx="50" cy="50" rx="6" ry="2" fill={color} opacity="0.6" transform="rotate(45 50 50)"/>
+    </svg>
+  )
+}
+
+// UGV Icon (Unmanned Ground Vehicle) - tracks instead of wheels, smaller height
+function UgvDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Antenna waves */}
+      <ellipse cx="42" cy="12" rx="8" ry="4" stroke={color} strokeWidth="2" fill="none" opacity="0.6"/>
+      <ellipse cx="42" cy="12" rx="14" ry="7" stroke={color} strokeWidth="2" fill="none" opacity="0.4"/>
+      {/* Antenna */}
+      <line x1="42" y1="16" x2="42" y2="26" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="42" cy="14" r="3" fill={color}/>
+      {/* Body - shorter than Foxy */}
+      <rect x="12" y="26" width="40" height="14" rx="3" fill={color}/>
+      {/* Left track */}
+      <rect x="6" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="8" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
+      {/* Right track */}
+      <rect x="50" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="52" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
     </svg>
   )
 }
@@ -851,9 +874,17 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete, saveError }
             >
               <FpvDroneIcon size={28} active={formData.droneType === DRONE_TYPES.GENERIC_FPV} />
             </button>
+            <button
+              type="button"
+              className={`drone-type-btn ${formData.droneType === DRONE_TYPES.UGV ? 'active' : ''}`}
+              onClick={() => setFormData(prev => ({ ...prev, droneType: DRONE_TYPES.UGV }))}
+              title={t(DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.UGV])}
+            >
+              <UgvDroneIcon size={28} active={formData.droneType === DRONE_TYPES.UGV} />
+            </button>
           </div>
           <span className="drone-type-label">
-            {DRONE_TYPE_LABELS[formData.droneType] || DRONE_TYPE_LABELS[DRONE_TYPES.FOXY]}
+            {t(DRONE_TYPE_LABEL_KEYS[formData.droneType] || DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.FOXY])}
           </span>
         </div>
       </div>
@@ -2434,12 +2465,17 @@ function DroneProfileEditor() {
                             {profile.droneType === DRONE_TYPES.GENERIC_FPV ? (
                               <>
                                 <FpvDroneIcon size={18} active={true} />
-                                <span>{DRONE_TYPE_LABELS[DRONE_TYPES.GENERIC_FPV]}</span>
+                                <span>{t(DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.GENERIC_FPV])}</span>
+                              </>
+                            ) : profile.droneType === DRONE_TYPES.UGV ? (
+                              <>
+                                <UgvDroneIcon size={18} active={true} />
+                                <span>{t(DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.UGV])}</span>
                               </>
                             ) : (
                               <>
                                 <GroundDroneIcon size={18} active={true} />
-                                <span>{DRONE_TYPE_LABELS[DRONE_TYPES.FOXY]}</span>
+                                <span>{t(DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.FOXY])}</span>
                               </>
                             )}
                           </span>
@@ -2754,8 +2790,16 @@ function DroneProfileEditor() {
                                 >
                                   <FpvDroneIcon size={28} active={currentDroneType === DRONE_TYPES.GENERIC_FPV} />
                                 </button>
+                                <button
+                                  className={`drone-type-btn ${currentDroneType === DRONE_TYPES.UGV ? 'active' : ''}`}
+                                  onClick={() => setSelectedDroneTypes(prev => ({ ...prev, [drone.ip]: DRONE_TYPES.UGV }))}
+                                  disabled={isPairing || isSuccess}
+                                  title={t(DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.UGV])}
+                                >
+                                  <UgvDroneIcon size={28} active={currentDroneType === DRONE_TYPES.UGV} />
+                                </button>
                               </div>
-                              <span className="drone-type-label">{DRONE_TYPE_LABELS[currentDroneType]}</span>
+                              <span className="drone-type-label">{t(DRONE_TYPE_LABEL_KEYS[currentDroneType] || DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.FOXY])}</span>
                             </div>
                             
                             <div className="discovered-drone-actions">
@@ -2912,8 +2956,16 @@ function DroneProfileEditor() {
                 >
                   <FpvDroneIcon size={32} active={directPairDroneType === DRONE_TYPES.GENERIC_FPV} />
                 </button>
+                <button
+                  className={`drone-type-btn ${directPairDroneType === DRONE_TYPES.UGV ? 'active' : ''}`}
+                  onClick={() => setDirectPairDroneType(DRONE_TYPES.UGV)}
+                  disabled={isPairingAny}
+                  title={t(DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.UGV])}
+                >
+                  <UgvDroneIcon size={32} active={directPairDroneType === DRONE_TYPES.UGV} />
+                </button>
               </div>
-              <span className="drone-type-label">{DRONE_TYPE_LABELS[directPairDroneType]}</span>
+              <span className="drone-type-label">{t(DRONE_TYPE_LABEL_KEYS[directPairDroneType] || DRONE_TYPE_LABEL_KEYS[DRONE_TYPES.FOXY])}</span>
             </div>
             
             <div className="direct-pair-form">

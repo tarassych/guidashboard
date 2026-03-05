@@ -5,9 +5,10 @@ import config from '../config'
  * Custom hook for dynamic theme management
  * 
  * @param {Object} telemetryData - Current telemetry data for condition-based switching
+ * @param {string} droneType - Drone type (e.g. 'foxy', 'ugv') - used to skip fusesArmed for UGV
  * @returns {Object} - { currentTheme, setTheme, isLoading }
  */
-export function useTheme(telemetryData = null) {
+export function useTheme(telemetryData = null, droneType = null) {
   const [currentTheme, setCurrentTheme] = useState(config.defaultTheme)
   const [isLoading, setIsLoading] = useState(true)
   const loadedThemesRef = useRef(new Set())
@@ -77,11 +78,12 @@ export function useTheme(telemetryData = null) {
 
     const conditions = config.themeConditions
     let matchedTheme = null
+    const conditionContext = { f1, f2, batt_v: battV, droneType }
     
     // Check all conditions - first match wins
     for (const [, conditionConfig] of Object.entries(conditions)) {
       try {
-        if (conditionConfig.condition({ f1, f2, batt_v: battV })) {
+        if (conditionConfig.condition(conditionContext)) {
           matchedTheme = conditionConfig.theme
           break
         }
@@ -95,7 +97,7 @@ export function useTheme(telemetryData = null) {
     if (currentTheme !== targetTheme) {
       loadTheme(targetTheme)
     }
-  }, [f1, f2, battV, currentTheme, loadTheme])
+  }, [f1, f2, battV, droneType, currentTheme, loadTheme])
 
   return {
     currentTheme,

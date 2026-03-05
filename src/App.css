@@ -987,6 +987,11 @@ body {
   width: 300px;
 }
 
+/* UGV: no mirror section - move heading tape up */
+.hud-overlay--ugv .hud-heading-tape {
+  top: 70px;
+}
+
 .heading-tape {
   position: relative;
   height: 50px;
@@ -2139,6 +2144,10 @@ body {
     top: 170px;
   }
   
+  .hud-overlay--ugv .hud-heading-tape {
+    top: 60px;
+  }
+  
   .map-panel {
     width: 280px;
   }
@@ -2168,6 +2177,10 @@ body {
   .hud-heading-tape {
     width: 250px;
     top: 160px;
+  }
+  
+  .hud-overlay--ugv .hud-heading-tape {
+    top: 55px;
   }
   
   .hud-minimap-container {
@@ -2231,6 +2244,10 @@ body {
   .hud-heading-tape {
     width: 200px;
     top: 120px;
+  }
+  
+  .hud-overlay--ugv .hud-heading-tape {
+    top: 55px;
   }
   
   .telem-content {

@@ -116,8 +116,9 @@ function App() {
   const [activating, setActivating] = useState(false) // Progress bar phase
   const [skipPasswordForm, setSkipPasswordForm] = useState(false) // Skip password if already authenticated
   
-  // Theme management - reacts to telemetry data
-  const { currentTheme } = useTheme(latestTelemetryData)
+  // Theme management - reacts to telemetry data (droneType used to skip fusesArmed for UGV)
+  const droneTypeForTheme = droneProfile?.droneType || DRONE_TYPES.FOXY
+  const { currentTheme } = useTheme(latestTelemetryData, droneTypeForTheme)
   
   // Poll active status for this drone
   // Active control is EXCLUSIVE: only one drone can be active at a time

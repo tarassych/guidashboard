@@ -214,6 +214,8 @@
     "title": "Drone Type",
     "foxy": "Foxy",
     "genericFpv": "Generic FPV",
+    "ugv": "General UGV",
+    "ugvShort": "UGV",
     "ground": "Ground",
     "fpv": "FPV"
   },

@@ -216,6 +216,8 @@
     "title": "Тип дрона",
     "foxy": "Foxy",
     "genericFpv": "Звичайний FPV",
+    "ugv": "Загальний НРК",
+    "ugvShort": "НРК",
     "ground": "Наземний",
     "fpv": "FPV"
   },

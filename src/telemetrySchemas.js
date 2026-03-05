@@ -6,19 +6,29 @@
 // Drone type constants
 export const DRONE_TYPES = {
   FOXY: 'foxy',
-  GENERIC_FPV: 'generic_fpv'
+  GENERIC_FPV: 'generic_fpv',
+  UGV: 'ugv'
 }
 
 // Full labels for forms and detailed displays
 export const DRONE_TYPE_LABELS = {
   [DRONE_TYPES.FOXY]: 'Foxy',
-  [DRONE_TYPES.GENERIC_FPV]: 'Generic FPV'
+  [DRONE_TYPES.GENERIC_FPV]: 'Generic FPV',
+  [DRONE_TYPES.UGV]: 'General UGV'
 }
 
 // Short labels for compact displays (dashboard overlays, etc.)
 export const DRONE_TYPE_LABELS_SHORT = {
   [DRONE_TYPES.FOXY]: 'Foxy',
-  [DRONE_TYPES.GENERIC_FPV]: 'FPV'
+  [DRONE_TYPES.GENERIC_FPV]: 'FPV',
+  [DRONE_TYPES.UGV]: 'UGV'
+}
+
+// i18n keys for translated labels (use with t())
+export const DRONE_TYPE_LABEL_KEYS = {
+  [DRONE_TYPES.FOXY]: 'droneType.foxy',
+  [DRONE_TYPES.GENERIC_FPV]: 'droneType.genericFpv',
+  [DRONE_TYPES.UGV]: 'droneType.ugv'
 }
 
 /**
@@ -261,10 +271,11 @@ const GENERIC_FPV_FIELDS = {
   }
 }
 
-// Schema registry
+// Schema registry (UGV uses Foxy fields - same telemetry structure)
 export const TELEMETRY_SCHEMAS = {
   [DRONE_TYPES.FOXY]: FOXY_FIELDS,
-  [DRONE_TYPES.GENERIC_FPV]: GENERIC_FPV_FIELDS
+  [DRONE_TYPES.GENERIC_FPV]: GENERIC_FPV_FIELDS,
+  [DRONE_TYPES.UGV]: FOXY_FIELDS
 }
 
 /**
@@ -437,6 +448,11 @@ const DISPLAY_ORDER = {
     'groundspeed', 'speed', 'dist', 'batt_v', 
     'satellites', 'md_str', 'telemetry_time'
   ],
+  [DRONE_TYPES.UGV]: [
+    'latitude', 'longitude', 'altitude', 'heading', 
+    'groundspeed', 'speed', 'dist', 'batt_v', 
+    'satellites', 'md_str', 'telemetry_time'
+  ],
   [DRONE_TYPES.GENERIC_FPV]: [
     'latitude', 'longitude', 'altitude', 'heading',
     'groundspeed', 'batt_v', 'satellites',
@@ -480,6 +496,12 @@ export const BATTERY_THRESHOLDS = {
     warn: 30,
     unit: 'V',
     cells: 3 // 3S LiPo typical for ground vehicles
+  },
+  [DRONE_TYPES.UGV]: {
+    good: 35,
+    warn: 30,
+    unit: 'V',
+    cells: 3 // Same as Foxy - ground vehicle
   },
   [DRONE_TYPES.GENERIC_FPV]: {
     good: 14.8, // 4S at ~3.7V per cell
